@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Firebase 聊天室</title>
+    <style>
+        /* 保持原有样式不变 */
+        body { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .auth-form { margin-bottom: 20px; }
+        .chat-container { display: none; }
+        #messages { height: 300px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; }
+        .message { margin-bottom: 10px; }
+        .message span { color: #666; font-size: 0.8em; }
+        #logoutBtn {
+            margin-bottom: 10px;
+            background-color: #ff4444;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #logoutBtn:hover { background-color: #cc0000; }
+    </style>
+</head>
+<body>
+    <div class="auth-form">
+        <input type="email" id="email" placeholder="電子郵件">
+        <input type="password" id="password" placeholder="密碼">
+        <button onclick="signUp()">註冊</button>
+        <button onclick="signIn()">登入</button>
+    </div>
+
+    <div class="chat-container">
+        <button id="logoutBtn" onclick="signOut()">登出</button>
+        <div id="messages"></div>
+        <input type="text" id="messageInput" placeholder="輸入訊息...">
+        <button onclick="sendMessage()">傳送</button>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
+        import { 
+            getAuth, 
+            createUserWithEmailAndPassword, 
+            signInWithEmailAndPassword,
+            onAuthStateChanged,
+            signOut
+        } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
+        import { 
+            getFirestore,
+            collection,
+            addDoc,
+            query,
+            orderBy,
+            onSnapshot
+        } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDt9mJRH-BHlEksl4xla32sVIUGVnLUxWY",
+            authDomain: "future-infusion-368721.firebaseapp.com",
+            projectId: "future-infusion-368721",
+            storageBucket: "future-infusion-368721.appspot.com",
+            messagingSenderId: "345445420847",
+            appId: "1:345445420847:web:070778c173ec6157c6dbda",
+            measurementId: "G-57PJMMNNWW"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // 将需要全局访问的函数绑定到window对象
+        window.signUp = async () => {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                await createUserWithEmailAndPassword(auth, email, password);
+                alert('註冊成功！');
+            } catch (error) {
+                alert('註冊失敗: ' + error.message);
+            }
+        }
+
+        window.signIn = async () => {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+            } catch (error) {
+                alert('登入失敗: ' + error.message);
+            }
+        }
+
+        window.sendMessage = async () => {
+            const messageInput = document.getElementById('messageInput');
+            const user = auth.currentUser;
+            
+            if (messageInput.value.trim() === '') return;
+            
+            try {
+                await addDoc(collection(db, "messages"), {
+                    text: messageInput.value,
+                    user: user.email,
+                    timestamp: new Date().getTime()
+                });
+                messageInput.value = '';
+            } catch (error) {
+                alert('傳送訊息失敗: ' + error.message);
+            }
+        }
+
+        window.signOut = async () => {
+            try {
+                await signOut(auth);
+                alert('已成功登出！');
+            } catch (error) {
+                alert('登出失敗: ' + error.message);
+            }
+        }
+
+        // 非全局函数不需要绑定到window
+        const loadMessages = () => {
+            const q = query(collection(db, "messages"), orderBy("timestamp"));
+            
+            onSnapshot(q, (snapshot) => {
+                const messages = [];
+                snapshot.forEach((doc) => {
+                    messages.push(doc.data());
+                });
+                displayMessages(messages);
+            });
+        }
+
+        const displayMessages = (messages) => {
+            const messagesDiv = document.getElementById('messages');
+            messagesDiv.innerHTML = '';
+            
+            messages.forEach(msg => {
+                const div = document.createElement('div');
+                div.className = 'message';
+                div.innerHTML = `
+                    <strong>${msg.user}</strong>: ${msg.text}
+                    <span>${new Date(msg.timestamp).toLocaleString()}</span>
+                `;
+                messagesDiv.appendChild(div);
+            });
+            
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        // 監聽登入狀態
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                document.querySelector('.auth-form').style.display = 'none';
+                document.querySelector('.chat-container').style.display = 'block';
+                loadMessages(); // 只在模組內部調用
+            } else {
+                document.querySelector('.auth-form').style.display = 'block';
+                document.querySelector('.chat-container').style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
