@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>數網異譚</title>
+  <style>
+    body {
+      font-family: 'Microsoft JhengHei', sans-serif;
+      background: #f4f4f4;
+      margin: 0;
+      padding: 20px;
+    }
+    #game-container {
+      max-width: 600px;
+      margin: auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0px 0px 8px rgba(0,0,0,0.1);
+    }
+    h1 { text-align: center; }
+    #story { margin-bottom: 20px; line-height: 1.5; }
+    .option-button {
+      display: block;
+      margin: 5px 0;
+      padding: 10px;
+      background: #4285f4;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      width: 100%;
+      text-align: left;
+    }
+    .option-button:hover { background: #3367d6; }
+    .control-buttons { margin-top: 20px; text-align: center; }
+    .control-buttons button {
+      margin: 0 5px;
+      padding: 8px 12px;
+      border: none;
+      background: #0f9d58;
+      color: #fff;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .control-buttons button:hover { background: #0b7e43; }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <h1>數網異譚</h1>
+    <div id="story">載入中...</div>
+    <div id="options"></div>
+    <div class="control-buttons">
+      <button id="saveButton">儲存進度</button>
+      <button id="loadButton">讀取進度</button>
+    </div>
+  </div>
+
+  <!-- 使用 Firebase CDN 模組，實際開發中可用 npm 編譯 -->
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
