@@ -41,14 +41,19 @@
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 const userRef = ref(db, 'onlineUsers/' + user.uid);
-                set(userRef, { name: user.displayName, email: user.email });
+                set(userRef, { name: user.displayName, email: user.email, photoURL: user.photoURL });
                 userRef.onDisconnect().remove();
             }
         });
 
         onValue(ref(db, 'onlineUsers'), (snapshot) => {
             const users = snapshot.val() || {};
-            userList.innerHTML = Object.values(users).map(u => `<li>${u.name}</li>`).join('');
+            userList.innerHTML = Object.values(users).map(u => `
+                <li>
+                    <img src="${u.photoURL}" alt="${u.name}" class="user-avatar"> 
+                    ${u.name}
+                </li>
+            `).join('');
             userCount.textContent = Object.keys(users).length;
         });
     </script>
@@ -63,6 +68,13 @@
             border-radius: 5px;
         }
         ul { list-style: none; padding: 0; }
+        .user-avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            margin-right: 5px;
+            vertical-align: middle;
+        }
     </style>
 </head>
 <body>
