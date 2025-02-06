@@ -1,88 +1,142 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>線上用戶</title>
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
-        import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>線上用戶追蹤</title>
+  <!-- 使用 Firebase v9 模組化 API -->
+  <script type="module">
+    // Firebase 初始化
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-analytics.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+    import { getDatabase, ref, set, onValue, onDisconnect } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
+    
+    // 請將下列 firebaseConfig 設定換成你專案內的設定
+    const firebaseConfig = {
+      apiKey: "AIzaSyDt9mJRH-BHlEksl4xla32sVIUGVnLUxWY",
+      authDomain: "future-infusion-368721.firebaseapp.com",
+      databaseURL: "https://future-infusion-368721-default-rtdb.firebaseio.com/",
+      projectId: "future-infusion-368721",
+      storageBucket: "future-infusion-368721.appspot.com",
+      messagingSenderId: "345445420847",
+      appId: "1:345445420847:web:070778c173ec6157c6dbda",
+      measurementId: "G-57PJMMNNWW"
+    };
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyDt9mJRH-BHlEksl4xla32sVIUGVnLUxWY",
-            authDomain: "future-infusion-368721.firebaseapp.com",
-            databaseURL: "https://future-infusion-368721-default-rtdb.firebaseio.com/",
-            projectId: "future-infusion-368721",
-            storageBucket: "future-infusion-368721.appspot.com",
-            messagingSenderId: "345445420847",
-            appId: "1:345445420847:web:070778c173ec6157c6dbda",
-            measurementId: "G-57PJMMNNWW"
-        };
+    // 初始化 Firebase
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+    
+    // HTML 元素
+    const loginBtn = document.getElementById("login-btn");
+    const logoutBtn = document.getElementById("logout-btn");
+    const userList = document.getElementById("user-list");
+    const userCount = document.getElementById("user-count");
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getDatabase(app);
+    // 建立 Google 登入提供者
+    const provider = new GoogleAuthProvider();
 
-        const provider = new GoogleAuthProvider();
-        const loginBtn = document.getElementById('login-btn');
-        const logoutBtn = document.getElementById('logout-btn');
-        const userList = document.getElementById('user-list');
-        const userCount = document.getElementById('user-count');
-
-        loginBtn.onclick = () => {
-            signInWithPopup(auth, provider);
-        };
-
-        logoutBtn.onclick = () => {
-            signOut(auth);
-        };
-
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                const userRef = ref(db, 'onlineUsers/' + user.uid);
-                set(userRef, { name: user.displayName, email: user.email, photoURL: user.photoURL });
-                userRef.onDisconnect().remove();
-            }
+    // 登入按鈕事件
+    loginBtn.addEventListener("click", () => {
+      signInWithPopup(auth, provider)
+        .then((result) => {
+          // 登入成功，接下來 onAuthStateChanged 會處理後續操作
+          console.log("登入成功", result.user);
+        })
+        .catch((error) => {
+          console.error("登入失敗", error);
         });
+    });
 
-        onValue(ref(db, 'onlineUsers'), (snapshot) => {
-            const users = snapshot.val() || {};
-            userList.innerHTML = Object.values(users).map(u => `
-                <li>
-                    <img src="${u.photoURL}" alt="${u.name}" class="user-avatar"> 
-                    ${u.name}
-                </li>
-            `).join('');
-            userCount.textContent = Object.keys(users).length;
+    // 登出按鈕事件
+    logoutBtn.addEventListener("click", () => {
+      signOut(auth)
+        .then(() => {
+          console.log("已登出");
+        })
+        .catch((error) => {
+          console.error("登出失敗", error);
         });
-    </script>
-    <style>
-        #online-users {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 10px;
-            border-radius: 5px;
-        }
-        ul { list-style: none; padding: 0; }
-        .user-avatar {
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            margin-right: 5px;
-            vertical-align: middle;
-        }
-    </style>
+    });
+
+    // 當驗證狀態改變時，若有使用者登入，將其資訊寫入 Realtime Database 並設定 onDisconnect
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        const userRef = ref(db, "onlineUsers/" + user.uid);
+        // 寫入用戶資料（包含名稱、email、頭像 URL）
+        set(userRef, {
+          name: user.displayName,
+          email: user.email,
+          photoURL: user.photoURL
+        });
+        // 當用戶斷線時，自動移除資料
+        onDisconnect(userRef).remove();
+      }
+    });
+
+    // 監聽 onlineUsers 資料節點，更新線上用戶列表與人數
+    onValue(ref(db, "onlineUsers"), (snapshot) => {
+      const users = snapshot.val() || {};
+      // 更新名單，包含用戶頭像與名稱
+      userList.innerHTML = Object.values(users).map(u => `
+        <li>
+          <img src="${u.photoURL}" alt="${u.name}" class="user-avatar">
+          ${u.name}
+        </li>
+      `).join("");
+      // 更新在線人數
+      userCount.textContent = Object.keys(users).length;
+    });
+  </script>
+  <style>
+    /* 右上角線上用戶顯示區 */
+    #online-users {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.8);
+      color: #fff;
+      padding: 10px;
+      border-radius: 5px;
+      max-width: 200px;
+      font-family: Arial, sans-serif;
+      font-size: 14px;
+    }
+    #online-users ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    #online-users li {
+      margin-bottom: 5px;
+      display: flex;
+      align-items: center;
+    }
+    .user-avatar {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      margin-right: 5px;
+    }
+    /* 登入與登出按鈕 */
+    #controls {
+      margin: 20px;
+    }
+  </style>
 </head>
 <body>
+  <div id="controls">
     <button id="login-btn">登入 Google</button>
     <button id="logout-btn">登出</button>
-    <div id="online-users">
-        <p>在線人數: <span id="user-count">0</span></p>
-        <ul id="user-list"></ul>
-    </div>
+  </div>
+  
+  <!-- 右上角顯示線上人數與名單 -->
+  <div id="online-users">
+    <p>在線人數: <span id="user-count">0</span></p>
+    <ul id="user-list"></ul>
+  </div>
 </body>
 </html>
