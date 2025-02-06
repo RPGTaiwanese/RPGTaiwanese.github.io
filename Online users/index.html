@@ -3,22 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>線上用戶追蹤</title>
+  <title>線上用戶追蹤 - Firestore</title>
   <!-- 使用 Firebase v9 模組化 API -->
   <script type="module">
-    // Firebase 初始化
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-    import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-analytics.js";
-    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
-    import { getDatabase, ref, set, onValue, onDisconnect } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
-    
-    // 請將下列 firebaseConfig 設定換成你專案內的設定
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-analytics.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, deleteDoc, collection, query, onSnapshot } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+
+    // Firebase 設定（請依你專案內容更新）
     const firebaseConfig = {
       apiKey: "AIzaSyDt9mJRH-BHlEksl4xla32sVIUGVnLUxWY",
       authDomain: "future-infusion-368721.firebaseapp.com",
-      databaseURL: "https://future-infusion-368721-default-rtdb.firebaseio.com/",
       projectId: "future-infusion-368721",
-      storageBucket: "future-infusion-368721.appspot.com",
+      storageBucket: "future-infusion-368721.firebasestorage.app",
       messagingSenderId: "345445420847",
       appId: "1:345445420847:web:070778c173ec6157c6dbda",
       measurementId: "G-57PJMMNNWW"
@@ -28,8 +26,8 @@
     const app = initializeApp(firebaseConfig);
     const analytics = getAnalytics(app);
     const auth = getAuth(app);
-    const db = getDatabase(app);
-    
+    const db = getFirestore(app);
+
     // HTML 元素
     const loginBtn = document.getElementById("login-btn");
     const logoutBtn = document.getElementById("logout-btn");
@@ -43,8 +41,8 @@
     loginBtn.addEventListener("click", () => {
       signInWithPopup(auth, provider)
         .then((result) => {
-          // 登入成功，接下來 onAuthStateChanged 會處理後續操作
           console.log("登入成功", result.user);
+          // 登入後 onAuthStateChanged 會處理將用戶資料加入 Firestore
         })
         .catch((error) => {
           console.error("登入失敗", error);
@@ -53,42 +51,65 @@
 
     // 登出按鈕事件
     logoutBtn.addEventListener("click", () => {
-      signOut(auth)
-        .then(() => {
-          console.log("已登出");
-        })
-        .catch((error) => {
-          console.error("登出失敗", error);
-        });
-    });
-
-    // 當驗證狀態改變時，若有使用者登入，將其資訊寫入 Realtime Database 並設定 onDisconnect
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        const userRef = ref(db, "onlineUsers/" + user.uid);
-        // 寫入用戶資料（包含名稱、email、頭像 URL）
-        set(userRef, {
-          name: user.displayName,
-          email: user.email,
-          photoURL: user.photoURL
-        });
-        // 當用戶斷線時，自動移除資料
-        onDisconnect(userRef).remove();
+      if (auth.currentUser) {
+        const userId = auth.currentUser.uid;
+        // 登出前從 Firestore 中刪除用戶文件
+        deleteDoc(doc(db, "onlineUsers", userId))
+          .then(() => {
+            return signOut(auth);
+          })
+          .then(() => {
+            console.log("已登出");
+          })
+          .catch((error) => {
+            console.error("登出失敗", error);
+          });
+      } else {
+        signOut(auth).catch(console.error);
       }
     });
 
-    // 監聽 onlineUsers 資料節點，更新線上用戶列表與人數
-    onValue(ref(db, "onlineUsers"), (snapshot) => {
-      const users = snapshot.val() || {};
-      // 更新名單，包含用戶頭像與名稱
-      userList.innerHTML = Object.values(users).map(u => `
+    // 當驗證狀態改變時，若有使用者登入，將其資料加入 Firestore 的 onlineUsers 集合中
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        const userRef = doc(db, "onlineUsers", user.uid);
+        setDoc(userRef, {
+          name: user.displayName,
+          email: user.email,
+          photoURL: user.photoURL,
+          lastActive: Date.now()
+        }).catch((error) => {
+          console.error("設定用戶資料失敗", error);
+        });
+      }
+    });
+
+    // 當使用者關閉頁面時，嘗試從 Firestore 中刪除用戶文件
+    window.addEventListener("beforeunload", () => {
+      if (auth.currentUser) {
+        const userId = auth.currentUser.uid;
+        deleteDoc(doc(db, "onlineUsers", userId))
+          .catch((error) => {
+            console.error("頁面關閉時刪除用戶資料失敗", error);
+          });
+      }
+    });
+
+    // 監聽 onlineUsers 集合的變化，更新線上用戶列表與人數
+    const onlineUsersRef = collection(db, "onlineUsers");
+    const q = query(onlineUsersRef);
+    onSnapshot(q, (snapshot) => {
+      const users = [];
+      snapshot.forEach((doc) => {
+        users.push(doc.data());
+      });
+      userList.innerHTML = users.map(u => `
         <li>
           <img src="${u.photoURL}" alt="${u.name}" class="user-avatar">
           ${u.name}
         </li>
       `).join("");
-      // 更新在線人數
-      userCount.textContent = Object.keys(users).length;
+      userCount.textContent = users.length;
     });
   </script>
   <style>
@@ -132,7 +153,7 @@
     <button id="login-btn">登入 Google</button>
     <button id="logout-btn">登出</button>
   </div>
-  
+
   <!-- 右上角顯示線上人數與名單 -->
   <div id="online-users">
     <p>在線人數: <span id="user-count">0</span></p>
