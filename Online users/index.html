@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>線上用戶追蹤 - Firestore</title>
+  <title>線上用戶追蹤 - Firestore 版</title>
   <!-- 使用 Firebase v9 模組化 API -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-analytics.js";
     import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
-    import { getFirestore, doc, setDoc, deleteDoc, collection, query, onSnapshot } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, deleteDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
     // Firebase 設定（請依你專案內容更新）
     const firebaseConfig = {
@@ -27,53 +27,38 @@
     const analytics = getAnalytics(app);
     const auth = getAuth(app);
     const db = getFirestore(app);
-
-    // HTML 元素
-    const loginBtn = document.getElementById("login-btn");
-    const logoutBtn = document.getElementById("logout-btn");
+    
+    // HTML 元素：分為登入提示與內容區
+    const loginPrompt = document.getElementById("login-prompt");
+    const contentArea = document.getElementById("content-area");
     const userList = document.getElementById("user-list");
     const userCount = document.getElementById("user-count");
 
     // 建立 Google 登入提供者
     const provider = new GoogleAuthProvider();
 
-    // 登入按鈕事件
-    loginBtn.addEventListener("click", () => {
+    // 當未登入時，顯示提示，點擊提示進行登入
+    loginPrompt.addEventListener("click", () => {
       signInWithPopup(auth, provider)
         .then((result) => {
           console.log("登入成功", result.user);
-          // 登入後 onAuthStateChanged 會處理將用戶資料加入 Firestore
         })
         .catch((error) => {
           console.error("登入失敗", error);
         });
     });
 
-    // 登出按鈕事件
-    logoutBtn.addEventListener("click", () => {
-      if (auth.currentUser) {
-        const userId = auth.currentUser.uid;
-        // 登出前從 Firestore 中刪除用戶文件
-        deleteDoc(doc(db, "onlineUsers", userId))
-          .then(() => {
-            return signOut(auth);
-          })
-          .then(() => {
-            console.log("已登出");
-          })
-          .catch((error) => {
-            console.error("登出失敗", error);
-          });
-      } else {
-        signOut(auth).catch(console.error);
-      }
-    });
-
-    // 當驗證狀態改變時，若有使用者登入，將其資料加入 Firestore 的 onlineUsers 集合中
+    // 當使用者驗證狀態改變時
+    let currentUserId = null;
     onAuthStateChanged(auth, (user) => {
       if (user) {
-        const userRef = doc(db, "onlineUsers", user.uid);
-        setDoc(userRef, {
+        currentUserId = user.uid;
+        // 隱藏登入提示，顯示內容區
+        loginPrompt.style.display = "none";
+        contentArea.style.display = "block";
+        // 將使用者資料加入 Firestore 的 onlineUsers 集合
+        const userDocRef = doc(db, "onlineUsers", user.uid);
+        setDoc(userDocRef, {
           name: user.displayName,
           email: user.email,
           photoURL: user.photoURL,
@@ -81,14 +66,18 @@
         }).catch((error) => {
           console.error("設定用戶資料失敗", error);
         });
+      } else {
+        // 使用者登出，清空 currentUserId 並顯示登入提示
+        currentUserId = null;
+        loginPrompt.style.display = "block";
+        contentArea.style.display = "none";
       }
     });
 
-    // 當使用者關閉頁面時，嘗試從 Firestore 中刪除用戶文件
+    // 當使用者關閉頁面時，嘗試刪除用戶文件
     window.addEventListener("beforeunload", () => {
       if (auth.currentUser) {
-        const userId = auth.currentUser.uid;
-        deleteDoc(doc(db, "onlineUsers", userId))
+        deleteDoc(doc(db, "onlineUsers", auth.currentUser.uid))
           .catch((error) => {
             console.error("頁面關閉時刪除用戶資料失敗", error);
           });
@@ -97,22 +86,71 @@
 
     // 監聽 onlineUsers 集合的變化，更新線上用戶列表與人數
     const onlineUsersRef = collection(db, "onlineUsers");
-    const q = query(onlineUsersRef);
-    onSnapshot(q, (snapshot) => {
+    onSnapshot(onlineUsersRef, (snapshot) => {
       const users = [];
-      snapshot.forEach((doc) => {
-        users.push(doc.data());
+      snapshot.forEach((docSnap) => {
+        users.push(docSnap.data());
       });
-      userList.innerHTML = users.map(u => `
-        <li>
+      // 若有使用者本人，將本人資料移到第一個位置
+      let currentUserData = null;
+      const otherUsers = [];
+      users.forEach((userData) => {
+        if (userData.email === auth.currentUser?.email) {
+          currentUserData = userData;
+        } else {
+          otherUsers.push(userData);
+        }
+      });
+      // 排序：本人放第一筆，其它依原本順序排列
+      const sortedUsers = currentUserData ? [currentUserData, ...otherUsers] : users;
+      // 更新名單與人數
+      userList.innerHTML = sortedUsers.map((u, index) => `
+        <li class="${index === 0 ? "current-user" : ""}">
           <img src="${u.photoURL}" alt="${u.name}" class="user-avatar">
           ${u.name}
         </li>
       `).join("");
-      userCount.textContent = users.length;
+      userCount.textContent = sortedUsers.length;
+
+      // 為本人頭像加上登出事件（預設顯示的第一筆）
+      const currentUserElem = document.querySelector(".current-user");
+      if (currentUserElem) {
+        currentUserElem.style.cursor = "pointer";
+        currentUserElem.onclick = () => {
+          // 登出前先從 Firestore 刪除本人文件
+          deleteDoc(doc(db, "onlineUsers", currentUserId))
+            .then(() => {
+              return signOut(auth);
+            })
+            .then(() => {
+              console.log("已登出");
+            })
+            .catch((error) => {
+              console.error("登出失敗", error);
+            });
+        };
+      }
     });
   </script>
   <style>
+    /* 登入提示 */
+    #login-prompt {
+      display: block;
+      margin: 50px auto;
+      width: 80%;
+      max-width: 400px;
+      padding: 20px;
+      background: #eee;
+      text-align: center;
+      border-radius: 5px;
+      cursor: pointer;
+      font-family: Arial, sans-serif;
+      font-size: 16px;
+    }
+    /* 內容區：僅在登入後顯示 */
+    #content-area {
+      display: none;
+    }
     /* 右上角線上用戶顯示區 */
     #online-users {
       position: fixed;
@@ -142,22 +180,25 @@
       border-radius: 50%;
       margin-right: 5px;
     }
-    /* 登入與登出按鈕 */
-    #controls {
-      margin: 20px;
-    }
   </style>
 </head>
 <body>
-  <div id="controls">
-    <button id="login-btn">登入 Google</button>
-    <button id="logout-btn">登出</button>
+  <!-- 登入提示區 -->
+  <div id="login-prompt">
+    請點擊此處以使用 Google 帳號登入，登入後將顯示網頁內容
   </div>
 
-  <!-- 右上角顯示線上人數與名單 -->
-  <div id="online-users">
-    <p>在線人數: <span id="user-count">0</span></p>
-    <ul id="user-list"></ul>
+  <!-- 內容區（登入後顯示） -->
+  <div id="content-area">
+    <div id="online-users">
+      <p>在線人數: <span id="user-count">0</span></p>
+      <ul id="user-list"></ul>
+    </div>
+    <!-- 此處可加入其他網頁內容 -->
+    <div style="margin: 20px; font-family: Arial, sans-serif;">
+      <h1>歡迎使用本網站！</h1>
+      <p>這裡是一些只有登入後才能看到的內容。</p>
+    </div>
   </div>
 </body>
 </html>
