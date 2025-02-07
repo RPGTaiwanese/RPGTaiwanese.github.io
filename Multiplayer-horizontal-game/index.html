@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+      background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+      margin: 0;
+      padding: 0;
+    }
+    /* Modal 覆蓋層 */
+    .modal-overlay {
+      background-color: rgba(0, 0, 0, 0.5);
+    }
+    /* 固定聊天室按鈕 */
+    .chat-toggle {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 50;
+    }
+  </style>
+</head>
+<body>
+  <!-- 固定聊天室開啟按鈕 -->
+  <div class="chat-toggle">
+    <button id="open-chat" class="px-4 py-2 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 focus:outline-none">
+      聊天室
+    </button>
+  </div>
+
+  <!-- 聊天室 Modal -->
+  <div id="chat-modal" class="fixed inset-0 flex items-center justify-center hidden z-40">
+    <!-- Modal 覆蓋層 -->
+    <div class="modal-overlay absolute inset-0"></div>
+    <!-- Modal 內容 -->
+    <div class="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 p-6 z-50">
+      <!-- 關閉按鈕 -->
+      <button id="close-chat" class="absolute top-3 right-3 text-gray-500 hover:text-gray-700 focus:outline-none">
+        ✕
+      </button>
+
+      <!-- 登入區塊 -->
+      <div id="login-container" class="text-center">
+        <h1 class="text-2xl font-bold mb-4 text-gray-800">歡迎來到聊天室</h1>
+        <button id="google-signin" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 focus:outline-none">
+          使用 Google 登入
+        </button>
+      </div>
+
+      <!-- 聊天室區塊 -->
+      <div id="chat-container" class="hidden">
+        <button id="signout" class="absolute top-3 left-3 px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 focus:outline-none">登出</button>
+        <h1 class="text-2xl font-bold mb-4 text-gray-800 text-center">聊天室</h1>
+        <div id="messages" class="h-72 overflow-y-auto border border-gray-300 p-4 bg-gray-50 rounded mb-4"></div>
+        <form id="message-form" class="flex gap-2">
+          <input type="text" id="message-input" placeholder="請輸入訊息..." required class="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500">
+          <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none">送出</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDt9mJRH-BHlEksl4xla32sVIUGVnLUxWY",
+      authDomain: "future-infusion-368721.firebaseapp.com",
+      projectId: "future-infusion-368721",
+      storageBucket: "future-infusion-368721.appspot.com",
+      messagingSenderId: "345445420847",
+      appId: "1:345445420847:web:070778c173ec6157c6dbda",
+      measurementId: "G-57PJMMNNWW"
+    };
+
+    // 初始化 Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+
+    // 取得 DOM 元素
+    const loginContainer = document.getElementById("login-container");
+    const chatContainer = document.getElementById("chat-container");
+    const googleSignInButton = document.getElementById("google-signin");
+    const signOutButton = document.getElementById("signout");
+    const messagesDiv = document.getElementById("messages");
+    const messageForm = document.getElementById("message-form");
+    const openChatButton = document.getElementById("open-chat");
+    const closeChatButton = document.getElementById("close-chat");
+    const chatModal = document.getElementById("chat-modal");
+
+    // 開啟聊天室 Modal
+    openChatButton.addEventListener("click", () => {
+      chatModal.classList.remove("hidden");
+    });
+
+    // 關閉聊天室 Modal
+    closeChatButton.addEventListener("click", () => {
+      chatModal.classList.add("hidden");
+    });
+
+    // Google 登入
+    googleSignInButton.addEventListener("click", async () => {
+      try {
+        await signInWithPopup(auth, provider);
+      } catch (error) {
+        console.error("Google 登入失敗:", error);
+      }
+    });
+
+    // 登出
+    signOutButton.addEventListener("click", async () => {
+      try {
+        await signOut(auth);
+      } catch (error) {
+        console.error("登出失敗:", error);
+      }
+    });
+
+    // 認證狀態改變
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // 已登入：隱藏登入區塊，顯示聊天室內容
+        loginContainer.classList.add("hidden");
+        chatContainer.classList.remove("hidden");
+      } else {
+        // 未登入：顯示登入區塊，隱藏聊天室內容
+        loginContainer.classList.remove("hidden");
+        chatContainer.classList.add("hidden");
+      }
+    });
+
+    // 取得訊息集合
+    const messagesRef = collection(db, "messages");
+    const q = query(messagesRef, orderBy("timestamp"));
+
+    // 監聽訊息變更
+    onSnapshot(q, (querySnapshot) => {
+      messagesDiv.innerHTML = "";
+      querySnapshot.forEach((doc) => {
+        const message = doc.data();
+        const messageDiv = document.createElement("div");
+        messageDiv.classList.add("message", "mb-3", "p-2", "bg-white", "rounded", "shadow-sm");
+
+        let date = message.timestamp?.toDate ? message.timestamp.toDate() : new Date();
+        const timeString = date.toLocaleTimeString();
+
+        messageDiv.innerHTML = `<span class="font-bold text-gray-700">${message.userName || "匿名"}</span> [${timeString}]: ${message.text}`;
+        messagesDiv.appendChild(messageDiv);
+      });
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    });
+
+    // 發送訊息
+    messageForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const input = document.getElementById("message-input");
+      const text = input.value.trim();
+      if (text) {
+        try {
+          await addDoc(messagesRef, {
+            text: text,
+            userId: auth.currentUser?.uid || "匿名",
+            userName: auth.currentUser?.displayName || "匿名",
+            timestamp: serverTimestamp()
+          });
+          input.value = "";
+        } catch (error) {
+          console.error("發送訊息失敗:", error);
+        }
+      }
+    });
+  </script>
+</body>
+</html>
+
+
+<html>
+<head>
+  <title>Multiplayer Platform Game</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      position: fixed;
+    }
+    
+    canvas {
+      touch-action: none;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+
+    #loginPrompt {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.8);
+      padding: 20px;
+      border-radius: 10px;
+      color: white;
+      text-align: center;
+      display: none;
+    }
+
+    .button {
+      background: #4a90e2;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-top: 10px;
+    }
+
+    .button:hover {
+      background: #357abd;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+  <div id="loginPrompt">
+    <h2>Welcome to Multiplayer Platform Game</h2>
+    <p>Join other players in this interactive platforming experience!</p>
+    <button class="button" onclick="window.location.reload()">Click to Play</button>
+  </div>
+
+  <script type="module">
+    import { Game } from './game.js';
+    
+    const canvas = document.getElementById('gameCanvas');
+    const game = new Game(canvas);
+    game.start();
+  </script>
+</body>
+</html>
+
