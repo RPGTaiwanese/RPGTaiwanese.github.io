@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>沒有通知我就自己通知自己</title>
+  <style>
+    body {
+      background-color: #1a1a1a;
+      color: #00ffcc;
+      font-family: 'Roboto', sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      flex-direction: column;
+      text-align: center;
+    }
+
+    .button {
+      background-color: #00ffcc;
+      color: #1a1a1a;
+      padding: 10px 20px;
+      font-size: 18px;
+      border: none;
+      cursor: pointer;
+      border-radius: 5px;
+      margin-top: 20px;
+    }
+
+    .header {
+      font-size: 32px;
+      margin-top: 20px;
+    }
+
+    .score {
+      font-size: 24px;
+      margin-top: 20px;
+    }
+
+    .game-container {
+      position: relative;
+      margin-top: 30px;
+      width: 80%;
+      max-width: 500px;
+      height: 300px;
+      background-color: #333;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #game-image {
+      max-width: 100%;
+      max-height: 100%;
+      cursor: pointer;
+      transition: transform 0.3s ease;
+    }
+
+    .effect {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 50px;
+      color: #ff4081;
+      animation: popEffect 0.5s forwards;
+    }
+
+    @keyframes popEffect {
+      0% {
+        transform: translate(-50%, -50%) scale(0);
+        opacity: 1;
+      }
+      100% {
+        transform: translate(-50%, -50%) scale(1.5);
+        opacity: 0;
+      }
+    }
+
+    .back-button {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background-color: #ff4081;
+      color: #fff;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .logout-button {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background-color: #ff4081;
+      color: #fff;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div id="login-section" style="display: none;">
+    <h1 class="header">場外大富翁</h1>
+    <p>請使用 Google 登入來開始遊戲</p>
+    <button id="google-login" class="button">使用 Google 登入</button>
+  </div>
+
+  <div id="game-section" style="display: none;">
+    <button class="back-button" onclick="window.location.href='https://rpgtaiwanese.github.io/RPG2/'">回到上一頁</button>
+    <h1 class="header">沒有通知我就自己通知自己</h1>
+
+    <div id="total-score" class="score">你的分數: 0</div>
+
+    <div class="game-container">
+      <img id="game-image" src="https://truth.bahamut.com.tw/s01/202502/a34e46e5ad5bca90428bc277293fb273.PNG" alt="Game Image" />
+    </div>
+
+    <button id="logout" class="logout-button">登出</button>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    // Firebase configuration
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js';
+    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js';
+    import { getFirestore, doc, getDoc, updateDoc } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js';
+
+    // Your web app's Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyDt9mJRH-BHlEksl4xla32sVIUGVnLUxWY",
+      authDomain: "future-infusion-368721.firebaseapp.com",
+      projectId: "future-infusion-368721",
+      storageBucket: "future-infusion-368721.firebasestorage.app",
+      messagingSenderId: "345445420847",
+      appId: "1:345445420847:web:070778c173ec6157c6dbda",
+      measurementId: "G-57PJMMNNWW"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // Google Login function
+    const googleLogin = () => {
+      const provider = new GoogleAuthProvider();
+      signInWithPopup(auth, provider)
+        .then((result) => {
+          const user = result.user;
+          document.getElementById('login-section').style.display = 'none';
+          document.getElementById('game-section').style.display = 'block';
+          loadUserData(user.uid);
+        })
+        .catch((error) => {
+          console.error(error.message);
+        });
+    };
+
+    // Load user data from Firestore
+    const loadUserData = (userId) => {
+      const userRef = doc(db, 'users', userId);
+      getDoc(userRef).then((docSnap) => {
+        if (docSnap.exists()) {
+          const userData = docSnap.data();
+          document.getElementById('total-score').textContent = `你的分數: ${userData.totalScore}`;
+        }
+      }).catch((error) => {
+        console.error('Error loading user data:', error);
+      });
+    };
+
+    // Update user score
+    const updateUserScore = (userId, newScore) => {
+      const userRef = doc(db, 'users', userId);
+      updateDoc(userRef, {
+        totalScore: newScore
+      }).catch((error) => {
+        console.error('Error updating user score:', error);
+      });
+    };
+
+    // Handle image click and effect
+    const handleImageClick = (userId) => {
+      const effectDiv = document.createElement('div');
+      effectDiv.classList.add('effect');
+      effectDiv.textContent = 'BAM!';
+      document.querySelector('.game-container').appendChild(effectDiv);
+
+      setTimeout(() => {
+        effectDiv.remove();  // Remove the effect after animation ends
+      }, 500);
+
+      // Increase score and update Firebase
+      const userRef = doc(db, 'users', userId);
+      getDoc(userRef).then((docSnap) => {
+        if (docSnap.exists()) {
+          const userData = docSnap.data();
+          const newScore = userData.totalScore + 1;
+          updateUserScore(userId, newScore);
+          document.getElementById('total-score').textContent = `你的分數: ${newScore}`;
+        }
+      });
+    };
+
+    // Logout function
+    const logout = () => {
+      signOut(auth).then(() => {
+        document.getElementById('game-section').style.display = 'none';
+        document.getElementById('login-section').style.display = 'block';
+      }).catch((error) => {
+        console.error(error.message);
+      });
+    };
+
+    // Listen for authentication state changes
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        document.getElementById('login-section').style.display = 'none';
+        document.getElementById('game-section').style.display = 'block';
+        loadUserData(user.uid);
+      } else {
+        // Redirect to login page if not logged in
+        window.location.href = "https://rpgtaiwanese.github.io/RPG/";
+      }
+    });
+
+    // Event listeners
+    document.getElementById('google-login').addEventListener('click', googleLogin);
+    document.getElementById('logout').addEventListener('click', logout);
+    document.getElementById('game-image').addEventListener('click', () => {
+      const user = auth.currentUser;
+      if (user) {
+        handleImageClick(user.uid);
+      }
+    });
+  </script>
+</body>
+</html>
