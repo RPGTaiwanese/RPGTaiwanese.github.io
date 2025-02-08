@@ -77,7 +77,7 @@
     form button:hover {
       background: #0cc;
     }
-    #login-container button, #signout {
+    #login-container button {
       padding: 12px 20px;
       background: #0ff;
       color: #000;
@@ -86,7 +86,7 @@
       cursor: pointer;
       transition: background 0.3s ease;
     }
-    #login-container button:hover, #signout:hover {
+    #login-container button:hover {
       background: #0cc;
     }
     /* 上一頁按鈕 */
@@ -121,7 +121,6 @@
 
   <!-- 聊天室區塊 -->
   <div id="chat-container" class="container" style="display: none; position: relative;">
-    <button id="signout" style="position: absolute; top: 20px; right: 20px;">登出</button>
     <h1>聊天室</h1>
     <div id="messages"></div>
     <form id="message-form">
@@ -133,7 +132,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
     import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
-    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDt9mJRH-BHlEksl4xla32sVIUGVnLUxWY",
@@ -153,7 +152,6 @@
     const loginContainer = document.getElementById("login-container");
     const chatContainer = document.getElementById("chat-container");
     const googleSignInButton = document.getElementById("google-signin");
-    const signOutButton = document.getElementById("signout");
     const messagesDiv = document.getElementById("messages");
     const messageForm = document.getElementById("message-form");
 
@@ -162,14 +160,6 @@
         await signInWithPopup(auth, provider);
       } catch (error) {
         console.error("Google 登入失敗:", error);
-      }
-    });
-
-    signOutButton.addEventListener("click", async () => {
-      try {
-        await signOut(auth);
-      } catch (error) {
-        console.error("登出失敗:", error);
       }
     });
 
