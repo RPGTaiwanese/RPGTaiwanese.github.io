@@ -244,9 +244,21 @@
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 <!-- Firebase SDK -->
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+  import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
   import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-analytics.js";
   import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 
@@ -261,12 +273,11 @@
     measurementId: "G-57PJMMNNWW"
   };
 
-  // 初始化 Firebase
-  const app = initializeApp(firebaseConfig);
+  // 只在 Firebase 尚未初始化時才初始化
+  const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
   const analytics = getAnalytics(app);
   const auth = getAuth(app);
 
-  // 當 DOM 加載後執行
   document.addEventListener("DOMContentLoaded", () => {
     let gameButtonContainer = document.getElementById("gameButtonContainer");
 
@@ -321,11 +332,4 @@
     color: #000;
   }
 </style>
-
-
-
-
-
-
-
 
