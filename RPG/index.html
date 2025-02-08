@@ -2,8 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <!-- 新增 COOP meta 標籤 -->
+  <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Future Infusion – Cyberpunk Game</title>
+  <!-- 加入 favicon（請確認 favicon.ico 存在或修改路徑） -->
+  <link rel="icon" href="favicon.ico" type="image/x-icon" />
   <!-- 引入 Google 字型，營造未來感 -->
   <link href="https://fonts.googleapis.com/css?family=Orbitron&display=swap" rel="stylesheet" />
   <style>
@@ -163,37 +167,43 @@
         // 使用者已登入，更新按鈕文字為 "Sign Out"
         authButton.textContent = "Sign Out";
 
-        // 指向 Firestore 中 users 集合下的使用者文件
-        const userDocRef = doc(db, "users", user.uid);
-        const docSnap = await getDoc(userDocRef);
+        try {
+          // 指向 Firestore 中 users 集合下的使用者文件
+          const userDocRef = doc(db, "users", user.uid);
+          const docSnap = await getDoc(userDocRef);
 
-        if (docSnap.exists()) {
-          // 若文件已存在，僅更新 lastLogin 時間戳
-          await updateDoc(userDocRef, {
-            lastLogin: serverTimestamp()
-          });
-        } else {
-          // 新使用者，創建初始文件
-          await setDoc(userDocRef, {
-            username: user.displayName || "Anonymous",
-            email: user.email,
-            avatarUrl: user.photoURL || "",
-            totalScore: 0,
-            createdAt: serverTimestamp(),
-            lastLogin: serverTimestamp(),
-            games: {
-              offFieldTycoon: {
-                highScore: 0,
-                plays: 0,
-                lastPlayed: null
-              },
-              neonRacer: {
-                highScore: 0,
-                plays: 0,
-                lastPlayed: null
+          if (docSnap.exists()) {
+            // 若文件已存在，僅更新 lastLogin 時間戳
+            await updateDoc(userDocRef, {
+              lastLogin: serverTimestamp()
+            });
+          } else {
+            // 新使用者，創建初始文件
+            await setDoc(userDocRef, {
+              username: user.displayName || "Anonymous",
+              email: user.email,
+              avatarUrl: user.photoURL || "",
+              totalScore: 0,
+              createdAt: serverTimestamp(),
+              lastLogin: serverTimestamp(),
+              games: {
+                offFieldTycoon: {
+                  highScore: 0,
+                  plays: 0,
+                  lastPlayed: null
+                },
+                neonRacer: {
+                  highScore: 0,
+                  plays: 0,
+                  lastPlayed: null
+                }
               }
-            }
-          });
+            });
+          }
+        } catch (error) {
+          console.error("Firestore 操作錯誤 (可能與安全規則有關)：", error);
+          // 提醒使用者檢查 Firebase 安全規則
+          alert("資料庫權限不足，請檢查 Firebase 安全規則！");
         }
       } else {
         // 使用者未登入，顯示 "Sign In"
@@ -205,14 +215,18 @@
     authButton.addEventListener("click", async () => {
       if (auth.currentUser) {
         // 已登入則登出
-        await signOut(auth);
+        try {
+          await signOut(auth);
+        } catch (error) {
+          console.error("登出失敗：", error);
+        }
       } else {
         // 否則使用 Google 登入
         const provider = new GoogleAuthProvider();
         try {
           await signInWithPopup(auth, provider);
         } catch (error) {
-          console.error("Error during sign in:", error);
+          console.error("登入失敗：", error);
         }
       }
     });
