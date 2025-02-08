@@ -1,14 +1,26 @@
+
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <!-- 新增 COOP meta 標籤 -->
   <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Future Infusion – Cyberpunk Game</title>
+  <!-- 加入 favicon（請確認 favicon.ico 存在或修改路徑） -->
   <link rel="icon" href="favicon.ico" type="image/x-icon" />
+  <!-- 引入 Google 字型，營造未來感 -->
   <link href="https://fonts.googleapis.com/css?family=Orbitron&display=swap" rel="stylesheet" />
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    /* 基本重置 */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    /* 賽博風格背景與文字 */
     body {
       font-family: 'Orbitron', sans-serif;
       background: #0f0f0f;
@@ -17,6 +29,7 @@
       position: relative;
       min-height: 100vh;
     }
+    /* 動態霓虹背景 */
     .neon-bg {
       position: fixed;
       top: 0;
@@ -34,6 +47,7 @@
       50% { background-position: 100% 50%; }
       100% { background-position: 0% 50%; }
     }
+    /* Header 樣式 */
     header {
       background: rgba(0, 0, 0, 0.8);
       padding: 20px;
@@ -66,88 +80,174 @@
       background: #0ff;
       color: #000;
     }
+    /* 主要內容區：使用 Flexbox 置中，並預留 Header 高度 */
     .content {
-      margin-top: 120px;
-      height: calc(100vh - 120px);
+      margin-top: 120px; /* 確保內容不被 Header 遮到 */
+      height: calc(100vh - 120px); /* 使用剩餘視窗高度 */
       display: flex;
       justify-content: center;
       align-items: center;
       padding: 20px;
     }
-    .game-button {
-      display: none;
-      background: #0ff;
-      color: #000;
-      border: none;
-      padding: 15px 30px;
-      font-size: 1.2em;
-      cursor: pointer;
-      text-transform: uppercase;
-      box-shadow: 0 0 10px #0ff;
-      margin-top: 20px;
+    /* 遊戲介紹區塊 */
+    .intro {
+      max-width: 800px;
+      padding: 20px;
+      border: 1px solid #0ff;
+      background: rgba(0, 0, 0, 0.7);
+      box-shadow: 0 0 20px #0ff;
+      border-radius: 10px;
     }
-    .game-button:hover {
-      background: #fff;
-      color: #000;
+    .neon-text {
+      color: #0ff;
+      text-shadow: 0 0 5px #0ff, 0 0 10px #0ff, 0 0 20px #0ff;
     }
   </style>
 </head>
 <body>
+  <!-- 動態霓虹背景 -->
   <div class="neon-bg"></div>
+
+  <!-- 頂部固定 Header 與導覽按鈕 -->
   <header>
     <h1 class="neon-text">Future Infusion</h1>
     <nav>
       <button id="authButton">Sign In</button>
       <button id="introButton">Game Introduction</button>
-      <button id="startGameButton" class="game-button">Start Game</button>
     </nav>
   </header>
+
+  <!-- 主要內容區，內含遊戲介紹文字 -->
   <div class="content">
     <div class="intro" id="gameIntro" style="display: none;">
-      <h2 class="neon-text">遊戲背景故事</h2>
-      <p>這是一個充滿賽博未來感的世界，你將進入冒險之旅！</p>
+      <h2 class="neon-text">遊戲背景故事：場外大富翁</h2>
+      <p>
+        在不遠的未來，全球經濟因數位網路的無限延展而徹底重組。曾經穩定的金融市場崩解後，一座名為「新台灣 2077」的超現實賽博都市悄然崛起。這裡，霓虹閃爍的高樓大廈與古典日式建築交織，形成一個充滿矛盾卻又極具魅力的城市風景。<br /><br />
+        在這個世界中，現實與虛擬早已模糊不清——巨型企業、地下黑客、數位藝術家和街頭武士都在這片數據流洪流中追逐著屬於自己的傳奇。傳說中，虛擬世界的一處隱秘角落蘊藏著改變命運的「數位鑰匙」，而獲得它的人將擁有重塑這個賽博社會的力量。<br /><br />
+        玩家將扮演一位身懷絕技的網路流浪者，穿梭於由日式極簡美學與賽博未來感混搭而成的虛擬世界。為了成為真正的「場外大富翁」，你需要在各式各樣的小遊戲中挑戰自我，從霓虹閃爍的賭局、黑市密令到充滿謎團的數位對決中累積分數，爭奪排行榜上的頂尖位置。每一次遊戲對決，都像是在破解一段隱藏在光影背後的企業密碼，既充滿刺激又蘊含著改變命運的契機。
+      </p>
     </div>
   </div>
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-    import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 
+  <!-- Firebase SDK (ES Modules) -->
+  <script type="module">
+    // 引入 Firebase 所需的模組
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-analytics.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+  import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+
+  // Firebase 設定
+ 
+
+
+
+    // Firebase 設定
     const firebaseConfig = {
       apiKey: "AIzaSyDt9mJRH-BHlEksl4xla32sVIUGVnLUxWY",
       authDomain: "future-infusion-368721.firebaseapp.com",
       projectId: "future-infusion-368721",
       storageBucket: "future-infusion-368721.firebasestorage.app",
       messagingSenderId: "345445420847",
-      appId: "1:345445420847:web:070778c173ec6157c6dbda"
+      appId: "1:345445420847:web:070778c173ec6157c6dbda",
+      measurementId: "G-57PJMMNNWW"
     };
 
+
+
+
+
+
+
+    // 初始化 Firebase
     const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
     const auth = getAuth(app);
+    const db = getFirestore(app);
 
+    // 取得 DOM 元素
     const authButton = document.getElementById("authButton");
-    const startGameButton = document.getElementById("startGameButton");
+    const introButton = document.getElementById("introButton");
+    const gameIntro = document.getElementById("gameIntro");
 
-    onAuthStateChanged(auth, (user) => {
+    // 切換「遊戲介紹」區塊的顯示
+    introButton.addEventListener("click", () => {
+      gameIntro.style.display = gameIntro.style.display === "none" || gameIntro.style.display === "" ? "block" : "none";
+    });
+
+    // 監控登入狀態變化
+    onAuthStateChanged(auth, async (user) => {
       if (user) {
+        // 使用者已登入，更新按鈕文字為 "Sign Out"
         authButton.textContent = "Sign Out";
-        startGameButton.style.display = "block";
+
+        try {
+          // 指向 Firestore 中 users 集合下的使用者文件
+          const userDocRef = doc(db, "users", user.uid);
+          const docSnap = await getDoc(userDocRef);
+
+          if (docSnap.exists()) {
+            // 若文件已存在，僅更新 lastLogin 時間戳
+            await updateDoc(userDocRef, {
+              lastLogin: serverTimestamp()
+            });
+          } else {
+            // 新使用者，創建初始文件
+            await setDoc(userDocRef, {
+              username: user.displayName || "Anonymous",
+              email: user.email,
+              avatarUrl: user.photoURL || "",
+              totalScore: 0,
+              createdAt: serverTimestamp(),
+              lastLogin: serverTimestamp(),
+              games: {
+                offFieldTycoon: {
+                  highScore: 0,
+                  plays: 0,
+                  lastPlayed: null
+                },
+                neonRacer: {
+                  highScore: 0,
+                  plays: 0,
+                  lastPlayed: null
+                }
+              }
+            });
+          }
+        } catch (error) {
+          console.error("Firestore 操作錯誤 (可能與安全規則有關)：", error);
+          // 提醒使用者檢查 Firebase 安全規則
+          alert("資料庫權限不足，請檢查 Firebase 安全規則！");
+        }
       } else {
+        // 使用者未登入，顯示 "Sign In"
         authButton.textContent = "Sign In";
-        startGameButton.style.display = "none";
       }
     });
 
+    // 處理登入/登出按鈕點擊事件
     authButton.addEventListener("click", async () => {
       if (auth.currentUser) {
-        await signOut(auth);
+        // 已登入則登出
+        try {
+          await signOut(auth);
+        } catch (error) {
+          console.error("登出失敗：", error);
+        }
       } else {
+        // 否則使用 Google 登入
         const provider = new GoogleAuthProvider();
-        await signInWithPopup(auth, provider);
+        try {
+          await signInWithPopup(auth, provider);
+        } catch (error) {
+          console.error("登入失敗：", error);
+        }
       }
-    });
-
-    startGameButton.addEventListener("click", () => {
-      window.location.href = "https://rpgtaiwanese.github.io/RPG2";
     });
   </script>
 </body>
