@@ -1,0 +1,42 @@
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>場外大富翁劇情第一章</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="header">
+    <button onclick="goBack()">回到上一頁</button>
+  </div>
+
+  <div class="game-container">
+    <h1>場外大富翁劇情第一章</h1>
+    <div id="story-text">
+      <p>故事開始時，我的眼前浮現的是一片無邊無際的霓虹，城市的街道彷彿一條條數位血脈，在夜幕中脈動。這是「新台灣 2077」——一個充滿著無限可能與危險的地方。我穿行於這片賽博都市，身為一名被遺忘的網路流浪者，生活充滿了未知與挑戰。</p>
+      <p>這座城市不僅僅是由數位與現實交織而成，它的每一個角落都藏著秘密，藏著能夠改變命運的力量。傳說中，某個隱秘的數位空間，藏有一個「數位通知」，那是一個能夠重塑人生的契機。而我，正是為了這個目標而不斷穿梭，挑戰這些隱藏於虛擬世界中的遊戲。</p>
+      <p>我並不是普通的玩家。我擁有一種能力——每當我失敗，無論多麼深陷困境，我都能重來。這份力量曾讓我無數次地逃脫死亡，讓我有機會改寫自己的命運。然而，這不僅僅是重來那麼簡單，每一次的重生，對我而言，都是一場新的冒險，但也是一場全新的賭局。</p>
+      <p>這次的遊戲開始得很簡單：我只需進入一個名為「霓虹賭局」的小遊戲，就能繼續前進。然而，事情並不如預期那麼簡單。我來到遊戲的入口，卻發現四周的光線開始扭曲，這並不是我想象中的賭局，而是一個需要我做出選擇的時刻。這是一場重來的遊戲，接下來的每個選擇，都將決定我的命運。</p>
+      <p>在我眼前，突然浮現了三個選項：</p>
+      <p><strong>進入賭局：</strong> 如果我選擇進入這場賭局，將會有機會獲得更高的積分和更多的機會，然而，這場賭局的風險也非常高，可能讓我失去一切。</p>
+      <p><strong>離開並尋找「數位通知」：</strong> 這是一條更加隱秘的道路，充滿未知的挑戰。我將不再依賴賭局，而是踏上尋找改變命運的「數位通知」的旅程，但這條路的難度遠高於任何賭局。</p>
+      <p><strong>與地下黑客聯手：</strong> 我知道，這條道路充滿了危險。地下黑客的世界，不是簡單的地方。即使他們能提供有用的資源，但這也可能讓我陷入他們的陰謀之中，最終成為他們的棋子。</p>
+    </div>
+
+    <div class="choices">
+      <button onclick="makeChoice('gamble')">進入賭局</button>
+      <button onclick="makeChoice('search')">離開並尋找「數位通知」</button>
+      <button onclick="makeChoice('hack')">與地下駭客聯手</button>
+    </div>
+
+    <p id="notification-count">數位通知: 0</p>
+  </div>
+
+  <!-- Use the Firebase compat libraries so that the legacy namespaced API works correctly -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
