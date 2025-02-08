@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>新台灣 2077 - 場外大富翁</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: #1b1b1b;
+      color: #fff;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      text-align: center;
+    }
+
+    .game-container {
+      background-color: #222;
+      border-radius: 10px;
+      padding: 30px;
+      max-width: 500px;
+      width: 100%;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 20px;
+    }
+
+    p {
+      font-size: 1.2rem;
+      margin-bottom: 20px;
+    }
+
+    button {
+      padding: 10px 20px;
+      background-color: #007bff;
+      border: none;
+      border-radius: 5px;
+      color: #fff;
+      font-size: 1rem;
+      margin: 10px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    #score {
+      font-size: 1.5rem;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="game-container">
+    <h1>新台灣 2077 - 場外大富翁</h1>
+    <p id="story-text">你站在新台灣 2077 的繁華街頭，周圍是滿眼的霓虹燈與不斷滾動的數位廣告...</p>
+    <div id="options-container">
+      <button onclick="chooseOption(1)">進入賭場挑戰數字迷宮</button>
+      <button onclick="chooseOption(2)">跟隨黑市商人</button>
+      <button onclick="chooseOption(3)">在街頭走動</button>
+    </div>
+    <div id="score">數位通知：5</div>
+  </div>
+
+  <script>
+    let score = 5;  // 玩家初始的數位通知
+
+    function updateScore() {
+      document.getElementById('score').textContent = `數位通知：${score}`;
+    }
+
+    function chooseOption(option) {
+      const storyText = document.getElementById('story-text');
+      const optionsContainer = document.getElementById('options-container');
+
+      // 清空現有選項
+      optionsContainer.innerHTML = '';
+
+      if (option === 1) {
+        // 進入賭場挑戰數字迷宮
+        storyText.textContent = "你推開賭場的門，進入了閃爍著光彩的賭場大廳。你必須破解數字迷宮才能得到數位通知，但失敗會讓你損失一些數位通知。";
+        score--;  // 進入賭場挑戰，扣除 1 個數位通知
+        updateScore();
+
+        // 添加新選項
+        const button1 = document.createElement('button');
+        button1.textContent = "挑戰數字迷宮";
+        button1.onclick = () => chooseOption(4);
+        optionsContainer.appendChild(button1);
+
+        const button2 = document.createElement('button');
+        button2.textContent = "退出賭場";
+        button2.onclick = () => chooseOption(5);
+        optionsContainer.appendChild(button2);
+      } else if (option === 2) {
+        // 跟隨黑市商人
+        storyText.textContent = "你跟隨黑市商人，商人告訴你有辦法讓你獲得更強的工具，但需要付出一些數位通知來交換。";
+        score--;  // 跟隨黑市商人，扣除 1 個數位通知
+        updateScore();
+
+        // 添加新選項
+        const button1 = document.createElement('button');
+        button1.textContent = "接受交易";
+        button1.onclick = () => chooseOption(6);
+        optionsContainer.appendChild(button1);
+
+        const button2 = document.createElement('button');
+        button2.textContent = "拒絕交易";
+        button2.onclick = () => chooseOption(7);
+        optionsContainer.appendChild(button2);
+      } else if (option === 3) {
+        // 在街頭走動
+        storyText.textContent = "你在街頭走動，偶然遇到了一個神秘流浪者，他給了你一些有用的提示，讓你獲得數位通知。";
+        score++;  // 獲得 1 個數位通知
+        updateScore();
+
+        // 添加新選項
+        const button1 = document.createElement('button');
+        button1.textContent = "繼續探索";
+        button1.onclick = () => chooseOption(8);
+        optionsContainer.appendChild(button1);
+      } else if (option === 4) {
+        // 挑戰數字迷宮
+        storyText.textContent = "你開始挑戰數字迷宮，必須解開一系列複雜的密碼。你成功了，獲得了數位通知！";
+        score++;  // 成功獲得數位通知
+        updateScore();
+
+        // 添加新選項
+        const button1 = document.createElement('button');
+        button1.textContent = "返回街頭";
+        button1.onclick = () => chooseOption(3);
+        optionsContainer.appendChild(button1);
+      } else if (option === 5) {
+        // 退出賭場
+        storyText.textContent = "你決定退出賭場，並尋找其他方法獲得數位通知。";
+        updateScore();
+
+        // 添加新選項
+        const button1 = document.createElement('button');
+        button1.textContent = "返回街頭";
+        button1.onclick = () => chooseOption(3);
+        optionsContainer.appendChild(button1);
+      } else if (option === 6) {
+        // 接受黑市商人的交易
+        storyText.textContent = "你接受了黑市商人的交易，獲得了強大的駭客工具，但你失去了部分數位通知。";
+        score--;  // 失去數位通知
+        updateScore();
+
+        // 添加新選項
+        const button1 = document.createElement('button');
+        button1.textContent = "繼續行動";
+        button1.onclick = () => chooseOption(3);
+        optionsContainer.appendChild(button1);
+      } else if (option === 7) {
+        // 拒絕黑市商人的交易
+        storyText.textContent = "你拒絕了黑市商人的交易，選擇繼續前行。";
+        updateScore();
+
+        // 添加新選項
+        const button1 = document.createElement('button');
+        button1.textContent = "繼續探索";
+        button1.onclick = () => chooseOption(8);
+        optionsContainer.appendChild(button1);
+      } else if (option === 8) {
+        // 繼續探索
+        storyText.textContent = "你繼續在街頭探索，並與更多的流浪者交談，發現了一些關於數位通知的線索。";
+        score++;  // 獲得數位通知
+        updateScore();
+
+        // 添加新選項
+        const button1 = document.createElement('button');
+        button1.textContent = "回到賭場";
+        button1.onclick = () => chooseOption(1);
+        optionsContainer.appendChild(button1);
+      }
+    }
+  </script>
+</body>
+</html>

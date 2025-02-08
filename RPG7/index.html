@@ -1,0 +1,224 @@
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>賽博龐克聊天室</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Cyberpunk 風格背景與動畫效果 */
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: url('https://truth.bahamut.com.tw/s01/202502/43a5c6e9d1ca597288ef339e23d31081.JPG') no-repeat center center fixed;
+      background-size: cover;
+      color: #e0e0e0;
+      overflow: hidden;
+    }
+    /* 整個頁面的容器，帶點賽博感的半透明背景 */
+    .container {
+      max-width: 600px;
+      margin: 80px auto;
+      background: rgba(10, 10, 10, 0.7);
+      border: 1px solid #0ff;
+      border-radius: 20px;
+      box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+      overflow: hidden;
+      padding: 20px;
+      backdrop-filter: blur(5px);
+    }
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 20px;
+      text-shadow: 0 0 5px #0ff;
+    }
+    #messages {
+      height: 300px;
+      overflow-y: auto;
+      border: 1px solid rgba(0,255,255,0.3);
+      padding: 15px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+    .message {
+      margin-bottom: 15px;
+      padding: 10px;
+      background: rgba(20, 20, 20, 0.5);
+      border-left: 3px solid #0ff;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+    }
+    .message span {
+      font-weight: bold;
+      color: #0ff;
+    }
+    form {
+      display: flex;
+      gap: 10px;
+    }
+    form input {
+      flex: 1;
+      padding: 12px;
+      border: 1px solid rgba(0,255,255,0.5);
+      border-radius: 10px;
+      background: rgba(0, 0, 0, 0.3);
+      color: #e0e0e0;
+    }
+    form button {
+      padding: 12px 20px;
+      background: #0ff;
+      color: #000;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    form button:hover {
+      background: #0cc;
+    }
+    #login-container button, #signout {
+      padding: 12px 20px;
+      background: #0ff;
+      color: #000;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    #login-container button:hover, #signout:hover {
+      background: #0cc;
+    }
+    /* 上一頁按鈕 */
+    #back-button {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      padding: 10px 15px;
+      background: rgba(0,255,255,0.8);
+      color: #000;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    #back-button:hover {
+      background: rgba(0,204,204,0.8);
+    }
+  </style>
+</head>
+<body>
+  <!-- 左上角上一頁按鈕 -->
+  <a id="back-button" href="https://rpgtaiwanese.github.io/RPG2/">上一頁</a>
+
+  <!-- 登入區塊 -->
+  <div id="login-container" class="container text-center">
+    <h1>歡迎來到賽博龐克聊天室</h1>
+    <button id="google-signin">使用 Google 登入</button>
+  </div>
+
+  <!-- 聊天室區塊 -->
+  <div id="chat-container" class="container" style="display: none; position: relative;">
+    <button id="signout" style="position: absolute; top: 20px; right: 20px;">登出</button>
+    <h1>聊天室</h1>
+    <div id="messages"></div>
+    <form id="message-form">
+      <input type="text" id="message-input" placeholder="請輸入訊息..." required>
+      <button type="submit">送出</button>
+    </form>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDt9mJRH-BHlEksl4xla32sVIUGVnLUxWY",
+      authDomain: "future-infusion-368721.firebaseapp.com",
+      projectId: "future-infusion-368721",
+      storageBucket: "future-infusion-368721.appspot.com",
+      messagingSenderId: "345445420847",
+      appId: "1:345445420847:web:070778c173ec6157c6dbda",
+      measurementId: "G-57PJMMNNWW"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+
+    const loginContainer = document.getElementById("login-container");
+    const chatContainer = document.getElementById("chat-container");
+    const googleSignInButton = document.getElementById("google-signin");
+    const signOutButton = document.getElementById("signout");
+    const messagesDiv = document.getElementById("messages");
+    const messageForm = document.getElementById("message-form");
+
+    googleSignInButton.addEventListener("click", async () => {
+      try {
+        await signInWithPopup(auth, provider);
+      } catch (error) {
+        console.error("Google 登入失敗:", error);
+      }
+    });
+
+    signOutButton.addEventListener("click", async () => {
+      try {
+        await signOut(auth);
+      } catch (error) {
+        console.error("登出失敗:", error);
+      }
+    });
+
+    // 監控 Firebase 登入狀態：如果未登入則直接跳轉到指定網址
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        window.location.href = "https://rpgtaiwanese.github.io/RPG/";
+      } else {
+        loginContainer.style.display = "none";
+        chatContainer.style.display = "block";
+      }
+    });
+
+    const messagesRef = collection(db, "messages");
+    const q = query(messagesRef, orderBy("timestamp"));
+
+    onSnapshot(q, (querySnapshot) => {
+      messagesDiv.innerHTML = "";
+      querySnapshot.forEach((doc) => {
+        const message = doc.data();
+        const messageDiv = document.createElement("div");
+        messageDiv.classList.add("message");
+
+        let date = message.timestamp?.toDate ? message.timestamp.toDate() : new Date();
+        const timeString = date.toLocaleTimeString();
+        messageDiv.innerHTML = `<span>${message.userName || "匿名"}</span> [${timeString}]: ${message.text}`;
+        messagesDiv.appendChild(messageDiv);
+      });
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    });
+
+    messageForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const input = document.getElementById("message-input");
+      const text = input.value.trim();
+      if (text) {
+        try {
+          await addDoc(messagesRef, {
+            text: text,
+            userId: auth.currentUser?.uid || "匿名",
+            userName: auth.currentUser?.displayName || "匿名",
+            timestamp: serverTimestamp()
+          });
+          input.value = "";
+        } catch (error) {
+          console.error("發送訊息失敗:", error);
+        }
+      }
+    });
+  </script>
+</body>
+</html>
