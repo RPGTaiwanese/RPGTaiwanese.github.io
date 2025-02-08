@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>場外大富翁 - 排行榜</title>
+  <style>
+    /* 設定背景為賽博龐克風格 */
+    body {
+      background-color: #1a1a1a;
+      color: #00ffcc;
+      font-family: 'Roboto', sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      flex-direction: column;
+      text-align: center;
+    }
+    .button {
+      background-color: #00ffcc;
+      color: #1a1a1a;
+      padding: 10px 20px;
+      font-size: 18px;
+      border: none;
+      cursor: pointer;
+      border-radius: 5px;
+      margin-top: 20px;
+    }
+    .header {
+      font-size: 32px;
+      margin-top: 50px;
+    }
+    .profile-info {
+      margin-top: 20px;
+      font-size: 18px;
+    }
+    #leaderboard {
+      margin-top: 30px;
+      width: 100%;
+      max-width: 600px;
+      overflow-y: scroll;
+      height: 300px;
+      border: 2px solid #00ffcc;
+      border-radius: 5px;
+      padding: 10px;
+      background-color: #333;
+    }
+    .rank-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px;
+      border-bottom: 1px solid #555;
+    }
+    .rank-item:last-child {
+      border-bottom: none;
+    }
+    .rank-item .username {
+      color: #00ffcc;
+    }
+    .rank-item .score {
+      color: white;
+    }
+    .user-rank {
+      margin-top: 20px;
+      font-size: 20px;
+      font-weight: bold;
+      color: #00ffcc;
+    }
+  </style>
+</head>
+<body>
+  <div id="login-section" style="display: none;">
+    <h1 class="header">場外大富翁</h1>
+    <p>請使用 Google 登入來查看排行榜</p>
+    <button id="google-login" class="button">使用 Google 登入</button>
+  </div>
+
+  <div id="leaderboard-section" style="display: none;">
+    <button class="button" onclick="window.location.href='https://rpgtaiwanese.github.io/RPG2/'">回到上一頁</button>
+    <h1 class="header">排行榜</h1>
+
+    <div id="user-rank" class="user-rank">你的排名: 正在載入...</div>
+
+    <div id="leaderboard"></div>
+
+    <button id="logout" class="button">登出</button>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    // Firebase configuration
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js';
+    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js';
+    import { getFirestore, collection, query, orderBy, getDocs } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js';
+
+    // Your web app's Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyDt9mJRH-BHlEksl4xla32sVIUGVnLUxWY",
+      authDomain: "future-infusion-368721.firebaseapp.com",
+      projectId: "future-infusion-368721",
+      storageBucket: "future-infusion-368721.firebasestorage.app",
+      messagingSenderId: "345445420847",
+      appId: "1:345445420847:web:070778c173ec6157c6dbda",
+      measurementId: "G-57PJMMNNWW"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // Google Login function
+    const googleLogin = () => {
+      const provider = new GoogleAuthProvider();
+      signInWithPopup(auth, provider)
+        .then((result) => {
+          const user = result.user;
+          document.getElementById('login-section').style.display = 'none';
+          document.getElementById('leaderboard-section').style.display = 'block';
+          loadLeaderboard(user.uid);
+        })
+        .catch((error) => {
+          console.error(error.message);
+        });
+    };
+
+    // Load leaderboard from Firestore
+    const loadLeaderboard = (currentUserId) => {
+      const leaderboardRef = collection(db, 'users');
+      const leaderboardQuery = query(leaderboardRef, orderBy('totalScore', 'desc'));
+
+      getDocs(leaderboardQuery).then((querySnapshot) => {
+        let rank = 1;
+        let currentUserRank = null;
+        let leaderboardHTML = '';
+
+        querySnapshot.forEach((doc) => {
+          const userData = doc.data();
+          const userId = doc.id;
+
+          leaderboardHTML += `
+            <div class="rank-item">
+              <span class="username">${userData.username}</span>
+              <span class="score">${userData.totalScore}</span>
+            </div>
+          `;
+
+          if (userId === currentUserId && currentUserRank === null) {
+            currentUserRank = rank;  // Find user's rank
+          }
+
+          rank++;
+        });
+
+        document.getElementById('leaderboard').innerHTML = leaderboardHTML;
+
+        if (currentUserRank !== null) {
+          document.getElementById('user-rank').textContent = `你的排名: 第${currentUserRank}名`;
+        } else {
+          document.getElementById('user-rank').textContent = `你的排名: 無`;
+        }
+      }).catch((error) => {
+        console.error('Error getting documents:', error);
+      });
+    };
+
+    // Logout function
+    const logout = () => {
+      signOut(auth).then(() => {
+        document.getElementById('leaderboard-section').style.display = 'none';
+        document.getElementById('login-section').style.display = 'block';
+      }).catch((error) => {
+        console.error(error.message);
+      });
+    };
+
+    // Listen for authentication state changes
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        document.getElementById('login-section').style.display = 'none';
+        document.getElementById('leaderboard-section').style.display = 'block';
+        loadLeaderboard(user.uid);
+      } else {
+        // Redirect to another page if not logged in
+        window.location.href = "https://rpgtaiwanese.github.io/RPG/";
+      }
+    });
+
+    // Event listeners
+    document.getElementById('google-login').addEventListener('click', googleLogin);
+    document.getElementById('logout').addEventListener('click', logout);
+  </script>
+</body>
+</html>
