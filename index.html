@@ -9,7 +9,7 @@
   <!-- Google Adsense -->
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1928880731403231"
        crossorigin="anonymous"></script>
-  <!-- 內嵌 CSS 調整行動裝置下的導覽選單 -->
+  <!-- 內嵌 CSS 調整行動裝置下的導覽選單與漢堡按鈕位置 -->
   <style>
     /* 基本設定 */
     header {
@@ -27,16 +27,16 @@
     }
     /* 行動裝置響應式設定 */
     @media (max-width: 768px) {
-      /* 顯示漢堡選單按鈕，並將位置下移 */
+      /* 顯示漢堡選單按鈕，並固定在左下角 */
       .menu-toggle {
         display: block;
         font-size: 24px;
         background: none;
         border: none;
         cursor: pointer;
-        position: absolute;
-        top: 40px; /* 調整後的數值，避免覆蓋圖標 */
-        right: 20px;
+        position: fixed;
+        bottom: 20px; 
+        left: 20px;
         z-index: 1000;
       }
       /* 隱藏原始導覽選單，改用漢堡展開 */
@@ -58,6 +58,10 @@
       /* 調整選單項目間距 */
       header nav ul li {
         margin: 10px 0;
+      }
+      /* 展開的選單文字顏色設為黑色 */
+      header nav ul li a {
+        color: #000;
       }
     }
   </style>
