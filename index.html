@@ -9,7 +9,7 @@
   <!-- Google Adsense -->
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1928880731403231"
        crossorigin="anonymous"></script>
-  <!-- 以下內嵌樣式用來處理行動裝置上的導覽選單響應式問題 -->
+  <!-- 內嵌 CSS 調整行動裝置下的導覽選單 -->
   <style>
     /* 基本設定 */
     header {
@@ -27,7 +27,7 @@
     }
     /* 行動裝置響應式設定 */
     @media (max-width: 768px) {
-      /* 顯示漢堡選單按鈕 */
+      /* 顯示漢堡選單按鈕，並將位置下移 */
       .menu-toggle {
         display: block;
         font-size: 24px;
@@ -35,7 +35,7 @@
         border: none;
         cursor: pointer;
         position: absolute;
-        top: 20px;
+        top: 40px; /* 調整後的數值，避免覆蓋圖標 */
         right: 20px;
         z-index: 1000;
       }
@@ -45,7 +45,7 @@
         flex-direction: column;
         background: #fff;
         position: absolute;
-        top: 60px; /* 根據 header 高度調整 */
+        top: 80px; /* 根據 header 高度調整 */
         right: 0;
         width: 200px;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -106,7 +106,8 @@
     <section id="works-list" class="section">
       <div class="container">
         <h2 data-i18n="worksSectionTitle">作品列表</h2>
-        <h3 data-i18n="onlineWorks">已上線作品</h3>
+        <!-- 修改標題：由「已上線作品」改為「目前工作室遊戲」 -->
+        <h3 data-i18n="onlineWorks">目前工作室遊戲</h3>
         <ul>
           <li data-i18n="worksOnlineItem1">場外大富翁</li>
           <li data-i18n="worksOnlineItem2">線上文字RPG網頁遊戲</li>
