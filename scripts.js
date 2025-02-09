@@ -65,7 +65,9 @@ const translations = {
     team1: "Naobao: The sole main operator of the studio.",
     team2: "Bobo: Occasionally helps out by providing opinions and technical support.",
     team3: "Mysterious Partner: Another helper whose identity is currently kept secret, but may be revealed in the future.",
-    worksSectionTitle: "Works List",
+
+
+
     onlineWorks: "Online Works",
     pastGameTitle: "Outdusk Tale (Past game)",
     pastGameDescription: "A real-time online battle game built with RPG Maker MV and Firebase",
