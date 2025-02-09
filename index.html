@@ -9,6 +9,58 @@
   <!-- Google Adsense -->
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1928880731403231"
        crossorigin="anonymous"></script>
+  <!-- 以下內嵌樣式用來處理行動裝置上的導覽選單響應式問題 -->
+  <style>
+    /* 基本設定 */
+    header {
+      position: relative;
+    }
+    header nav ul {
+      display: flex;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    /* 漢堡選單按鈕預設隱藏 */
+    .menu-toggle {
+      display: none;
+    }
+    /* 行動裝置響應式設定 */
+    @media (max-width: 768px) {
+      /* 顯示漢堡選單按鈕 */
+      .menu-toggle {
+        display: block;
+        font-size: 24px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        z-index: 1000;
+      }
+      /* 隱藏原始導覽選單，改用漢堡展開 */
+      header nav ul {
+        display: none;
+        flex-direction: column;
+        background: #fff;
+        position: absolute;
+        top: 60px; /* 根據 header 高度調整 */
+        right: 0;
+        width: 200px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        padding: 10px;
+      }
+      /* 當 nav 加上 active 類別時，顯示選單 */
+      header nav.active ul {
+        display: flex;
+      }
+      /* 調整選單項目間距 */
+      header nav ul li {
+        margin: 10px 0;
+      }
+    }
+  </style>
 </head>
 <body>
   <div id="particles-bg"></div>
@@ -21,6 +73,7 @@
           <circle cx="50" cy="50" r="40" stroke="#ff6b6b" stroke-width="5" fill="none"/>
         </svg>
       </h1>
+      <!-- 導覽選單 -->
       <nav>
         <ul>
           <li><a href="#welcome" data-i18n="navHome">首頁</a></li>
@@ -30,6 +83,8 @@
           <li><a href="#contact" data-i18n="navContact">聯絡我們</a></li>
         </ul>
       </nav>
+      <!-- 漢堡選單按鈕 (手機版) -->
+      <button class="menu-toggle" id="menuToggle">&#9776;</button>
       <div class="language-toggle">
         <button id="langToggle">EN</button>
       </div>
@@ -54,7 +109,7 @@
         <h3 data-i18n="onlineWorks">已上線作品</h3>
         <ul>
           <li data-i18n="worksOnlineItem1">場外大富翁</li>
-          <li data-i18n="worksOnlineItem2">場外物語</li>
+          <li data-i18n="worksOnlineItem2">線上文字RPG網頁遊戲</li>
         </ul>
         <div class="past-game">
           <h3 data-i18n="pastGameTitle">場外物語（過去製作的遊戲）</h3>
@@ -173,5 +228,12 @@
   <script src="https://cdn.jsdelivr.net/npm/tsparticles@2.11.1/tsparticles.min.js"></script>
   <!-- 主要腳本（若內含 React 元件，請確認使用開發版以便除錯） -->
   <script type="module" src="scripts.js"></script>
+  <!-- 漢堡選單切換腳本 -->
+  <script>
+    document.getElementById('menuToggle').addEventListener('click', function() {
+      var nav = document.querySelector('header nav');
+      nav.classList.toggle('active');
+    });
+  </script>
 </body>
 </html>
