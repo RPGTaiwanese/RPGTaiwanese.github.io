@@ -18,7 +18,6 @@ const translations = {
     team1: "鬧爆：目前工作室唯一的主要運作者。",
     team2: "波波：有時候會來幫忙，提供意見和技術支援。",
     team3: "神秘夥伴：另一位幫手，但目前暫時保密，未來或許會揭曉其身分。",
-    worksSectionTitle: "egin列表",
     onlineWorks: "已上線作品",
     pastGameTitle: "場外物語 (過去製作的遊戲)",
     pastGameDescription: "使用RPG Maker MV與Firebase 製作的即時連線戰鬥遊戲",
