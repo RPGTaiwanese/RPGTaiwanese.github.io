@@ -3,81 +3,111 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Firebase CDN Example</title>
+  <title>Firebase Chat Room</title>
   <style>
-    /* 添加一些基本的樣式來顯示登入狀態 */
-    #login-status {
-      margin-top: 20px;
-      font-size: 18px;
-    }
-    #chat-btn {
-      background-color: #007bff;
-      color: white;
-      padding: 15px;
-      border-radius: 50%;
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      cursor: pointer;
-    }
+    .chat-btn, .chat-window, .sticker-panel { position: fixed; z-index: 1000; }
+    .chat-btn { bottom: 20px; right: 20px; background: #007bff; color: white; padding: 15px; border-radius: 50%; cursor: pointer; }
+    .chat-window { bottom: 80px; right: 20px; width: 300px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: none; flex-direction: column; }
+    .chat-header, .chat-input-container { background: #007bff; color: white; padding: 10px; display: flex; justify-content: space-between; }
+    .chat-messages { flex: 1; padding: 10px; overflow-y: auto; background: #f1f1f1; }
+    .chat-input { flex: 1; padding: 10px; border: none; }
+    .sticker-panel { bottom: 50px; right: 0; width: 280px; background: white; border: 1px solid #ccc; display: none; flex-wrap: wrap; }
+    .sticker-panel img { width: 60px; height: 60px; margin: 5px; cursor: pointer; }
   </style>
 </head>
 <body>
-  <h1>Firebase CDN Example</h1>
-  <p>這是一個示範如何在 HTML 中正確引用 Firebase 模組的例子。</p>
+  <h1>Firebase Chat Room</h1>
+  
+  <!-- Chat Room UI Elements -->
+  <div class="chat-btn">Chat</div>
+  <div class="chat-window">
+    <div class="chat-header">
+      Chat Room 
+      <button id="close-btn">&times;</button>
+    </div>
+    <div class="chat-messages"></div>
+    <div class="chat-input-container">
+      <input class="chat-input" placeholder="Type your message..." disabled />
+      <button class="chat-send">Send</button>
+    </div>
+    <div class="sticker-panel"></div>
+  </div>
 
-  <!-- 顯示登入狀態 -->
-  <div id="login-status">尚未登入</div>
-
-  <!-- 添加一個簡單的聊天按鈕 -->
-  <div id="chat-btn">Chat</div>
-
-  <!-- 使用 type="module" 的內聯 script 來引用 Firebase CDN 模組 -->
+  <!-- 引用 Firebase JS 和你的 Chat Room Firebase JS File -->
   <script type="module">
-    // 從 Firebase CDN 載入各個模組 (請根據需要調整版本號)
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
     import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
 
-    // Firebase 設定 (請替換成你自己的設定)
-    const firebaseConfig = {
-      apiKey: "AIzaSyDt9mJRH-BHlEksl4xla32sVIUGVnLUxWY",
-      authDomain: "future-infusion-368721.firebaseapp.com",
-      databaseURL: "https://future-infusion-368721-default-rtdb.firebaseio.com",
-      projectId: "future-infusion-368721",
-      storageBucket: "future-infusion-368721.firebasestorage.app",
-      messagingSenderId: "345445420847",
-      appId: "1:345445420847:web:070778c173ec6157c6dbda",
-      measurementId: "G-57PJMMNNWW"
-    };
+    document.addEventListener("DOMContentLoaded", () => {
+      const firebaseConfig = {
+        apiKey: "AIzaSyDt9mJRH-BHlEksl4xla32sVIUGVnLUxWY",
+        authDomain: "future-infusion-368721.firebaseapp.com",
+        databaseURL: "https://future-infusion-368721-default-rtdb.firebaseio.com",
+        projectId: "future-infusion-368721",
+        storageBucket: "future-infusion-368721.firebasestorage.app",
+        messagingSenderId: "345445420847",
+        appId: "1:345445420847:web:070778c173ec6157c6dbda",
+        measurementId: "G-57PJMMNNWW"
+      };
 
-    // 初始化 Firebase
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const database = getDatabase(app);
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      const database = getDatabase(app);
 
-    console.log("Firebase 已成功初始化", app);
+      // 聊天窗口樣式
+      const styles = `
+        .chat-btn, .chat-window, .sticker-panel { position: fixed; z-index: 1000; }
+        .chat-btn { bottom: 20px; right: 20px; background: #007bff; color: white; padding: 15px; border-radius: 50%; cursor: pointer; }
+        .chat-window { bottom: 80px; right: 20px; width: 300px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: none; flex-direction: column; }
+        .chat-header, .chat-input-container { background: #007bff; color: white; padding: 10px; display: flex; justify-content: space-between; }
+        .chat-messages { flex: 1; padding: 10px; overflow-y: auto; background: #f1f1f1; }
+        .chat-input { flex: 1; padding: 10px; border: none; }
+        .sticker-panel { bottom: 50px; right: 0; width: 280px; background: white; border: 1px solid #ccc; display: none; flex-wrap: wrap; }
+        .sticker-panel img { width: 60px; height: 60px; margin: 5px; cursor: pointer; }
+      `;
+      
+      const styleTag = document.createElement("style");
+      styleTag.textContent = styles;
+      document.head.appendChild(styleTag);
 
-    // 監聽登入狀態變化並更新顯示
-    onAuthStateChanged(auth, (user) => {
-      const loginStatus = document.getElementById('login-status');
-      if (user) {
-        loginStatus.textContent = `登入成功：${user.displayName || user.email}`;
-        // 當用戶登入後，顯示聊天按鈕
-        document.getElementById('chat-btn').style.display = 'block';
-      } else {
-        loginStatus.textContent = '尚未登入';
-        // 當用戶未登入，隱藏聊天按鈕
-        document.getElementById('chat-btn').style.display = 'none';
-      }
+      const chatBtn = document.querySelector(".chat-btn");
+      const chatWindow = document.querySelector(".chat-window");
+      const closeBtn = document.getElementById("close-btn");
+      const inputField = document.querySelector(".chat-input");
+      const sendButton = document.querySelector(".chat-send");
+
+      // 顯示聊天窗口
+      chatBtn.addEventListener("click", () => chatWindow.style.display = "flex");
+      closeBtn.addEventListener("click", () => chatWindow.style.display = "none");
+
+      // Firebase 認證
+      onAuthStateChanged(auth, (user) => {
+        inputField.disabled = !user;
+        sendButton.disabled = !user;
+
+        if (user) {
+          console.log("User signed in: ", user.displayName || user.email);
+        } else {
+          console.log("User not signed in.");
+        }
+      });
+
+      // 發送訊息到 Firebase
+      sendButton.addEventListener("click", () => {
+        if (inputField.value.trim() !== "") {
+          push(ref(database, 'messages'), { text: inputField.value.trim(), timestamp: Date.now() });
+          inputField.value = "";
+        }
+      });
+
+      // 實時接收聊天訊息
+      onChildAdded(ref(database, 'messages'), (data) => {
+        const msg = document.createElement("div");
+        msg.textContent = data.val().text;
+        document.querySelector(".chat-messages").appendChild(msg);
+      });
     });
-
-    // 聊天按鈕邏輯
-    const chatBtn = document.getElementById("chat-btn");
-    chatBtn.addEventListener("click", () => {
-      alert("Chat functionality will be added here.");
-    });
-
   </script>
 </body>
 </html>
