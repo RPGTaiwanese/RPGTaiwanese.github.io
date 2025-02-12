@@ -21,13 +21,10 @@
  * Firebase 專案設定如下：
  */
  
-// Firebase SDK 模組匯入
 import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "firebase/auth";
 import { getDatabase, ref, push, onChildAdded } from "firebase/database";
 
-// Your Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyDt9mJRH-BHlEksl4xla32sVIUGVnLUxWY",
   authDomain: "future-infusion-368721.firebaseapp.com",
@@ -35,172 +32,64 @@ const firebaseConfig = {
   projectId: "future-infusion-368721",
   storageBucket: "future-infusion-368721.firebasestorage.app",
   messagingSenderId: "345445420847",
-  appId: "1:345445420847:web:070778c173ec6157c6dbda",
-  measurementId: "G-57PJMMNNWW"
+  appId: "1:345445420847:web:070778c173ec6157c6dbda"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
 const auth = getAuth(app);
 const database = getDatabase(app);
 
-// 全域變數：用來儲存聊天室訊息區參考與是否已註冊監聽器
-let messagesContainer = null;
-let messagesListenerAdded = false;
-
-/* ---------------------------
-   1. 建立並注入聊天室 CSS 樣式
---------------------------- */
-const style = document.createElement('style');
-style.textContent = `
-  #firebase-chat-container {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    z-index: 9999;
-    font-family: Arial, sans-serif;
-  }
-  #chat-toggle-btn {
-    width: 50px;
-    height: 50px;
-    background-color: #007bff;
-    border-radius: 50%;
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-  }
-  #chat-panel {
-    display: none;
-    width: 300px;
-    height: 400px;
-    background: white;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    position: relative;
-    margin-bottom: 10px;
-  }
-  #chat-panel.open {
-    display: block;
-  }
-  /* 聊天室標題列 */
-  #chat-header {
-    background: #007bff;
-    color: white;
-    padding: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    user-select: none;
-  }
-  #chat-header img {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    margin-right: 8px;
-  }
-  #chat-messages {
-    height: calc(100% - 100px);
-    overflow-y: auto;
-    padding: 10px;
-    background: #f9f9f9;
-  }
-  #chat-input {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    display: flex;
-    border-top: 1px solid #ccc;
-  }
-  #chat-input input {
-    flex: 1;
-    border: none;
-    padding: 10px;
-    outline: none;
-  }
-  #chat-input button {
-    border: none;
-    padding: 10px;
-    background: #007bff;
-    color: white;
-    cursor: pointer;
-  }
-  .chat-message {
-    margin-bottom: 10px;
-    display: flex;
-    align-items: center;
-  }
-  .chat-message img {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    margin-right: 5px;
-  }
-  .chat-message strong {
-    margin-right: 5px;
-  }
-`;
-document.head.appendChild(style);
-
-/* ---------------------------
-   2. 建立聊天室主要 HTML 元素
---------------------------- */
-// 建立最外層容器
 const chatContainer = document.createElement('div');
 chatContainer.id = "firebase-chat-container";
-
-// 建立浮動按鈕 (預設圖示為 💬)
-const chatToggleBtn = document.createElement('div');
-chatToggleBtn.id = "chat-toggle-btn";
-chatToggleBtn.innerHTML = "💬";
-
-// 建立聊天室面板 (初始隱藏)
-const chatPanel = document.createElement('div');
-chatPanel.id = "chat-panel";
-
-// 將按鈕與聊天室面板加入最外層容器，並附加到網頁中
-chatContainer.appendChild(chatPanel);
-chatContainer.appendChild(chatToggleBtn);
+chatContainer.style.position = "fixed";
+chatContainer.style.bottom = "20px";
+chatContainer.style.right = "20px";
+chatContainer.style.width = "300px";
+chatContainer.style.height = "400px";
+chatContainer.style.background = "white";
+chatContainer.style.border = "1px solid #ccc";
+chatContainer.style.borderRadius = "5px";
+chatContainer.style.boxShadow = "0 2px 10px rgba(0,0,0,0.1)";
+chatContainer.style.display = "flex";
+chatContainer.style.flexDirection = "column";
 document.body.appendChild(chatContainer);
 
-// 點擊浮動按鈕時切換聊天室面板的顯示/隱藏
-chatToggleBtn.addEventListener('click', () => {
-  chatPanel.classList.toggle('open');
-});
+const chatHeader = document.createElement('div');
+chatHeader.style.background = "#007bff";
+chatHeader.style.color = "white";
+chatHeader.style.padding = "10px";
+chatHeader.style.textAlign = "center";
+chatHeader.textContent = "聊天室";
+chatContainer.appendChild(chatHeader);
 
-/* ---------------------------
-   3. Firebase 驗證與登入/登出函式
---------------------------- */
-function signIn() {
-  const provider = new GoogleAuthProvider();
-  signInWithPopup(auth, provider)
-    .then((result) => {
-      // 登入成功，由 onAuthStateChanged 更新 UI
-    })
-    .catch((error) => {
-      console.error("登入錯誤：", error);
-    });
-}
+const chatMessages = document.createElement('div');
+chatMessages.style.flex = "1";
+chatMessages.style.overflowY = "auto";
+chatMessages.style.padding = "10px";
+chatMessages.style.background = "#f9f9f9";
+chatContainer.appendChild(chatMessages);
 
-function signOutUser() {
-  signOut(auth)
-    .then(() => {
-      // 登出成功，由 onAuthStateChanged 更新 UI
-    })
-    .catch((error) => {
-      console.error("登出錯誤：", error);
-    });
-}
+const chatInputContainer = document.createElement('div');
+chatInputContainer.style.display = "flex";
+chatInputContainer.style.borderTop = "1px solid #ccc";
 
-/* ---------------------------
-   4. 聊天訊息處理函式
---------------------------- */
-// 發送訊息：將訊息 push 到 Firebase Realtime Database
+const chatInput = document.createElement('input');
+chatInput.type = "text";
+chatInput.style.flex = "1";
+chatInput.style.padding = "10px";
+
+const sendButton = document.createElement('button');
+sendButton.textContent = "發送";
+sendButton.style.padding = "10px";
+sendButton.style.background = "#007bff";
+sendButton.style.color = "white";
+sendButton.style.border = "none";
+sendButton.style.cursor = "pointer";
+
+chatInputContainer.appendChild(chatInput);
+chatInputContainer.appendChild(sendButton);
+chatContainer.appendChild(chatInputContainer);
+
 function sendMessage(user, text) {
   const messagesRef = ref(database, 'messages');
   push(messagesRef, {
@@ -208,17 +97,19 @@ function sendMessage(user, text) {
     name: user.displayName,
     avatar: user.photoURL,
     timestamp: Date.now()
-  }).catch(err => console.error(err));
+  });
 }
 
-// 將接收到的訊息新增到訊息區
 function appendMessage(msg) {
-  if (!messagesContainer) return;
   const msgDiv = document.createElement('div');
-  msgDiv.className = "chat-message";
+  msgDiv.style.marginBottom = "10px";
   
   const avatarImg = document.createElement('img');
   avatarImg.src = msg.avatar || '';
+  avatarImg.style.width = "20px";
+  avatarImg.style.height = "20px";
+  avatarImg.style.borderRadius = "50%";
+  avatarImg.style.marginRight = "5px";
   
   const nameSpan = document.createElement('strong');
   nameSpan.textContent = msg.name || "匿名";
@@ -229,165 +120,40 @@ function appendMessage(msg) {
   msgDiv.appendChild(avatarImg);
   msgDiv.appendChild(nameSpan);
   msgDiv.appendChild(textSpan);
-  
-  messagesContainer.appendChild(msgDiv);
-  // 自動捲動到底部
-  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  chatMessages.appendChild(msgDiv);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
-// 監聽 Firebase Realtime Database 中的新增訊息
-function loadMessages() {
-  if (!messagesContainer) return;
-  if (!messagesListenerAdded) {
-    const messagesRef = ref(database, 'messages');
-    onChildAdded(messagesRef, (snapshot) => {
-      const msg = snapshot.val();
-      appendMessage(msg);
-    });
-    messagesListenerAdded = true;
-  }
-}
-
-/* ---------------------------
-   5. 使元素可拖曳（實現浮動效果）
---------------------------- */
-function makeDraggable(handle, container) {
-  let startX = 0, startY = 0;
-  handle.style.cursor = "move";
-  
-  handle.addEventListener('mousedown', dragMouseDown);
-  
-  function dragMouseDown(e) {
-    e.preventDefault();
-    startX = e.clientX;
-    startY = e.clientY;
-    document.addEventListener('mousemove', elementDrag);
-    document.addEventListener('mouseup', closeDragElement);
-  }
-  
-  function elementDrag(e) {
-    e.preventDefault();
-    const dx = e.clientX - startX;
-    const dy = e.clientY - startY;
-    startX = e.clientX;
-    startY = e.clientY;
-    
-    // 取得目前 container 的位置，並更新 left/top
-    const rect = container.getBoundingClientRect();
-    const newLeft = rect.left + dx;
-    const newTop = rect.top + dy;
-    container.style.left = newLeft + "px";
-    container.style.top = newTop + "px";
-    // 移除原本的 bottom/right 設定，避免衝突
-    container.style.right = "auto";
-    container.style.bottom = "auto";
-  }
-  
-  function closeDragElement() {
-    document.removeEventListener('mousemove', elementDrag);
-    document.removeEventListener('mouseup', closeDragElement);
-  }
-}
-
-/* ---------------------------
-   6. 根據使用者狀態更新聊天室 UI
---------------------------- */
-function updateChatPanel(user) {
-  // 清除原有內容
-  chatPanel.innerHTML = "";
-  
-  if (user) {
-    // 使用者已登入的情況 ----------------------------
-    // 建立聊天室標題列：顯示使用者大頭貼與名稱，並提供登出按鈕
-    const header = document.createElement('div');
-    header.id = "chat-header";
-    
-    const userInfo = document.createElement('div');
-    userInfo.style.display = "flex";
-    userInfo.style.alignItems = "center";
-    
-    const avatar = document.createElement('img');
-    avatar.src = user.photoURL;
-    avatar.alt = "User Avatar";
-    
-    const nameSpan = document.createElement('span');
-    nameSpan.textContent = user.displayName || "使用者";
-    
-    userInfo.appendChild(avatar);
-    userInfo.appendChild(nameSpan);
-    
-    const signOutBtn = document.createElement('button');
-    signOutBtn.textContent = "登出";
-    signOutBtn.style.background = "transparent";
-    signOutBtn.style.border = "none";
-    signOutBtn.style.color = "white";
-    signOutBtn.style.cursor = "pointer";
-    signOutBtn.addEventListener('click', signOutUser);
-    
-    header.appendChild(userInfo);
-    header.appendChild(signOutBtn);
-    
-    chatPanel.appendChild(header);
-    // 加入拖曳功能，使用 header 作為拖曳控制項
-    makeDraggable(header, chatContainer);
-    
-    // 建立訊息顯示區
-    messagesContainer = document.createElement('div');
-    messagesContainer.id = "chat-messages";
-    chatPanel.appendChild(messagesContainer);
-    
-    // 建立訊息輸入區
-    const inputContainer = document.createElement('div');
-    inputContainer.id = "chat-input";
-    
-    const inputField = document.createElement('input');
-    inputField.type = "text";
-    inputField.placeholder = "輸入訊息...";
-    
-    const sendButton = document.createElement('button');
-    sendButton.textContent = "送出";
-    sendButton.addEventListener('click', () => {
-      const text = inputField.value.trim();
-      if (text !== "") {
-        sendMessage(user, text);
-        inputField.value = "";
-      }
-    });
-    
-    inputContainer.appendChild(inputField);
-    inputContainer.appendChild(sendButton);
-    chatPanel.appendChild(inputContainer);
-    
-    // 開始載入並監聽訊息
-    loadMessages();
-    
-  } else {
-    // 使用者未登入的情況 ----------------------------
-    // 顯示提示文字與 Google 登入按鈕
-    const signInContainer = document.createElement('div');
-    signInContainer.style.padding = "20px";
-    signInContainer.style.textAlign = "center";
-    
-    const info = document.createElement('p');
-    info.textContent = "請使用 Google 登入以進入聊天室";
-    
-    const signInBtn = document.createElement('button');
-    signInBtn.textContent = "Google 登入";
-    signInBtn.style.padding = "10px 20px";
-    signInBtn.style.background = "#4285F4";
-    signInBtn.style.color = "white";
-    signInBtn.style.border = "none";
-    signInBtn.style.borderRadius = "4px";
-    signInBtn.style.cursor = "pointer";
-    signInBtn.addEventListener('click', signIn);
-    
-    signInContainer.appendChild(info);
-    signInContainer.appendChild(signInBtn);
-    chatPanel.appendChild(signInContainer);
-  }
-}
-
-// 監聽 Firebase 驗證狀態變化 (登入/登出)
 onAuthStateChanged(auth, (user) => {
-  updateChatPanel(user);
+  chatMessages.innerHTML = "";
+  if (user) {
+    loadMessages();
+    sendButton.onclick = () => {
+      if (chatInput.value.trim() !== "") {
+        sendMessage(user, chatInput.value);
+        chatInput.value = "";
+      }
+    };
+  } else {
+    const loginButton = document.createElement('button');
+    loginButton.textContent = "使用 Google 登入";
+    loginButton.style.padding = "10px";
+    loginButton.style.background = "#007bff";
+    loginButton.style.color = "white";
+    loginButton.style.border = "none";
+    loginButton.style.cursor = "pointer";
+    loginButton.onclick = () => {
+      const provider = new GoogleAuthProvider();
+      signInWithPopup(auth, provider).catch(console.error);
+    };
+    chatMessages.appendChild(loginButton);
+  }
 });
+
+function loadMessages() {
+  const messagesRef = ref(database, 'messages');
+  onChildAdded(messagesRef, (snapshot) => {
+    const msg = snapshot.val();
+    appendMessage(msg);
+  });
+}
