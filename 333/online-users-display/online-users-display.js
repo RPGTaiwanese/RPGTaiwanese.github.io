@@ -10,16 +10,16 @@
  * 1. Place this file in the "online-users-display" folder.
  * 2. In your HTML file, include this module:
  *      <script type="module" src="online-users-display/online-users-display.js"></script>
- * 3. Ensure that your project includes the Firebase SDK (or use a bundler that supports ES modules).
+ * 3. Ensure that your project includes the Firebase SDK from CDN.
  *
  * Note: This file assumes that your Firebase project is properly set up with Authentication and Realtime Database.
  */
 
-// Import the functions you need from the Firebase SDKs
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "firebase/auth";
-import { getDatabase, ref, onValue, set, onDisconnect } from "firebase/database";
+// Import the functions you need from the Firebase SDKs via CDN
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-analytics.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+import { getDatabase, ref, onValue, set, onDisconnect } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
