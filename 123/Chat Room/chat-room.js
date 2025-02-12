@@ -19,7 +19,7 @@
  *
  * Firebase 專案設定如下：
  */
-
+ 
 // Firebase SDK 模組匯入
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
@@ -52,7 +52,7 @@ let messagesListenerAdded = false;
    1. 建立並注入聊天室 CSS 樣式
 --------------------------- */
 const style = document.createElement('style');
-style.textContent = `
+style.textContent = 
   #firebase-chat-container {
     position: fixed;
     bottom: 20px;
@@ -85,11 +85,6 @@ style.textContent = `
   }
   #chat-panel.open {
     display: block;
-  }
-  /* 新增放大後的樣式 */
-  #chat-panel.enlarged {
-    width: 500px;
-    height: 600px;
   }
   #chat-header {
     background: #007bff;
@@ -146,7 +141,7 @@ style.textContent = `
   .chat-message strong {
     margin-right: 5px;
   }
-`;
+;
 document.head.appendChild(style);
 
 /* ---------------------------
@@ -256,13 +251,13 @@ function loadMessages() {
 function updateChatPanel(user) {
   // 清除原有內容
   chatPanel.innerHTML = "";
-
-  // 建立聊天室標題列 (Header)，並新增放大按鈕
-  const header = document.createElement('div');
-  header.id = "chat-header";
   
   if (user) {
-    // 使用者已登入，顯示大頭貼與名稱
+    // 使用者已登入的情況 ----------------------------
+    // 建立聊天室標題列：顯示使用者大頭貼與名稱，並提供登出按鈕
+    const header = document.createElement('div');
+    header.id = "chat-header";
+    
     const userInfo = document.createElement('div');
     userInfo.style.display = "flex";
     userInfo.style.alignItems = "center";
@@ -276,34 +271,7 @@ function updateChatPanel(user) {
     
     userInfo.appendChild(avatar);
     userInfo.appendChild(nameSpan);
-    header.appendChild(userInfo);
-  } else {
-    // 尚未登入，顯示預設標題
-    const titleSpan = document.createElement('span');
-    titleSpan.textContent = "聊天室";
-    header.appendChild(titleSpan);
-  }
-  
-  // 新增「放大／縮小」按鈕
-  const enlargeBtn = document.createElement('button');
-  enlargeBtn.textContent = "放大";
-  enlargeBtn.style.background = "transparent";
-  enlargeBtn.style.border = "none";
-  enlargeBtn.style.color = "white";
-  enlargeBtn.style.cursor = "pointer";
-  enlargeBtn.addEventListener('click', () => {
-    if (chatPanel.classList.contains('enlarged')) {
-      chatPanel.classList.remove('enlarged');
-      enlargeBtn.textContent = "放大";
-    } else {
-      chatPanel.classList.add('enlarged');
-      enlargeBtn.textContent = "縮小";
-    }
-  });
-  header.appendChild(enlargeBtn);
-  
-  // 若使用者已登入，右側再加入登出按鈕
-  if (user) {
+    
     const signOutBtn = document.createElement('button');
     signOutBtn.textContent = "登出";
     signOutBtn.style.background = "transparent";
@@ -311,13 +279,13 @@ function updateChatPanel(user) {
     signOutBtn.style.color = "white";
     signOutBtn.style.cursor = "pointer";
     signOutBtn.addEventListener('click', signOutUser);
+    
+    header.appendChild(userInfo);
     header.appendChild(signOutBtn);
-  }
-  
-  chatPanel.appendChild(header);
-  
-  if (user) {
-    // 使用者已登入的情況：建立訊息區與輸入區
+    
+    chatPanel.appendChild(header);
+    
+    // 建立訊息顯示區
     messagesContainer = document.createElement('div');
     messagesContainer.id = "chat-messages";
     chatPanel.appendChild(messagesContainer);
@@ -348,7 +316,8 @@ function updateChatPanel(user) {
     loadMessages();
     
   } else {
-    // 使用者未登入的情況：顯示提示文字與 Google 登入按鈕
+    // 使用者未登入的情況 ----------------------------
+    // 顯示提示文字與 Google 登入按鈕
     const signInContainer = document.createElement('div');
     signInContainer.style.padding = "20px";
     signInContainer.style.textAlign = "center";
