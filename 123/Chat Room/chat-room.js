@@ -1,35 +1,22 @@
-/**
- * Firebase Chat Room Module
- * 
- * 功能說明：
- * - 在網頁右下角出現一個浮動的聊天按鈕 (💬)。
- * - 點擊按鈕後會展開聊天室視窗（浮動式）。
- * - 若使用者已使用 Google 登入，聊天室會顯示使用者的 Google 大頭貼，
- *   並顯示聊天室內容與輸入區，可即時發送/接收訊息（使用 Firebase Realtime Database）。
- *   登入後，聊天室標題列可拖曳，讓整個聊天室在頁面上浮動移動。
- * - 若使用者尚未登入，聊天室畫面會顯示「Google 登入」按鈕，點擊後可使用 Google 帳號登入。
- *
- * 使用說明：
- * 1. 請將此檔案存放於您的 "Chat Room" 資料夾中 (例如檔名為 chat-room.js)。
- * 2. 在網頁中引入此 JS 檔，範例如下：
- *
- *    <script type="module" src="Chat Room/chat-room.js"></script>
- *
- * 3. 請確認您已於 Firebase 主控台啟用 Google 驗證，並正確設定 Realtime Database。
- * 4. 若需要修改樣式或拖曳行為，可自行調整下方程式碼中的 CSS 及 JavaScript 部分。
- *
- * Firebase 專案設定如下：
- */
- 
 import { initializeApp } from "firebase/app";
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "firebase/auth";
+import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "firebase/auth";
 import { getDatabase, ref, push, onChildAdded } from "firebase/database";
 
-const firebaseConfig = { /* Firebase 設定 */ };
+const firebaseConfig = {
+  apiKey: "AIzaSyDt9mJRH-BHlEksl4xla32sVIUGVnLUxWY",
+  authDomain: "future-infusion-368721.firebaseapp.com",
+  databaseURL: "https://future-infusion-368721-default-rtdb.firebaseio.com",
+  projectId: "future-infusion-368721",
+  storageBucket: "future-infusion-368721.firebasestorage.app",
+  messagingSenderId: "345445420847",
+  appId: "1:345445420847:web:070778c173ec6157c6dbda"
+};
+
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const database = getDatabase(app);
 
+// 建立聊天室容器
 const chatContainer = document.createElement('div');
 chatContainer.id = "firebase-chat-container";
 chatContainer.style.position = "fixed";
@@ -43,34 +30,44 @@ chatContainer.style.borderRadius = "5px";
 chatContainer.style.boxShadow = "0 2px 10px rgba(0,0,0,0.1)";
 chatContainer.style.display = "flex";
 chatContainer.style.flexDirection = "column";
-chatContainer.style.transition = "width 0.3s, height 0.3s";
 document.body.appendChild(chatContainer);
 
+// 聊天室標題列
 const chatHeader = document.createElement('div');
+chatHeader.style.display = "flex";
+chatHeader.style.justifyContent = "space-between";
+chatHeader.style.alignItems = "center";
 chatHeader.style.background = "#007bff";
 chatHeader.style.color = "white";
 chatHeader.style.padding = "10px";
-chatHeader.style.textAlign = "center";
-chatHeader.style.cursor = "pointer";
-chatHeader.textContent = "聊天室";
+chatHeader.style.cursor = "move";
+chatHeader.innerHTML = `<span>聊天室</span>`;
+
+const enlargeButton = document.createElement('button');
+enlargeButton.textContent = "🔍";
+enlargeButton.style.background = "transparent";
+enlargeButton.style.border = "none";
+enlargeButton.style.color = "white";
+enlargeButton.style.fontSize = "16px";
+enlargeButton.style.cursor = "pointer";
+chatHeader.appendChild(enlargeButton);
+
 chatContainer.appendChild(chatHeader);
 
-const expandButton = document.createElement('button');
-expandButton.textContent = "🔍";
-expandButton.style.marginLeft = "10px";
-expandButton.style.cursor = "pointer";
-chatHeader.appendChild(expandButton);
-
-expandButton.onclick = () => {
-  if (chatContainer.style.width === "300px") {
-    chatContainer.style.width = "600px";
-    chatContainer.style.height = "800px";
-  } else {
+// 放大/縮小聊天室
+let isExpanded = false;
+enlargeButton.onclick = () => {
+  if (isExpanded) {
     chatContainer.style.width = "300px";
     chatContainer.style.height = "400px";
+  } else {
+    chatContainer.style.width = "500px";
+    chatContainer.style.height = "600px";
   }
+  isExpanded = !isExpanded;
 };
 
+// 聊天訊息區
 const chatMessages = document.createElement('div');
 chatMessages.style.flex = "1";
 chatMessages.style.overflowY = "auto";
@@ -78,6 +75,7 @@ chatMessages.style.padding = "10px";
 chatMessages.style.background = "#f9f9f9";
 chatContainer.appendChild(chatMessages);
 
+// 輸入區
 const chatInputContainer = document.createElement('div');
 chatInputContainer.style.display = "flex";
 chatInputContainer.style.borderTop = "1px solid #ccc";
@@ -99,11 +97,18 @@ chatInputContainer.appendChild(chatInput);
 chatInputContainer.appendChild(sendButton);
 chatContainer.appendChild(chatInputContainer);
 
+// 發送訊息函式
 function sendMessage(user, text) {
   const messagesRef = ref(database, 'messages');
-  push(messagesRef, { text: text, name: user.displayName, avatar: user.photoURL, timestamp: Date.now() });
+  push(messagesRef, {
+    text: text,
+    name: user.displayName,
+    avatar: user.photoURL,
+    timestamp: Date.now()
+  });
 }
 
+// 顯示訊息
 function appendMessage(msg) {
   const msgDiv = document.createElement('div');
   msgDiv.style.marginBottom = "10px";
@@ -128,6 +133,7 @@ function appendMessage(msg) {
   chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
+// 監聽登入狀態
 onAuthStateChanged(auth, (user) => {
   chatMessages.innerHTML = "";
   if (user) {
@@ -154,6 +160,7 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
+// 載入歷史訊息
 function loadMessages() {
   const messagesRef = ref(database, 'messages');
   onChildAdded(messagesRef, (snapshot) => {
