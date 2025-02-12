@@ -3,9 +3,10 @@
  * 
  * 功能說明：
  * - 在網頁右下角出現一個浮動的聊天按鈕 (💬)。
- * - 點擊按鈕後會展開聊天室視窗。
+ * - 點擊按鈕後會展開聊天室視窗（浮動式）。
  * - 若使用者已使用 Google 登入，聊天室會顯示使用者的 Google 大頭貼，
  *   並顯示聊天室內容與輸入區，可即時發送/接收訊息（使用 Firebase Realtime Database）。
+ *   登入後，聊天室標題列可拖曳，讓整個聊天室在頁面上浮動移動。
  * - 若使用者尚未登入，聊天室畫面會顯示「Google 登入」按鈕，點擊後可使用 Google 帳號登入。
  *
  * 使用說明：
@@ -15,7 +16,7 @@
  *    <script type="module" src="Chat Room/chat-room.js"></script>
  *
  * 3. 請確認您已於 Firebase 主控台啟用 Google 驗證，並正確設定 Realtime Database。
- * 4. 若需要修改樣式，可自行調整下方程式碼中的 CSS 部分。
+ * 4. 若需要修改樣式或拖曳行為，可自行調整下方程式碼中的 CSS 及 JavaScript 部分。
  *
  * Firebase 專案設定如下：
  */
@@ -86,6 +87,7 @@ style.textContent = `
   #chat-panel.open {
     display: block;
   }
+  /* 聊天室標題列 */
   #chat-header {
     background: #007bff;
     color: white;
@@ -93,6 +95,7 @@ style.textContent = `
     display: flex;
     align-items: center;
     justify-content: space-between;
+    user-select: none;
   }
   #chat-header img {
     width: 30px;
@@ -246,7 +249,48 @@ function loadMessages() {
 }
 
 /* ---------------------------
-   5. 根據使用者狀態更新聊天室 UI
+   5. 使元素可拖曳（實現浮動效果）
+--------------------------- */
+function makeDraggable(handle, container) {
+  let startX = 0, startY = 0;
+  handle.style.cursor = "move";
+  
+  handle.addEventListener('mousedown', dragMouseDown);
+  
+  function dragMouseDown(e) {
+    e.preventDefault();
+    startX = e.clientX;
+    startY = e.clientY;
+    document.addEventListener('mousemove', elementDrag);
+    document.addEventListener('mouseup', closeDragElement);
+  }
+  
+  function elementDrag(e) {
+    e.preventDefault();
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    startX = e.clientX;
+    startY = e.clientY;
+    
+    // 取得目前 container 的位置，並更新 left/top
+    const rect = container.getBoundingClientRect();
+    const newLeft = rect.left + dx;
+    const newTop = rect.top + dy;
+    container.style.left = newLeft + "px";
+    container.style.top = newTop + "px";
+    // 移除原本的 bottom/right 設定，避免衝突
+    container.style.right = "auto";
+    container.style.bottom = "auto";
+  }
+  
+  function closeDragElement() {
+    document.removeEventListener('mousemove', elementDrag);
+    document.removeEventListener('mouseup', closeDragElement);
+  }
+}
+
+/* ---------------------------
+   6. 根據使用者狀態更新聊天室 UI
 --------------------------- */
 function updateChatPanel(user) {
   // 清除原有內容
@@ -284,6 +328,8 @@ function updateChatPanel(user) {
     header.appendChild(signOutBtn);
     
     chatPanel.appendChild(header);
+    // 加入拖曳功能，使用 header 作為拖曳控制項
+    makeDraggable(header, chatContainer);
     
     // 建立訊息顯示區
     messagesContainer = document.createElement('div');
