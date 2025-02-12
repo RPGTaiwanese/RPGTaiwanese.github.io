@@ -7,12 +7,13 @@
 
   <!-- 引入 Firebase 模組 -->
   <script type="module">
+    // 使用 Firebase 的 CDN 來引入需要的模組
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
-    import { getDatabase } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js";
-    import { getAuth } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js";
+    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-analytics.js";
 
-    // 引入自定義的 onlineUsers.js 檔案
+    // 在這裡引入您的自定義 JS 檔案
     import './onlineUsers.js';  // 假設 onlineUsers.js 在相同目錄下
 
     // 初始化 Firebase 配置
@@ -32,7 +33,6 @@
     const db = getDatabase(app);
     const auth = getAuth();
     const analytics = getAnalytics(app);
-
   </script>
 </head>
 <body>
