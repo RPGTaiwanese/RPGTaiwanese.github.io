@@ -1,23 +1,31 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Firebase 聊天室</title>
-  <!-- 使用 import map 引入 Firebase 各模組 -->
+  <title>Firebase Chat Room 測試</title>
+  <!-- 利用 import map 指定 Firebase 模組的 CDN 路徑 -->
   <script type="importmap">
   {
     "imports": {
-      "firebase/app": "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js",
-      "firebase/analytics": "https://www.gstatic.com/firebasejs/9.22.1/firebase-analytics.js",
-      "firebase/auth": "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js",
-      "firebase/database": "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js"
+      "firebase/app": "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js",
+      "firebase/analytics": "https://www.gstatic.com/firebasejs/9.22.2/firebase-analytics.js",
+      "firebase/auth": "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js",
+      "firebase/database": "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js"
     }
   }
   </script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+  </style>
 </head>
 <body>
-  <!-- chatRoom.js 會自動建立聊天室相關的 UI -->
-  <script type="module" src="Chat Room/chatRoom.js"></script>
+  <h1>Firebase Chat Room 測試頁面</h1>
+  <p>這是一個用來測試 Firebase 聊天室模組的 HTML 頁面。</p>
+  
+  <!-- 載入位於 Chat Room 資料夾內的 chat-room.js 模組 -->
+  <script type="module" src="Chat Room/chat-room.js"></script>
 </body>
 </html>
