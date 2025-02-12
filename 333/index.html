@@ -1,75 +1,26 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-Hant">
 <head>
-    <title>在線用戶顯示測試</title>
+    <meta charset="UTF-8">
+    <title>在線用戶測試</title>
     <style>
-        #online-users-display {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background-color: #f0f0f0;
-            padding: 10px;
-            border-radius: 5px;
-        }
-        .button-container {
-            margin-top: 20px;
-        }
-        button {
-            padding: 10px 20px;
-            border-radius: 5px;
-            border: none;
-            background-color: #007bff;
-            color: white;
-            cursor: pointer;
-            margin-right: 10px;
-        }
-        button:hover {
-            background-color: #0056b3;
+        #online-users-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            z-index: 1000;
         }
     </style>
 </head>
 <body>
-
-    <div id="online-users-display"></div>
-
-    <div class="button-container">
-        <button onclick="googleSignIn()">使用 Google 登入</button>
-        <button onclick="signOutUser()">登出</button>
-    </div>
-
-    <script type="module">
-        // **請務必將以下 Firebase 配置替換成你自己的配置資訊**
-        const firebaseConfig = {
-            apiKey: "AIzaSyDt9mJRH-BHlEksl4xla32sVIUGVnLUxWY", // 請替換成你的 apiKey
-            authDomain: "future-infusion-368721.firebaseapp.com", // 請替換成你的 authDomain
-            databaseURL: "https://future-infusion-368721-default-rtdb.firebaseio.com", // 請替換成你的 databaseURL
-            projectId: "future-infusion-368721", // 請替換成你的 projectId
-            storageBucket: "future-infusion-368721.firebasestorage.app", // 請替換成你的 storageBucket
-            messagingSenderId: "345445420847", // 請替換成你的 messagingSenderId
-            appId: "1:345445420847:web:070778c173ec6157c6dbda", // 請替換成你的 appId
-            measurementId: "G-57PJMMNNWW" // 請替換成你的 measurementId
-        };
-
-        // 將 firebaseConfig 傳遞給 onlineUsersDisplay.js 模組
-        import('./onlineUsersDisplay.js')
-            .then(module => {
-                // 初始化 onlineUsersDisplay.js 模組，並傳入 firebaseConfig
-                initializeApp(firebaseConfig); // 初始化 Firebase 應用程式 (再次初始化 - 確保配置可用)
-                console.log("onlineUsersDisplay.js 模組已載入");
-                // 將 googleSignIn 和 signOutUser 函數綁定到 window，以便 HTML 按鈕可以調用
-                window.googleSignIn = module.googleSignIn;
-                window.signOutUser = module.signOutUser;
-
-                // (選擇性) 如果需要，可以在這裡調用 onlineUsersDisplay.js 中的其他初始化函數
-                // 例如 module.initFunction();
-            })
-            .catch(error => {
-                console.error("載入 onlineUsersDisplay.js 模組失敗", error);
-            });
-
-
-    </script>
-     <script src="onlineUsersDisplay.js" type="module"></script>
-
+    <h1>在線用戶測試頁面</h1>
+    
+    <!-- 只需要加載主腳本 -->
+    <script type="module" src="online-users-display.js"></script>
 </body>
 </html>
