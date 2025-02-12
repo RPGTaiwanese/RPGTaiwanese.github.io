@@ -4,17 +4,39 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Firebase CDN Example</title>
+  <style>
+    /* 添加一些基本的樣式來顯示登入狀態 */
+    #login-status {
+      margin-top: 20px;
+      font-size: 18px;
+    }
+    #chat-btn {
+      background-color: #007bff;
+      color: white;
+      padding: 15px;
+      border-radius: 50%;
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body>
   <h1>Firebase CDN Example</h1>
   <p>這是一個示範如何在 HTML 中正確引用 Firebase 模組的例子。</p>
-  
+
+  <!-- 顯示登入狀態 -->
+  <div id="login-status">尚未登入</div>
+
+  <!-- 添加一個簡單的聊天按鈕 -->
+  <div id="chat-btn">Chat</div>
+
   <!-- 使用 type="module" 的內聯 script 來引用 Firebase CDN 模組 -->
   <script type="module">
     // 從 Firebase CDN 載入各個模組 (請根據需要調整版本號)
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
-    import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-analytics.js";
-    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
     import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
 
     // Firebase 設定 (請替換成你自己的設定)
@@ -31,20 +53,31 @@
 
     // 初始化 Firebase
     const app = initializeApp(firebaseConfig);
-    const analytics = getAnalytics(app);
     const auth = getAuth(app);
     const database = getDatabase(app);
 
     console.log("Firebase 已成功初始化", app);
 
-    // 可在此撰寫其他與 Firebase 相關的邏輯，例如：
+    // 監聽登入狀態變化並更新顯示
     onAuthStateChanged(auth, (user) => {
+      const loginStatus = document.getElementById('login-status');
       if (user) {
-        console.log("使用者已登入：", user);
+        loginStatus.textContent = `登入成功：${user.displayName || user.email}`;
+        // 當用戶登入後，顯示聊天按鈕
+        document.getElementById('chat-btn').style.display = 'block';
       } else {
-        console.log("尚未登入");
+        loginStatus.textContent = '尚未登入';
+        // 當用戶未登入，隱藏聊天按鈕
+        document.getElementById('chat-btn').style.display = 'none';
       }
     });
+
+    // 聊天按鈕邏輯
+    const chatBtn = document.getElementById("chat-btn");
+    chatBtn.addEventListener("click", () => {
+      alert("Chat functionality will be added here.");
+    });
+
   </script>
 </body>
 </html>
