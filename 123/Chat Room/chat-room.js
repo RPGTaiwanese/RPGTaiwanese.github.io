@@ -52,7 +52,7 @@ let messagesListenerAdded = false;
    1. 建立並注入聊天室 CSS 樣式
 --------------------------- */
 const style = document.createElement('style');
-style.textContent = 
+style.textContent = `
   #firebase-chat-container {
     position: fixed;
     bottom: 20px;
@@ -141,7 +141,7 @@ style.textContent =
   .chat-message strong {
     margin-right: 5px;
   }
-;
+`;
 document.head.appendChild(style);
 
 /* ---------------------------
