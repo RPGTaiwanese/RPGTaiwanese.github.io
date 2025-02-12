@@ -1,26 +1,20 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>在線用戶測試</title>
-    <style>
-        #online-users-panel {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: white;
-            padding: 15px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            z-index: 1000;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Online Users Display Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+  </style>
 </head>
 <body>
-    <h1>在線用戶測試頁面</h1>
-    
-    <!-- 只需要加載主腳本 -->
-    <script type="module" src="online-users-display.js"></script>
+  <h1>Online Users Display Test</h1>
+  <p>This page is used to test the online-users-display module. Upon loading, it will prompt for Google sign-in and display the current online users in the top right corner.</p>
+
+  <!-- Include the online-users-display module -->
+  <script type="module" src="online-users-display/online-users-display.js"></script>
 </body>
 </html>
