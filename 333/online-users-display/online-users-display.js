@@ -1,27 +1,33 @@
-/**
+/*
  * online-users-display.js
  *
- * Description:
- * This script uses Firebase Authentication (with Google sign‐in) and Firebase Realtime Database
- * to display in the top-right corner of your webpage the number of online users (who have signed in via Google)
- * and a list of their display names. The current user’s name is always shown first in the list.
+ * 功能：
+ *  - 在網頁右上角顯示透過 Google 登入的在線用戶數量、用戶名稱以及頭像。
+ *  - 視窗背景為透明暗黑色。
+ *  - 畫面中，用戶自己（目前登入者）的名字會預設顯示在第一位。
  *
- * Usage:
- * 1. Place this file in the "online-users-display" folder.
- * 2. In your HTML file, include this module:
- *      <script type="module" src="online-users-display/online-users-display.js"></script>
- * 3. Ensure that your project includes the Firebase SDK from CDN.
+ * 使用方法：
+ *  1. 將此檔案放置於 online-users-display 資料夾中。
+ *  2. 在 HTML 中以 ES module 方式引入此檔案，例如：
+ *       <script type="module" src="online-users-display/online-users-display.js"></script>
+ *  3. 請確認已在專案中安裝 Firebase 並更新 firebaseConfig 為您的專案憑證。
  *
- * Note: This file assumes that your Firebase project is properly set up with Authentication and Realtime Database.
+ * 相依性：
+ *  - Firebase App、Analytics、Authentication 及 Realtime Database 模組
+ *
+ * 說明：
+ *  此檔案會初始化 Firebase，若使用者尚未登入則以 Google 登入，
+ *  並於 Firebase Realtime Database 的 "onlineUsers" 節點中更新使用者的在線狀態（連線時寫入，斷線時自動移除）。
+ *  同時，它會監聽在線用戶資料的變動並動態更新網頁右上角的 UI 顯示。
  */
 
-// Import the functions you need from the Firebase SDKs via CDN
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-analytics.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
-import { getDatabase, ref, onValue, set, onDisconnect } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+// Import Firebase 模組
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "firebase/auth";
+import { getDatabase, ref, set, onDisconnect, onValue } from "firebase/database";
 
-// Your web app's Firebase configuration
+// Firebase 設定
 const firebaseConfig = {
   apiKey: "AIzaSyDt9mJRH-BHlEksl4xla32sVIUGVnLUxWY",
   authDomain: "future-infusion-368721.firebaseapp.com",
@@ -33,135 +39,107 @@ const firebaseConfig = {
   measurementId: "G-57PJMMNNWW"
 };
 
-// Initialize Firebase
+// 初始化 Firebase
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
-const auth = getAuth(app);
-const db = getDatabase(app);
-const provider = new GoogleAuthProvider();
+const auth = getAuth();
+const database = getDatabase(app);
 
-let currentUser = null;
+// 建立 UI 容器 (右上角，透明暗黑色視窗)
+const container = document.createElement("div");
+container.id = "online-users-container";
+container.style.position = "fixed";
+container.style.top = "10px";
+container.style.right = "10px";
+container.style.backgroundColor = "rgba(0, 0, 0, 0.7)";
+container.style.color = "#fff";
+container.style.padding = "10px";
+container.style.borderRadius = "5px";
+container.style.zIndex = "9999";
+document.body.appendChild(container);
 
-// Create a container div for the online users display (placed in top-right)
-const onlineUsersContainer = document.createElement("div");
-onlineUsersContainer.id = "online-users-display";
-onlineUsersContainer.style.position = "fixed";
-onlineUsersContainer.style.top = "10px";
-onlineUsersContainer.style.right = "10px";
-onlineUsersContainer.style.backgroundColor = "rgba(255, 255, 255, 0.9)";
-onlineUsersContainer.style.border = "1px solid #ccc";
-onlineUsersContainer.style.padding = "10px";
-onlineUsersContainer.style.zIndex = "9999";
-document.body.appendChild(onlineUsersContainer);
-
-/**
- * updateOnlineUsersDisplay
- * Updates the display with the current online users.
- *
- * @param {object} usersObj - The object from the Realtime Database representing online users.
- */
-function updateOnlineUsersDisplay(usersObj) {
-  let users = [];
-  for (let uid in usersObj) {
-    users.push({
-      uid: uid,
-      displayName: usersObj[uid].displayName || "Anonymous"
-    });
-  }
+// 更新 UI 顯示在線用戶列表
+function updateUsersUI(users) {
+  container.innerHTML = "";
   
-  // Sort users so that the current user's name is first.
-  users.sort((a, b) => {
-    if (currentUser && a.uid === currentUser.uid) return -1;
-    if (currentUser && b.uid === currentUser.uid) return 1;
-    return a.displayName.localeCompare(b.displayName);
+  // 顯示在線人數
+  const countDiv = document.createElement("div");
+  countDiv.textContent = `在線人數：${users.length}`;
+  countDiv.style.fontWeight = "bold";
+  countDiv.style.marginBottom = "5px";
+  container.appendChild(countDiv);
+  
+  // 顯示每個用戶的頭像及名稱
+  users.forEach((user) => {
+    const userDiv = document.createElement("div");
+    userDiv.style.display = "flex";
+    userDiv.style.alignItems = "center";
+    userDiv.style.marginBottom = "5px";
+    
+    const avatar = document.createElement("img");
+    avatar.src = user.photoURL;
+    avatar.alt = user.displayName;
+    avatar.style.width = "30px";
+    avatar.style.height = "30px";
+    avatar.style.borderRadius = "50%";
+    avatar.style.marginRight = "8px";
+    
+    const nameSpan = document.createElement("span");
+    nameSpan.textContent = user.displayName;
+    
+    userDiv.appendChild(avatar);
+    userDiv.appendChild(nameSpan);
+    container.appendChild(userDiv);
   });
-  
-  // Build HTML: display online count and list of names.
-  let html = `<strong>Online Users (${users.length})</strong><br><ul style="list-style: none; padding: 0; margin: 0;">`;
-  users.forEach(user => {
-    html += `<li>${user.displayName}</li>`;
-  });
-  html += "</ul>";
-  
-  onlineUsersContainer.innerHTML = html;
 }
 
-// Listen for changes to the onlineUsers node in Realtime Database.
-const onlineUsersRef = ref(db, "onlineUsers");
-onValue(onlineUsersRef, (snapshot) => {
-  const data = snapshot.val() || {};
-  updateOnlineUsersDisplay(data);
-});
-
-/**
- * setUserOnline
- * Marks the current user as online in the Realtime Database and sets up a disconnection handler.
- *
- * @param {object} user - The authenticated user object.
- */
+// 設定使用者在線狀態至 Firebase Realtime Database
 function setUserOnline(user) {
-  const userStatusRef = ref(db, "onlineUsers/" + user.uid);
-  // Set the user's display name
+  const userStatusRef = ref(database, 'onlineUsers/' + user.uid);
   set(userStatusRef, {
-    displayName: user.displayName || "Anonymous"
+    uid: user.uid,
+    displayName: user.displayName,
+    photoURL: user.photoURL,
+    lastActive: Date.now()
   });
-  // Remove the user from the online list when they disconnect
+  // 當使用者斷線時自動移除該數據
   onDisconnect(userStatusRef).remove();
 }
 
-/**
- * displaySignInButton
- * Displays a sign-in button in the center of the screen. The sign-in process will only be
- * triggered when the user clicks the button (avoiding popup blockers).
- */
-function displaySignInButton() {
-  let signInButton = document.getElementById('google-signin-btn');
-  if (!signInButton) {
-    signInButton = document.createElement('button');
-    signInButton.id = 'google-signin-btn';
-    signInButton.textContent = "Sign in with Google";
-    signInButton.style.position = "fixed";
-    signInButton.style.top = "50%";
-    signInButton.style.left = "50%";
-    signInButton.style.transform = "translate(-50%, -50%)";
-    signInButton.style.padding = "10px 20px";
-    signInButton.style.zIndex = "10000";
-    document.body.appendChild(signInButton);
+// 從資料庫抓取並顯示在線用戶，將目前使用者預設排在第一位
+function fetchAndDisplayOnlineUsers(currentUser) {
+  const onlineUsersRef = ref(database, 'onlineUsers/');
+  onValue(onlineUsersRef, (snapshot) => {
+    const onlineUsers = snapshot.val() || {};
+    const usersArray = Object.values(onlineUsers);
     
-    signInButton.addEventListener('click', () => {
-      signInWithPopup(auth, provider)
-        .then((result) => {
-          currentUser = result.user;
-          setUserOnline(result.user);
-          hideSignInButton();
-        })
-        .catch((error) => {
-          console.error("Error during sign-in:", error);
-        });
+    // 排序：將目前使用者排在第一位
+    usersArray.sort((a, b) => {
+      if (a.uid === currentUser.uid) return -1;
+      if (b.uid === currentUser.uid) return 1;
+      return 0;
     });
-  }
+    
+    updateUsersUI(usersArray);
+  });
 }
 
-/**
- * hideSignInButton
- * Removes the sign-in button from the DOM.
- */
-function hideSignInButton() {
-  const signInButton = document.getElementById('google-signin-btn');
-  if (signInButton) {
-    signInButton.remove();
-  }
-}
-
-// Monitor authentication state changes.
+// 監聽使用者認證狀態
 onAuthStateChanged(auth, (user) => {
   if (user) {
-    currentUser = user;
+    // 使用者已登入
     setUserOnline(user);
-    hideSignInButton();
+    fetchAndDisplayOnlineUsers(user);
   } else {
-    // Instead of auto-triggering signInWithPopup (which can be blocked),
-    // show a sign-in button for the user to click.
-    displaySignInButton();
+    // 尚未登入則以 Google 登入
+    signInWithPopup(auth, new GoogleAuthProvider())
+      .then((result) => {
+        const signedInUser = result.user;
+        setUserOnline(signedInUser);
+        fetchAndDisplayOnlineUsers(signedInUser);
+      })
+      .catch((error) => {
+        console.error("Google 登入錯誤：", error);
+      });
   }
 });
