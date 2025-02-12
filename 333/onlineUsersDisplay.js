@@ -9,7 +9,7 @@
  *    (請參考 Firebase 官方文檔進行設定: https://firebase.google.com/docs/web/setup)
  *
  * 2. 在你的 HTML 檔案的 <head> 或 <body> 標籤中引入此 JavaScript 檔案。
- *    <script src="onlineUsersDisplay.js"></script>
+ *    <script src="onlineUsersDisplay.js" type="module"></script>
  *
  * 3. 在你的 HTML 檔案的 <body> 標籤中，你想顯示在線用戶資訊的位置加入一個 HTML 元素
  *    (例如 <div> 或 <span>)。建議放在網頁右上角以便醒目顯示。
@@ -26,25 +26,16 @@
  * - 此腳本假設你已經在你的網頁中初始化了 Firebase 應用程式，並具有可用的 `firebaseConfig` 變數。
  */
 
-// Firebase 初始化設定 (假設 firebaseConfig 已經在你的 HTML 或其他 JS 檔案中定義)
-import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
-import { getDatabase, ref, onValue, set, onDisconnect } from "firebase/database";
+// Firebase 初始化設定 (使用 CDN 連結)
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.19.1/firebase-app.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.19.1/firebase-auth.js';
+import { getDatabase, ref, onValue, set, onDisconnect } from 'https://www.gstatic.com/firebasejs/9.19.1/firebase-database.js';
 
-// 你的 Firebase 配置 (請替換成你自己的配置)
-const firebaseConfig = {
-  apiKey: "AIzaSyDt9mJRH-BHlEksl4xla32sVIUGVnLUxWY", // 請替換成你的 apiKey
-  authDomain: "future-infusion-368721.firebaseapp.com", // 請替換成你的 authDomain
-  databaseURL: "https://future-infusion-368721-default-rtdb.firebaseio.com", // 請替換成你的 databaseURL
-  projectId: "future-infusion-368721", // 請替換成你的 projectId
-  storageBucket: "future-infusion-368721.firebasestorage.app", // 請替換成你的 storageBucket
-  messagingSenderId: "345445420847", // 請替換成你的 messagingSenderId
-  appId: "1:345445420847:web:070778c173ec6157c6dbda", // 請替換成你的 appId
-  measurementId: "G-57PJMMNNWW" // 請替換成你的 measurementId
-};
+// 你的 Firebase 配置 (請替換成你自己的配置 - 這個配置資訊將在 HTML 檔案中提供)
+// const firebaseConfig = { ... };  // firebaseConfig 將在 HTML 中定義
 
 // 初始化 Firebase 應用程式
-const app = initializeApp(firebaseConfig);
+const app = initializeApp(firebaseConfig); // firebaseConfig 將在 HTML 中傳入
 const auth = getAuth(app);
 const database = getDatabase(app);
 

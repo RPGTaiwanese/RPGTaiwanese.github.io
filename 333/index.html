@@ -3,7 +3,29 @@
 <head>
     <title>在線用戶顯示測試</title>
     <style>
-        /* ... (CSS 樣式 - 不變) ... */
+        #online-users-display {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .button-container {
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            border-radius: 5px;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
     </style>
 </head>
 <body>
@@ -28,10 +50,11 @@
             measurementId: "G-57PJMMNNWW" // 請替換成你的 measurementId
         };
 
-        // 動態載入 onlineUsersDisplay.js 模組
+        // 將 firebaseConfig 傳遞給 onlineUsersDisplay.js 模組
         import('./onlineUsersDisplay.js')
             .then(module => {
-                // 在這裡可以訪問模組輸出的函數 (如果 onlineUsersDisplay.js 有輸出)
+                // 初始化 onlineUsersDisplay.js 模組，並傳入 firebaseConfig
+                initializeApp(firebaseConfig); // 初始化 Firebase 應用程式 (再次初始化 - 確保配置可用)
                 console.log("onlineUsersDisplay.js 模組已載入");
                 // 將 googleSignIn 和 signOutUser 函數綁定到 window，以便 HTML 按鈕可以調用
                 window.googleSignIn = module.googleSignIn;
@@ -46,5 +69,7 @@
 
 
     </script>
-    <script src="onlineUsersDisplay.js" type="module"></script>  </body>
+     <script src="onlineUsersDisplay.js" type="module"></script>
+
+</body>
 </html>
