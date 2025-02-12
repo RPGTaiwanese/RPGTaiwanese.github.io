@@ -1,37 +1,23 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>聊天室</title>
-  
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.7.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.7.0/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.7.0/firebase-database.js"></script>
-
-  <!-- 你的JS檔案，記得使用type="module" -->
-  <script type="module" src="Chat Room/chatRoom.js"></script>
+  <title>Firebase 聊天室</title>
+  <!-- 使用 import map 引入 Firebase 各模組 -->
+  <script type="importmap">
+  {
+    "imports": {
+      "firebase/app": "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js",
+      "firebase/analytics": "https://www.gstatic.com/firebasejs/9.22.1/firebase-analytics.js",
+      "firebase/auth": "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js",
+      "firebase/database": "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js"
+    }
+  }
+  </script>
 </head>
 <body>
-
-<!-- Google登入UI -->
-<div id="loginUI" style="display: none;">
-  <button id="googleLoginButton">登入Google</button>
-</div>
-
-<!-- 聊天室UI -->
-<div id="chatUI" style="display: none;">
-  <div>
-    <img id="userPhoto" src="" alt="User Photo" />
-    <span id="userName"></span>
-    <button id="logoutButton">登出</button>
-  </div>
-  <div id="messageList"></div>
-  <input type="text" id="messageInput" placeholder="輸入訊息..." />
-  <div id="stickersContainer"></div>
-  <button id="sendButton">送出</button>
-</div>
-
+  <!-- chatRoom.js 會自動建立聊天室相關的 UI -->
+  <script type="module" src="Chat Room/chatRoom.js"></script>
 </body>
 </html>
