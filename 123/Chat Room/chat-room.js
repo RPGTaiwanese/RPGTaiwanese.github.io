@@ -22,19 +22,10 @@
  */
  
 import { initializeApp } from "firebase/app";
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "firebase/auth";
+import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "firebase/auth";
 import { getDatabase, ref, push, onChildAdded } from "firebase/database";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDt9mJRH-BHlEksl4xla32sVIUGVnLUxWY",
-  authDomain: "future-infusion-368721.firebaseapp.com",
-  databaseURL: "https://future-infusion-368721-default-rtdb.firebaseio.com",
-  projectId: "future-infusion-368721",
-  storageBucket: "future-infusion-368721.firebasestorage.app",
-  messagingSenderId: "345445420847",
-  appId: "1:345445420847:web:070778c173ec6157c6dbda"
-};
-
+const firebaseConfig = { /* Firebase 設定 */ };
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const database = getDatabase(app);
@@ -52,6 +43,7 @@ chatContainer.style.borderRadius = "5px";
 chatContainer.style.boxShadow = "0 2px 10px rgba(0,0,0,0.1)";
 chatContainer.style.display = "flex";
 chatContainer.style.flexDirection = "column";
+chatContainer.style.transition = "width 0.3s, height 0.3s";
 document.body.appendChild(chatContainer);
 
 const chatHeader = document.createElement('div');
@@ -59,8 +51,25 @@ chatHeader.style.background = "#007bff";
 chatHeader.style.color = "white";
 chatHeader.style.padding = "10px";
 chatHeader.style.textAlign = "center";
+chatHeader.style.cursor = "pointer";
 chatHeader.textContent = "聊天室";
 chatContainer.appendChild(chatHeader);
+
+const expandButton = document.createElement('button');
+expandButton.textContent = "🔍";
+expandButton.style.marginLeft = "10px";
+expandButton.style.cursor = "pointer";
+chatHeader.appendChild(expandButton);
+
+expandButton.onclick = () => {
+  if (chatContainer.style.width === "300px") {
+    chatContainer.style.width = "600px";
+    chatContainer.style.height = "800px";
+  } else {
+    chatContainer.style.width = "300px";
+    chatContainer.style.height = "400px";
+  }
+};
 
 const chatMessages = document.createElement('div');
 chatMessages.style.flex = "1";
@@ -92,12 +101,7 @@ chatContainer.appendChild(chatInputContainer);
 
 function sendMessage(user, text) {
   const messagesRef = ref(database, 'messages');
-  push(messagesRef, {
-    text: text,
-    name: user.displayName,
-    avatar: user.photoURL,
-    timestamp: Date.now()
-  });
+  push(messagesRef, { text: text, name: user.displayName, avatar: user.photoURL, timestamp: Date.now() });
 }
 
 function appendMessage(msg) {
