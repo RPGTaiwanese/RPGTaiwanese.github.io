@@ -42,7 +42,7 @@ const provider = new GoogleAuthProvider();
 
 let currentUser = null;
 
-// Create a container div for the online users display
+// Create a container div for the online users display (placed in top-right)
 const onlineUsersContainer = document.createElement("div");
 onlineUsersContainer.id = "online-users-display";
 onlineUsersContainer.style.position = "fixed";
@@ -109,20 +109,59 @@ function setUserOnline(user) {
   onDisconnect(userStatusRef).remove();
 }
 
+/**
+ * displaySignInButton
+ * Displays a sign-in button in the center of the screen. The sign-in process will only be
+ * triggered when the user clicks the button (avoiding popup blockers).
+ */
+function displaySignInButton() {
+  let signInButton = document.getElementById('google-signin-btn');
+  if (!signInButton) {
+    signInButton = document.createElement('button');
+    signInButton.id = 'google-signin-btn';
+    signInButton.textContent = "Sign in with Google";
+    signInButton.style.position = "fixed";
+    signInButton.style.top = "50%";
+    signInButton.style.left = "50%";
+    signInButton.style.transform = "translate(-50%, -50%)";
+    signInButton.style.padding = "10px 20px";
+    signInButton.style.zIndex = "10000";
+    document.body.appendChild(signInButton);
+    
+    signInButton.addEventListener('click', () => {
+      signInWithPopup(auth, provider)
+        .then((result) => {
+          currentUser = result.user;
+          setUserOnline(result.user);
+          hideSignInButton();
+        })
+        .catch((error) => {
+          console.error("Error during sign-in:", error);
+        });
+    });
+  }
+}
+
+/**
+ * hideSignInButton
+ * Removes the sign-in button from the DOM.
+ */
+function hideSignInButton() {
+  const signInButton = document.getElementById('google-signin-btn');
+  if (signInButton) {
+    signInButton.remove();
+  }
+}
+
 // Monitor authentication state changes.
-// If the user is not signed in, initiate a Google sign-in popup.
 onAuthStateChanged(auth, (user) => {
   if (user) {
     currentUser = user;
     setUserOnline(user);
+    hideSignInButton();
   } else {
-    signInWithPopup(auth, provider)
-      .then((result) => {
-        currentUser = result.user;
-        setUserOnline(result.user);
-      })
-      .catch((error) => {
-        console.error("Error during sign-in:", error);
-      });
+    // Instead of auto-triggering signInWithPopup (which can be blocked),
+    // show a sign-in button for the user to click.
+    displaySignInButton();
   }
 });
