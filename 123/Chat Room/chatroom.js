@@ -1,97 +1,134 @@
-<!DOCTYPE html>
-<html lang="zh">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Firebase Chat</title>
-  <style>
-    .chat-btn, .chat-window, .sticker-panel { position: fixed; z-index: 1000; }
-    .chat-btn { bottom: 20px; right: 20px; background: #007bff; color: white; padding: 15px; border-radius: 50%; cursor: pointer; }
-    .chat-window { bottom: 80px; right: 20px; width: 300px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: none; flex-direction: column; }
-    .chat-header, .chat-input-container { background: #007bff; color: white; padding: 10px; display: flex; justify-content: space-between; }
-    .chat-messages { flex: 1; padding: 10px; overflow-y: auto; background: #f1f1f1; }
-    .chat-input { flex: 1; padding: 10px; border: none; }
-    .sticker-panel { bottom: 50px; right: 0; width: 280px; background: white; border: 1px solid #ccc; display: none; flex-wrap: wrap; }
-    .sticker-panel img { width: 60px; height: 60px; margin: 5px; cursor: pointer; }
-  </style>
-</head>
-<body>
-  <h1>Firebase Chat Room</h1>
-  
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
-    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
-    import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
+// Firebase 聊天室 JS 檔案 - chatRoom.js
+// 使用說明：
+// 1. 把這個檔案放到 "Chat Room" 資料夾中。
+// 2. 確保你有將Firebase SDK與這個檔案載入到你的HTML中。
+// 3. 此檔案會自動檢查用戶是否已經登入Google帳號，如果未登入，會顯示Google登入按鈕。
+// 4. 用戶登入後會顯示用戶的Google頭像，並可以使用浮動UI來發送訊息與貼圖。
+// 5. 貼圖檔案會依照"Texture 1 (1)"、"Texture 1 (2)"等格式來顯示對應的貼圖。
 
-    document.addEventListener("DOMContentLoaded", () => {
-      const firebaseConfig = {
-        apiKey: "AIzaSyDt9mJRH-BHlEksl4xla32sVIUGVnLUxWY",
-        authDomain: "future-infusion-368721.firebaseapp.com",
-        databaseURL: "https://future-infusion-368721-default-rtdb.firebaseio.com",
-        projectId: "future-infusion-368721",
-        storageBucket: "future-infusion-368721.firebasestorage.app",
-        messagingSenderId: "345445420847",
-        appId: "1:345445420847:web:070778c173ec6157c6dbda",
-        measurementId: "G-57PJMMNNWW"
-      };
+// Import the necessary Firebase modules
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "firebase/auth";
+import { getDatabase, ref, set, push, onChildAdded } from "firebase/database";
 
-      const app = initializeApp(firebaseConfig);
-      const auth = getAuth(app);
-      const database = getDatabase(app);
+// Firebase 配置
+const firebaseConfig = {
+  apiKey: "AIzaSyDt9mJRH-BHlEksl4xla32sVIUGVnLUxWY",
+  authDomain: "future-infusion-368721.firebaseapp.com",
+  databaseURL: "https://future-infusion-368721-default-rtdb.firebaseio.com",
+  projectId: "future-infusion-368721",
+  storageBucket: "future-infusion-368721.firebasestorage.app",
+  messagingSenderId: "345445420847",
+  appId: "1:345445420847:web:070778c173ec6157c6dbda",
+  measurementId: "G-57PJMMNNWW"
+};
 
-      // 動態插入 Chat 按鈕和窗口
-      document.body.insertAdjacentHTML("beforeend", `
-        <div class="chat-btn">Chat</div>
-        <div class="chat-window">
-          <div class="chat-header">Chat Room <button id="close-btn">&times;</button></div>
-          <div class="chat-messages"></div>
-          <div class="chat-input-container">
-            <input class="chat-input" placeholder="Type your message..." disabled />
-            <button class="chat-send">Send</button>
-          </div>
-          <div class="sticker-panel"></div>
-        </div>
-      `);
+// 初始化 Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+const auth = getAuth();
+const database = getDatabase(app);
 
-      // 聊天按鈕和窗口
-      const chatBtn = document.querySelector(".chat-btn");
-      const chatWindow = document.querySelector(".chat-window");
-      const closeBtn = document.getElementById("close-btn");
-      const inputField = document.querySelector(".chat-input");
-      const sendButton = document.querySelector(".chat-send");
+// Google 登入提供者
+const provider = new GoogleAuthProvider();
 
-      // 顯示和隱藏聊天窗口
-      chatBtn.addEventListener("click", () => chatWindow.style.display = "flex");
-      closeBtn.addEventListener("click", () => chatWindow.style.display = "none");
+// 聊天室資料庫位置
+const chatRoomRef = ref(database, 'chatRoom');
 
-      // Firebase 認證狀態變更處理
-      onAuthStateChanged(auth, (user) => {
-        inputField.disabled = !user;
-        sendButton.disabled = !user;
+// 用戶登入狀態監聽
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    showChatUI(user);
+  } else {
+    showLoginUI();
+  }
+});
 
-        // 當用戶登入時，啟用聊天功能
-        if (user) {
-          console.log("User signed in: ", user.displayName || user.email);
-        } else {
-          console.log("User not signed in.");
-        }
-      });
+// 顯示聊天室界面
+function showChatUI(user) {
+  document.getElementById('chatUI').style.display = 'block';
+  document.getElementById('loginUI').style.display = 'none';
+  document.getElementById('userName').textContent = user.displayName;
+  document.getElementById('userPhoto').src = user.photoURL;
 
-      // 監聽發送訊息
-      sendButton.addEventListener("click", () => {
-        if (inputField.value.trim() !== "") {
-          push(ref(database, 'messages'), { text: inputField.value.trim(), timestamp: Date.now() });
-          inputField.value = "";
-        }
-      });
+  // 加載聊天室訊息
+  loadMessages();
 
-      // 實時接收聊天訊息
-      onChildAdded(ref(database, 'messages'), (data) => {
-        const msg = document.createElement("div");
-        msg.textContent = data.val().text;
-        document.querySelector(".chat-messages").appendChild(msg);
-      });
+  // 送出訊息與貼圖
+  document.getElementById('sendButton').onclick = () => {
+    const message = document.getElementById('messageInput').value;
+    const image = document.querySelector('input[name="sticker"]:checked')?.value;
+    if (message || image) {
+      sendMessage(user, message, image);
+      document.getElementById('messageInput').value = '';
+    }
+  };
+
+  // 登出功能
+  document.getElementById('logoutButton').onclick = () => {
+    signOut(auth).then(() => {
+      // 成功登出
+    }).catch((error) => {
+      console.error("登出失敗", error);
     });
-  </script>
-</body>
-</html>
+  };
+}
+
+// 顯示登入UI
+function showLoginUI() {
+  document.getElementById('chatUI').style.display = 'none';
+  document.getElementById('loginUI').style.display = 'block';
+  document.getElementById('googleLoginButton').onclick = () => {
+    signInWithPopup(auth, provider).then((result) => {
+      // 登入成功
+    }).catch((error) => {
+      console.error("Google 登入失敗", error);
+    });
+  };
+}
+
+// 載入訊息
+function loadMessages() {
+  onChildAdded(chatRoomRef, (data) => {
+    const messageData = data.val();
+    const messageElement = document.createElement('div');
+    messageElement.classList.add('message');
+    messageElement.innerHTML = `
+      <img src="${messageData.userPhoto}" alt="User" class="user-photo">
+      <span class="user-name">${messageData.userName}</span>: ${messageData.message}
+      ${messageData.image ? `<img src="${messageData.image}" class="sticker">` : ''}
+    `;
+    document.getElementById('messageList').appendChild(messageElement);
+  });
+}
+
+// 送出訊息或貼圖
+function sendMessage(user, message, image) {
+  const newMessageRef = push(chatRoomRef);
+  set(newMessageRef, {
+    userName: user.displayName,
+    userPhoto: user.photoURL,
+    message: message,
+    image: image || ''
+  });
+}
+
+// 貼圖選項
+function loadStickers() {
+  const stickers = ['Texture 1 (1)', 'Texture 1 (2)', 'Texture 2 (1)', 'Texture 2 (2)']; // 貼圖格式
+  const stickersContainer = document.getElementById('stickersContainer');
+  stickers.forEach(sticker => {
+    const stickerOption = document.createElement('input');
+    stickerOption.type = 'radio';
+    stickerOption.name = 'sticker';
+    stickerOption.value = `path_to_sticker_images/${sticker}.png`; // 假設貼圖儲存在特定路徑
+    const stickerLabel = document.createElement('label');
+    stickerLabel.textContent = sticker;
+    stickersContainer.appendChild(stickerOption);
+    stickersContainer.appendChild(stickerLabel);
+  });
+}
+
+// 初始載入貼圖
+loadStickers();
