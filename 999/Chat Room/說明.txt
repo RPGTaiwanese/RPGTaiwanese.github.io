@@ -1,1 +1,0 @@
-需要先引入Firebase 的 CDN 載入模組在index前端才可以使用 還有填自己的Firebase資料上去
