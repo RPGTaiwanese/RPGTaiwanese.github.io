@@ -3,17 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <title>Firebase Google 登入 & 單一活躍登入範例</title>
-  <!-- 載入 Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.21.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.21.0/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.21.0/firebase-database.js"></script>
   <style>
     /* 隱藏橫向滾動條，防止網頁左右滑動 */
     body { 
       overflow-x: hidden; 
       margin: 0; 
       padding: 0;
-      /* 利用 Flexbox 將內容置中 */
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -21,13 +16,11 @@
       min-height: 100vh;
       background: #f0f0f0;
     }
-
     /* 登入容器 */
     .login-container {
       text-align: center;
     }
-
-    /* 更新後的 Google 登入按鈕樣式 */
+    /* Google 登入按鈕 */
     #login-button {
       padding: 15px 30px;
       font-size: 24px;
@@ -39,80 +32,84 @@
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
       cursor: pointer;
       transition: background 0.3s ease;
-      margin-bottom: 20px; /* 按鈕與下方說明的間距 */
+      margin-bottom: 20px;
     }
     #login-button:hover {
       background: rgba(0, 0, 0, 0.85);
     }
-
-    /* 說明文字樣式 */
+    /* 說明文字 */
     .login-description {
       font-size: 16px;
       color: #333;
     }
-
-    /* 設定遊戲容器，確保遊戲置中 */
+    /* 遊戲容器，預設隱藏 */
     .game-container { 
       width: 100%; 
       text-align: center; 
       position: relative; 
       padding: 20px; 
-      display: none; /* 預設隱藏，待登入成功後顯示 */
+      display: none;
     }
-    /* 設定 iframe 讓遊戲可以自適應螢幕大小 */
+    /* 使 iframe 自適應螢幕 */
     iframe { 
       display: block;
       margin: auto;
       position: relative;
-      top: -20px;  /* 調整上下位置 */
-      left: -20px; /* 調整左右位置 */
+      top: -20px;
+      left: -20px;
       max-width: 100%;
     }
   </style>
 </head>
 <body>
-  <!-- 登入容器，置中於網頁正中央 -->
+  <!-- 登入區塊：置中顯示 -->
   <div class="login-container">
     <button id="login-button">以 Google 登入</button>
     <p class="login-description">遊玩遊戲需先已Google 登入</p>
   </div>
-
+  
   <!-- 遊戲鑲入容器 -->
   <div class="game-container">
     <iframe frameborder="0" 
       src="https://itch.io/embed-upload/10112658?color=000000" 
+      allow="fullscreen; monetization; xr" 
       allowfullscreen 
       width="1000" 
       height="700">
     </iframe>
   </div>
 
+  <!-- 使用 ES 模組載入 Firebase 相關功能 -->
   <script type="module">
-    // 匯入 Firebase 模組
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.21.0/firebase-app.js";
-    import { getAuth, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/9.21.0/firebase-auth.js";
-    import { getDatabase, ref, get, set, onDisconnect } from "https://www.gstatic.com/firebasejs/9.21.0/firebase-database.js";
+    // 從 Firebase SDK 載入所需模組
+    import { initializeApp } from "firebase/app";
+    import { getAnalytics } from "firebase/analytics";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, signOut } from "firebase/auth";
+    import { getDatabase, ref, get, set, onDisconnect } from "firebase/database";
 
-    // Firebase 設定
+    // 你這個專案的 Firebase 設定
     const firebaseConfig = {
-      apiKey: "AIzaSyBaq5Y89srrIozUZY7sUJALvAamIZsxyuo",
-      authDomain: "mmorpg-a836b.firebaseapp.com",
-      databaseURL: "https://mmorpg-a836b.firebaseio.com",
-      projectId: "mmorpg-a836b",
-      storageBucket: "mmorpg-a836b.appspot.com",
-      messagingSenderId: "995630256799",
-      appId: "1:995630256799:web:913fbb7303b58efaff08aa"
+      apiKey: "AIzaSyDt9mJRH-BHlEksl4xla32sVIUGVnLUxWY",
+      authDomain: "future-infusion-368721.firebaseapp.com",
+      databaseURL: "https://future-infusion-368721-default-rtdb.firebaseio.com",
+      projectId: "future-infusion-368721",
+      storageBucket: "future-infusion-368721.firebasestorage.app",
+      messagingSenderId: "345445420847",
+      appId: "1:345445420847:web:070778c173ec6157c6dbda",
+      measurementId: "G-57PJMMNNWW"
     };
 
-    // 初始化 Firebase
+    // 初始化 Firebase 與 Analytics
     const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
     const auth = getAuth(app);
     const database = getDatabase(app);
     const provider = new GoogleAuthProvider();
 
+    // 取得 DOM 參考
     const loginButton = document.getElementById('login-button');
-    const gameContainer = document.querySelector('.game-container');
     const loginContainer = document.querySelector('.login-container');
+    const gameContainer = document.querySelector('.game-container');
 
     // 當使用者點擊登入按鈕
     loginButton.addEventListener('click', () => {
@@ -122,17 +119,17 @@
           const uid = user.uid;
           const userStatusRef = ref(database, 'activeUsers/' + uid);
 
-          // 檢查是否已有登入狀態
+          // 檢查是否已有活躍登入狀態
           const snapshot = await get(userStatusRef);
           if (snapshot.exists()) {
             alert("此帳號已在其他裝置登入，請先登出其他裝置後再試。");
             signOut(auth);
           } else {
-            // 設定該使用者為已登入狀態，並在斷線時自動移除
+            // 寫入活躍登入狀態，並設定 onDisconnect 移除
             set(userStatusRef, { loginTime: Date.now() })
               .then(() => {
                 onDisconnect(userStatusRef).remove();
-                // 顯示遊戲，隱藏登入容器
+                // 登入成功後隱藏登入區塊並顯示遊戲
                 gameContainer.style.display = 'block';
                 loginContainer.style.display = 'none';
               })
