@@ -1,10 +1,12 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
+  <!-- 設定 COOP 為 same-origin-allow-popups，允許同源的 popup 被關閉 -->
+  <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin-allow-popups">
   <title>道具欄介面</title>
   <style>
-    /* 格子版的道具欄 */
+    /* 使用 CSS Grid 呈現道具格子 */
     #propGrid {
       display: grid;
       grid-template-columns: repeat(auto-fill, 80px);
@@ -20,7 +22,7 @@
       height: 64px;
       cursor: pointer;
     }
-    /* 簡易 tooltip 樣式 */
+    /* Tooltip 樣式 */
     .tooltip {
       position: absolute;
       bottom: 100%;
@@ -45,15 +47,14 @@
   <button id="signInBtn">使用 Google 登入</button>
   <div id="propGrid"></div>
   
-  <!-- Firebase SDK (使用 v9 modular 版) -->
+  <!-- Firebase SDK (v9 modular 版) -->
   <script type="module">
-    // 載入 Firebase 必要模組
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-analytics.js";
     import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
     import { getFirestore, collection, getDocs, doc, setDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
     
-    // Firebase 設定 (請根據自己的專案設定)
+    // Firebase 設定 (請依專案實際設定)
     const firebaseConfig = {
       apiKey: "AIzaSyDt9mJRH-BHlEksl4xla32sVIUGVnLUxWY",
       authDomain: "future-infusion-368721.firebaseapp.com",
@@ -65,50 +66,48 @@
       measurementId: "G-57PJMMNNWW"
     };
     
-    // 初始化 Firebase
     const app = initializeApp(firebaseConfig);
     const analytics = getAnalytics(app);
     const auth = getAuth();
     const db = getFirestore();
     
-    // UI 元件
     const signInBtn = document.getElementById("signInBtn");
     const userInfoDiv = document.getElementById("userInfo");
     const propGrid = document.getElementById("propGrid");
     
-    // 預設道具資料（使用之前提供的網路主題道具，可依需求增減或調整）
+    // 預設道具資料（此處使用替代的占位圖 URL）
     const defaultProps = [
       {
         id: "wifi_extender",
         name: "Wi-Fi 擴展器",
-        icon: "https://via.placeholder.com/64?text=WiFi",
+        icon: "https://placehold.co/64?text=WiFi",
         count: 3,
         description: "增強訊號範圍，讓你遠距離通訊。"
       },
       {
         id: "vpn_chip",
         name: "加密 VPN 裝置",
-        icon: "https://via.placeholder.com/64?text=VPN",
+        icon: "https://placehold.co/64?text=VPN",
         count: 2,
         description: "在敵對區域中降低被追蹤風險。"
       },
       {
         id: "5g_booster",
         name: "5G 增強模組",
-        icon: "https://via.placeholder.com/64?text=5G",
+        icon: "https://placehold.co/64?text=5G",
         count: 1,
         description: "降低遠端駭入延遲，提高成功率。"
       },
       {
         id: "quantum_earpiece",
         name: "量子通訊耳機",
-        icon: "https://via.placeholder.com/64?text=量子",
+        icon: "https://placehold.co/64?text=量子",
         count: 1,
         description: "接收未來訊息，獲取隱藏情報。"
       }
     ];
     
-    // Google 登入事件
+    // Google 登入
     signInBtn.addEventListener("click", async () => {
       const provider = new GoogleAuthProvider();
       try {
@@ -118,12 +117,11 @@
       }
     });
     
-    // 監聽使用者登入狀態
+    // 監聽登入狀態
     onAuthStateChanged(auth, async (user) => {
       if (user) {
         signInBtn.style.display = "none";
         userInfoDiv.innerText = "歡迎, " + user.displayName;
-        // 登入後檢查並初始化道具資料
         await initializeUserProps(user.uid);
         loadProps(user.uid);
       } else {
@@ -132,12 +130,11 @@
       }
     });
     
-    // 檢查使用者的 Props 子集合是否存在，若空則建立預設道具
+    // 若使用者尚未有 Props 資料，則初始化預設道具
     async function initializeUserProps(uid) {
       const propsColRef = collection(db, "users", uid, "Props");
       const querySnapshot = await getDocs(propsColRef);
       if (querySnapshot.empty) {
-        // 依預設資料新增道具文件
         defaultProps.forEach(async (prop) => {
           const propDocRef = doc(db, "users", uid, "Props", prop.id);
           await setDoc(propDocRef, prop);
@@ -145,53 +142,59 @@
       }
     }
     
-    // 載入並顯示使用者的道具
+    // 載入並顯示道具資料
     async function loadProps(uid) {
       const propsColRef = collection(db, "users", uid, "Props");
       const querySnapshot = await getDocs(propsColRef);
-      propGrid.innerHTML = ""; // 先清空格子內容
+      propGrid.innerHTML = "";
       
       querySnapshot.forEach((docSnap) => {
         const prop = docSnap.data();
-        // 建立道具項目元素
         const propItem = document.createElement("div");
         propItem.className = "propItem";
         
-        // 圖示
         const img = document.createElement("img");
         img.src = prop.icon;
         img.alt = prop.name;
         
-        // tooltip 顯示說明文字（滑鼠移上去時出現）
         const tooltip = document.createElement("div");
         tooltip.className = "tooltip";
         tooltip.innerText = prop.description;
         
-        // 道具名稱與數量標籤
         const label = document.createElement("div");
         label.innerText = `${prop.name} x${prop.count}`;
         
-        // 點擊道具時執行使用（數量 -1）
+        // 點擊道具圖標使用道具，數量減 1
         img.addEventListener("click", async () => {
           if (prop.count > 0) {
             const propDocRef = doc(db, "users", uid, "Props", prop.id);
             await updateDoc(propDocRef, {
               count: increment(-1)
             });
-            // 更新完成後重新載入道具資料
             loadProps(uid);
           } else {
             alert("該道具已經用完了！");
           }
         });
         
-        // 組合元素並加入道具格子中
         propItem.appendChild(img);
         propItem.appendChild(tooltip);
         propItem.appendChild(label);
         propGrid.appendChild(propItem);
       });
     }
+    
+    // Popup 處理範例 (popup.ts 部分)
+    function safeClosePopup() {
+      try {
+        window.close();
+      } catch (error) {
+        console.error("無法關閉 popup，可能因 COOP 限制：", error);
+      }
+    }
+    
+    // 例如：5秒後自動嘗試關閉 popup
+    setTimeout(safeClosePopup, 5000);
   </script>
 </body>
 </html>
