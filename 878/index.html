@@ -1,92 +1,197 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RPG 道具欄</title>
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-        // Firebase 配置
-        const firebaseConfig = {
-            apiKey: "AIzaSyDt9mJRH-BHlEksl4xla32sVIUGVnLUxWY",
-            authDomain: "future-infusion-368721.firebaseapp.com",
-            projectId: "future-infusion-368721",
-            storageBucket: "future-infusion-368721.appspot.com",
-            messagingSenderId: "345445420847",
-            appId: "1:345445420847:web:070778c173ec6157c6dbda"
-        };
-        
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth();
-        const db = getFirestore();
-        const provider = new GoogleAuthProvider();
-        let userId = "";
-        
-        document.getElementById("loginBtn").addEventListener("click", async () => {
-            try {
-                const result = await signInWithPopup(auth, provider);
-                const user = result.user;
-                userId = user.uid;
-                document.getElementById("user-info").textContent = `歡迎, ${user.displayName}`;
-                loadInventory();
-            } catch (error) {
-                console.error("登入失敗", error);
-            }
-        });
-        
-        async function loadInventory() {
-            if (!userId) return;
-            const userRef = doc(db, "users", userId);
-            const userSnap = await getDoc(userRef);
-            
-            if (!userSnap.exists()) {
-                await setDoc(userRef, { Props: {} });
-            }
-            
-            const props = userSnap.data().Props || {};
-            renderInventory(props);
-        }
-        
-        function renderInventory(props) {
-            const inventory = document.getElementById("inventory");
-            inventory.innerHTML = "";
-            Object.keys(props).forEach(key => {
-                const item = props[key];
-                const itemElement = document.createElement("div");
-                itemElement.classList.add("item");
-                itemElement.innerHTML = `
-                    <img src="${item.icon}" alt="${item.name}" title="${item.desc}">
-                    <span>${item.name} (${item.qty})</span>
-                `;
-                itemElement.addEventListener("click", () => useItem(key, item));
-                inventory.appendChild(itemElement);
-            });
-        }
-        
-        async function useItem(key, item) {
-            if (item.qty <= 0) return;
-            const userRef = doc(db, "users", userId);
-            const newQty = item.qty - 1;
-            await updateDoc(userRef, {
-                [`Props.${key}.qty`]: newQty
-            });
-            loadInventory();
-        }
-    </script>
-    <style>
-        body { font-family: Arial, sans-serif; text-align: center; }
-        #inventory { display: grid; grid-template-columns: repeat(4, 80px); gap: 10px; justify-content: center; }
-        .item { width: 80px; height: 80px; border: 1px solid #ccc; padding: 5px; cursor: pointer; }
-        .item img { width: 100%; height: auto; }
-    </style>
+  <meta charset="UTF-8">
+  <title>道具欄介面</title>
+  <style>
+    /* 格子版的道具欄 */
+    #propGrid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, 80px);
+      grid-gap: 10px;
+      margin-top: 20px;
+    }
+    .propItem {
+      text-align: center;
+      position: relative;
+    }
+    .propItem img {
+      width: 64px;
+      height: 64px;
+      cursor: pointer;
+    }
+    /* 簡易 tooltip 樣式 */
+    .tooltip {
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.7);
+      color: #fff;
+      padding: 5px;
+      border-radius: 3px;
+      white-space: nowrap;
+      display: none;
+      font-size: 12px;
+    }
+    .propItem:hover .tooltip {
+      display: block;
+    }
+  </style>
 </head>
 <body>
-    <h1>RPG 道具欄</h1>
-    <button id="loginBtn">Google 登入</button>
-    <p id="user-info"></p>
-    <div id="inventory"></div>
+  <h1>道具欄介面</h1>
+  <div id="userInfo"></div>
+  <button id="signInBtn">使用 Google 登入</button>
+  <div id="propGrid"></div>
+  
+  <!-- Firebase SDK (使用 v9 modular 版) -->
+  <script type="module">
+    // 載入 Firebase 必要模組
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-analytics.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+    import { getFirestore, collection, getDocs, doc, setDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+    
+    // Firebase 設定 (請根據自己的專案設定)
+    const firebaseConfig = {
+      apiKey: "AIzaSyDt9mJRH-BHlEksl4xla32sVIUGVnLUxWY",
+      authDomain: "future-infusion-368721.firebaseapp.com",
+      databaseURL: "https://future-infusion-368721-default-rtdb.firebaseio.com",
+      projectId: "future-infusion-368721",
+      storageBucket: "future-infusion-368721.firebasestorage.app",
+      messagingSenderId: "345445420847",
+      appId: "1:345445420847:web:070778c173ec6157c6dbda",
+      measurementId: "G-57PJMMNNWW"
+    };
+    
+    // 初始化 Firebase
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const auth = getAuth();
+    const db = getFirestore();
+    
+    // UI 元件
+    const signInBtn = document.getElementById("signInBtn");
+    const userInfoDiv = document.getElementById("userInfo");
+    const propGrid = document.getElementById("propGrid");
+    
+    // 預設道具資料（使用之前提供的網路主題道具，可依需求增減或調整）
+    const defaultProps = [
+      {
+        id: "wifi_extender",
+        name: "Wi-Fi 擴展器",
+        icon: "https://via.placeholder.com/64?text=WiFi",
+        count: 3,
+        description: "增強訊號範圍，讓你遠距離通訊。"
+      },
+      {
+        id: "vpn_chip",
+        name: "加密 VPN 裝置",
+        icon: "https://via.placeholder.com/64?text=VPN",
+        count: 2,
+        description: "在敵對區域中降低被追蹤風險。"
+      },
+      {
+        id: "5g_booster",
+        name: "5G 增強模組",
+        icon: "https://via.placeholder.com/64?text=5G",
+        count: 1,
+        description: "降低遠端駭入延遲，提高成功率。"
+      },
+      {
+        id: "quantum_earpiece",
+        name: "量子通訊耳機",
+        icon: "https://via.placeholder.com/64?text=量子",
+        count: 1,
+        description: "接收未來訊息，獲取隱藏情報。"
+      }
+    ];
+    
+    // Google 登入事件
+    signInBtn.addEventListener("click", async () => {
+      const provider = new GoogleAuthProvider();
+      try {
+        await signInWithPopup(auth, provider);
+      } catch (error) {
+        console.error("登入失敗:", error);
+      }
+    });
+    
+    // 監聽使用者登入狀態
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        signInBtn.style.display = "none";
+        userInfoDiv.innerText = "歡迎, " + user.displayName;
+        // 登入後檢查並初始化道具資料
+        await initializeUserProps(user.uid);
+        loadProps(user.uid);
+      } else {
+        signInBtn.style.display = "block";
+        userInfoDiv.innerText = "";
+      }
+    });
+    
+    // 檢查使用者的 Props 子集合是否存在，若空則建立預設道具
+    async function initializeUserProps(uid) {
+      const propsColRef = collection(db, "users", uid, "Props");
+      const querySnapshot = await getDocs(propsColRef);
+      if (querySnapshot.empty) {
+        // 依預設資料新增道具文件
+        defaultProps.forEach(async (prop) => {
+          const propDocRef = doc(db, "users", uid, "Props", prop.id);
+          await setDoc(propDocRef, prop);
+        });
+      }
+    }
+    
+    // 載入並顯示使用者的道具
+    async function loadProps(uid) {
+      const propsColRef = collection(db, "users", uid, "Props");
+      const querySnapshot = await getDocs(propsColRef);
+      propGrid.innerHTML = ""; // 先清空格子內容
+      
+      querySnapshot.forEach((docSnap) => {
+        const prop = docSnap.data();
+        // 建立道具項目元素
+        const propItem = document.createElement("div");
+        propItem.className = "propItem";
+        
+        // 圖示
+        const img = document.createElement("img");
+        img.src = prop.icon;
+        img.alt = prop.name;
+        
+        // tooltip 顯示說明文字（滑鼠移上去時出現）
+        const tooltip = document.createElement("div");
+        tooltip.className = "tooltip";
+        tooltip.innerText = prop.description;
+        
+        // 道具名稱與數量標籤
+        const label = document.createElement("div");
+        label.innerText = `${prop.name} x${prop.count}`;
+        
+        // 點擊道具時執行使用（數量 -1）
+        img.addEventListener("click", async () => {
+          if (prop.count > 0) {
+            const propDocRef = doc(db, "users", uid, "Props", prop.id);
+            await updateDoc(propDocRef, {
+              count: increment(-1)
+            });
+            // 更新完成後重新載入道具資料
+            loadProps(uid);
+          } else {
+            alert("該道具已經用完了！");
+          }
+        });
+        
+        // 組合元素並加入道具格子中
+        propItem.appendChild(img);
+        propItem.appendChild(tooltip);
+        propItem.appendChild(label);
+        propGrid.appendChild(propItem);
+      });
+    }
+  </script>
 </body>
 </html>
