@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>Firebase Google 登入示範</title>
+</head>
+<body>
+  <h1>Firebase Google 登入示範</h1>
+  <button id="loginBtn">使用 Google 登入</button>
+  <div id="userInfo" style="display:none;">
+    <p>歡迎，<span id="userName"></span>！</p>
+    <p>金鑰：<span id="userKey"></span></p>
+    <p>剩餘時間：<span id="countdown"></span></p>
+  </div>
+  
+  <!-- 載入 Firebase SDK (採用 v9 模組化寫法) -->
+  <script type="module">
+    // 從 Firebase CDN 載入必要的模組
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+    // Firebase 專案設定
+    const firebaseConfig = {
+      apiKey: "AIzaSyDt9mJRH-BHlEksl4xla32sVIUGVnLUxWY",
+      authDomain: "future-infusion-368721.firebaseapp.com",
+      databaseURL: "https://future-infusion-368721-default-rtdb.firebaseio.com",
+      projectId: "future-infusion-368721",
+      storageBucket: "future-infusion-368721.firebasestorage.app",
+      messagingSenderId: "345445420847",
+      appId: "1:345445420847:web:070778c173ec6157c6dbda",
+      measurementId: "G-57PJMMNNWW"
+    };
+
+    // 初始化 Firebase
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // 取得網頁上的 DOM 元素
+    const loginBtn = document.getElementById("loginBtn");
+    const userInfoDiv = document.getElementById("userInfo");
+    const userNameSpan = document.getElementById("userName");
+    const userKeySpan = document.getElementById("userKey");
+    const countdownSpan = document.getElementById("countdown");
+
+    // 產生中英混合 14 碼金鑰的函式
+    function generateKey() {
+      const englishChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+      const chineseChars = "中英混合金鑰驗碼"; // 可依需求調整可用的中文字
+      let key = "";
+      for (let i = 0; i < 14; i++) {
+        // 以 50% 機率選取英文或中文
+        if (Math.random() < 0.5) {
+          key += englishChars.charAt(Math.floor(Math.random() * englishChars.length));
+        } else {
+          key += chineseChars.charAt(Math.floor(Math.random() * chineseChars.length));
+        }
+      }
+      return key;
+    }
+
+    // 在 Cloud Firestore 中建立或更新使用者資料
+    async function createOrUpdateUser(user) {
+      const userRef = doc(db, "users", user.uid);
+      const userDoc = await getDoc(userRef);
+      if (!userDoc.exists()) {
+        // 若資料不存在，建立預設值
+        await setDoc(userRef, {
+          level: 1,
+          experience: 0,
+          attributes: {
+            力量: 10,
+            敏捷: 10,
+            智力: 10,
+            HP: 100,
+            MP: 50
+          },
+          position: {
+            地圖ID: "defaultMap",
+            X: 0,
+            Y: 0,
+            Z: 0
+          },
+          currency: 0,  // 巴幣（未來擴充）
+          createdAt: serverTimestamp()
+        });
+      }
+    }
+
+    // 處理 Google 登入流程
+    async function googleLogin() {
+      const provider = new GoogleAuthProvider();
+      try {
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+        // 更新畫面，顯示使用者名稱
+        userNameSpan.textContent = user.displayName;
+        // 建立或更新 Firestore 中的使用者資料
+        await createOrUpdateUser(user);
+        // 產生金鑰及設定有效期限 (5 分鐘後過期)
+        const key = generateKey();
+        const expiryTimestamp = Date.now() + 5 * 60 * 1000; // 毫秒數
+
+        // 更新使用者資料，新增金鑰與過期時間 (merge 為避免覆寫其他欄位)
+        const userRef = doc(db, "users", user.uid);
+        await setDoc(userRef, {
+          key: key,
+          keyExpiry: expiryTimestamp
+        }, { merge: true });
+
+        // 顯示金鑰並開始倒數計時
+        userKeySpan.textContent = key;
+        userInfoDiv.style.display = "block";
+        startCountdown(expiryTimestamp);
+      } catch (error) {
+        console.error("Google 登入失敗:", error);
+      }
+    }
+
+    // 倒數計時函式，每秒更新剩餘時間
+    function startCountdown(expiryTimestamp) {
+      const interval = setInterval(() => {
+        const now = Date.now();
+        const remaining = expiryTimestamp - now;
+        if (remaining > 0) {
+          const minutes = Math.floor(remaining / 60000);
+          const seconds = Math.floor((remaining % 60000) / 1000);
+          countdownSpan.textContent = `${minutes} 分 ${seconds} 秒`;
+        } else {
+          clearInterval(interval);
+          countdownSpan.textContent = "金鑰已過期";
+          // 如有需要，可在此處清除 Firestore 中的金鑰資料
+        }
+      }, 1000);
+    }
+
+    // 綁定按鈕點擊事件
+    loginBtn.addEventListener("click", googleLogin);
+  </script>
+</body>
+</html>
