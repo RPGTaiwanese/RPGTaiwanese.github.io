@@ -2,57 +2,77 @@
 <html lang="zh">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>场外物语公会网页</title>
-  <!-- 引入 Bootstrap CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>場外物語公會網頁</title>
   <style>
+    /* 基本重置與字型設定 */
     body {
-      background-color: #f8f9fa;
-      padding-top: 60px;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f7f7f7;
+      color: #333;
     }
-    .card {
-      border: none;
-      border-radius: 10px;
-    }
-    .btn-custom {
-      min-width: 150px;
-    }
-    .list-group {
-      max-height: 400px;
-      overflow-y: auto;
-    }
-    .search-bar {
+    h1 {
+      text-align: center;
       margin-bottom: 20px;
     }
+    /* 搜尋框 */
+    #searchBar {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      margin-bottom: 20px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    /* 公會列表區域 */
+    #guildList {
+      max-height: 400px;
+      overflow-y: auto;
+      border: 1px solid #ccc;
+      background-color: #fff;
+      padding: 10px;
+      border-radius: 5px;
+    }
+    .guildItem {
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+    }
+    .guildItem:last-child {
+      border-bottom: none;
+    }
+    .guildTitle {
+      font-weight: bold;
+      color: #007BFF;
+      margin-bottom: 5px;
+    }
+    .guildDetails {
+      font-size: 14px;
+      color: #555;
+    }
   </style>
+  <!-- 載入 Firebase SDK (含 app, analytics 與 database) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-analytics-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 </head>
 <body>
-  <div class="container">
-    <div class="card shadow mx-auto" style="max-width: 800px;">
-      <div class="card-body">
-        <h2 class="card-title mb-4 text-center">场外物语公会列表</h2>
-        <input id="searchInput" type="text" class="form-control search-bar" placeholder="搜索公会">
-        <ul id="guildList" class="list-group">
-          <!-- 公会列表将动态插入这里 -->
-        </ul>
-      </div>
-    </div>
+  <h1>場外物語公會網頁</h1>
+  <input type="text" id="searchBar" placeholder="搜尋公會..." />
+
+  <div id="guildList">
+    <!-- 公會列表將在這裡動態產生 -->
   </div>
 
-  <!-- Firebase SDK 与模块 -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js"></script>
-
   <script>
-    // Firebase 配置
+    // Firebase 配置 (請依實際專案設定)
     const firebaseConfig = {
       apiKey: "AIzaSyDt9mJRH-BHlEksl4xla32sVIUGVnLUxWY",
       authDomain: "future-infusion-368721.firebaseapp.com",
       databaseURL: "https://future-infusion-368721-default-rtdb.firebaseio.com",
       projectId: "future-infusion-368721",
-      storageBucket: "future-infusion-368721.appspot.com",
+      storageBucket: "future-infusion-368721.firebasestorage.app",
       messagingSenderId: "345445420847",
       appId: "1:345445420847:web:070778c173ec6157c6dbda",
       measurementId: "G-57PJMMNNWW"
@@ -60,60 +80,60 @@
 
     // 初始化 Firebase
     const app = firebase.initializeApp(firebaseConfig);
-    const analytics = firebase.analytics(app);
-    const database = firebase.database(app);
+    const analytics = firebase.analytics();
+    const database = firebase.database();
 
-    // 获取 DOM 元素
-    const guildList = document.getElementById("guildList");
-    const searchInput = document.getElementById("searchInput");
+    // 將取得的公會資料存至全域變數以便搜尋使用
+    window.allGuilds = {};
 
-    // 从 Realtime Database 中获取公会数据
-    function fetchGuilds() {
-      const guildRef = database.ref('guild');
-      guildRef.on('value', (snapshot) => {
-        const data = snapshot.val();
-        displayGuilds(data);
-      });
-    }
-
-    // 显示公会列表
+    // 顯示公會列表的函式
     function displayGuilds(guilds) {
-      guildList.innerHTML = ''; // 清空列表
+      const guildList = document.getElementById('guildList');
+      guildList.innerHTML = ''; // 清除現有內容
+
       for (const guildName in guilds) {
-        if (Object.hasOwnProperty.call(guilds, guildName)) {
+        if (guilds.hasOwnProperty(guildName)) {
           const guild = guilds[guildName];
-          const listItem = document.createElement('li');
-          listItem.className = 'list-group-item';
-          listItem.innerHTML = `
-            <h5>${guildName}</h5>
-            <p>公会长: ${guild.公会长}</p>
-            <p>等级: ${guild.等级}</p>
-            <p>成员: ${guild.成员.join(', ')}</p>
-            <p>经验值: ${guild.经验值}</p>
+          const itemDiv = document.createElement('div');
+          itemDiv.className = 'guildItem';
+          itemDiv.innerHTML = `
+            <div class="guildTitle">${guildName}</div>
+            <div class="guildDetails">公會長: ${guild["公會長"]} | 等級: ${guild["等級"]} | 經驗值: ${guild["經驗值"]}</div>
+            <div class="guildDetails">成員: ${guild["成員"].join(', ')}</div>
           `;
-          guildList.appendChild(listItem);
+          guildList.appendChild(itemDiv);
         }
       }
     }
 
-    // 搜索功能
-    searchInput.addEventListener('input', function() {
-      const filter = searchInput.value.toLowerCase();
-      const items = guildList.getElementsByTagName('li');
-      Array.from(items).forEach(function(item) {
-        const guildName = item.getElementsByTagName('h5')[0].textContent.toLowerCase();
-        if (guildName.includes(filter)) {
-          item.style.display = '';
+    // 從 Firebase Realtime Database 讀取 guild 資料
+    function fetchGuilds() {
+      const guildRef = database.ref('guild');
+      guildRef.on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          window.allGuilds = data; // 全域儲存以利搜尋
+          displayGuilds(data);
         } else {
-          item.style.display = 'none';
+          document.getElementById('guildList').innerHTML = '暫無公會資料';
         }
       });
+    }
+
+    // 搜尋功能：根據輸入篩選公會名稱
+    document.getElementById('searchBar').addEventListener('input', function(e) {
+      const query = e.target.value.toLowerCase();
+      const filteredGuilds = {};
+      for (const guildName in window.allGuilds) {
+        if (guildName.toLowerCase().includes(query)) {
+          filteredGuilds[guildName] = window.allGuilds[guildName];
+        }
+      }
+      displayGuilds(filteredGuilds);
     });
 
-    // 初始化获取公会数据
+    // 啟動資料讀取
     fetchGuilds();
   </script>
-  <!-- 引入 Bootstrap JS（可选，用于交互组件） -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
