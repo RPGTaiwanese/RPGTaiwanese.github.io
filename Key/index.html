@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Firebase Google 登入示範</title>
+  <!-- 引入 Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background-color: #f8f9fa;
+      padding-top: 60px;
+    }
+    .card {
+      border: none;
+      border-radius: 10px;
+    }
+    .btn-custom {
+      min-width: 150px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card shadow mx-auto" style="max-width: 500px;">
+      <div class="card-body text-center">
+        <h2 class="card-title mb-4">專業版 Firebase 登入</h2>
+        <button id="loginBtn" class="btn btn-primary btn-custom mb-3">使用 Google 登入</button>
+        <button id="logoutBtn" class="btn btn-outline-secondary btn-custom mb-3" style="display:none;">登出</button>
+        <div id="userInfo" style="display:none;">
+          <p>歡迎，<span id="userName" class="fw-bold"></span>！</p>
+          <p>金鑰：<span id="userKey" class="fst-monospace"></span></p>
+          <p>這個金鑰你綁定你的Google帳號,一個帳號只會有一個金鑰</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase SDK 與模組 -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics.js";
+    import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import { getDatabase, ref, set, get, query, orderByChild } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+
+    // Firebase 專案設定
+    const firebaseConfig = {
+      apiKey: "AIzaSyDt9mJRH-BHlEksl4xla32sVIUGVnLUxWY",
+      authDomain: "future-infusion-368721.firebaseapp.com",
+      databaseURL: "https://future-infusion-368721-default-rtdb.firebaseio.com",
+      projectId: "future-infusion-368721",
+      storageBucket: "future-infusion-368721.firebasestorage.app",
+      messagingSenderId: "345445420847",
+      appId: "1:345445420847:web:070778c173ec6157c6dbda",
+      measurementId: "G-57PJMMNNWW"
+    };
+
+    // 初始化 Firebase
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const auth = getAuth(app);
+    const database = getDatabase(app);
+
+    // 取得 DOM 元素
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const userInfoDiv = document.getElementById("userInfo");
+    const userNameSpan = document.getElementById("userName");
+    const userKeySpan = document.getElementById("userKey");
+
+    // 產生 14 碼英數混合金鑰（僅包含英文字母與數字）
+    function generateKey() {
+      const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+      let key = "";
+      for (let i = 0; i < 14; i++) {
+        key += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return key;
+    }
+
+    // 從 Realtime Database 取得或建立使用者金鑰
+    async function getOrCreateUserKey(user) {
+      const dbRef = ref(database);
+      // 使用查詢：找出綁定此 Google 帳號的金鑰
+      const userKeyQuery = query(dbRef, orderByChild('googleUid'), equalTo(user.uid));
+      const snapshot = await get(userKeyQuery);
+      if (snapshot.exists()) {
+        // 找到對應的金鑰，回傳第一個金鑰
+        const data = snapshot.val();
+        const keys = Object.keys(data);
+        return keys[0];
+      } else {
+        // 若沒有金鑰，則產生新的金鑰並存入資料庫的第一層級
+        const newKey = generateKey();
+        await set(ref(database, newKey), {
+          googleUid: user.uid,
+          userName: user.displayName || user.email,
+          createdAt: Date.now()
+        });
+        return newKey;
+      }
+    }
+
+    // Google 登入流程
+    async function googleLogin() {
+      const provider = new GoogleAuthProvider();
+      try {
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+        userNameSpan.textContent = user.displayName || user.email;
+
+        // 取得或建立使用者金鑰
+        const key = await getOrCreateUserKey(user);
+
+        // 顯示使用者資訊
+        userKeySpan.textContent = key;
+        userInfoDiv.style.display = "block";
+        loginBtn.style.display = "none";
+        logoutBtn.style.display = "inline-block";
+      } catch (error) {
+        console.error("登入失敗：", error);
+      }
+    }
+
+    // 登出流程
+    async function logout() {
+      try {
+        await signOut(auth);
+      } catch (error) {
+        console.error("登出失敗：", error);
+      }
+    }
+
+    // 監聽使用者狀態變化
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        loginBtn.style.display = "none";
+        logoutBtn.style.display = "inline-block";
+        userInfoDiv.style.display = "block";
+        userNameSpan.textContent = user.displayName || user.email;
+        // 取得使用者金鑰
+        getOrCreateUserKey(user).then(key => {
+          userKeySpan.textContent = key;
+        });
+      } else {
+        loginBtn.style.display = "inline-block";
+        logoutBtn.style.display = "none";
+        userInfoDiv.style.display = "none";
+      }
+    });
+
+    // 綁定按鈕事件
+    loginBtn.addEventListener("click", googleLogin);
+    logoutBtn.addEventListener("click", logout);
+  </script>
+  <!-- 引入 Bootstrap JS (可選，用於互動元件) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
