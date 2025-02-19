@@ -24,13 +24,13 @@
   <div class="container">
     <div class="card shadow mx-auto" style="max-width: 500px;">
       <div class="card-body text-center">
-        <h2 class="card-title mb-4">專業版 Firebase 登入</h2>
-        <button id="loginBtn" class="btn btn-primary btn-custom mb-3">使用 Google 登入</button>
+        <h2 class="card-title mb-4">場外物語 Google帳號登入</h2>
+        <button id="loginBtn" class="btn btn-primary btn-custom mb-3"> Google 登入</button>
         <button id="logoutBtn" class="btn btn-outline-secondary btn-custom mb-3" style="display:none;">登出</button>
         <div id="userInfo" style="display:none;">
           <p>歡迎，<span id="userName" class="fw-bold"></span>！</p>
           <p>金鑰：<span id="userKey" class="fst-monospace"></span></p>
-          <p>這個金鑰你綁定你的Google帳號,一個帳號只會有一個金鑰</p>
+          <p>這個金鑰你綁定你的Google帳號,一個帳號只會有一個金鑰,要小心保存</p>
         </div>
       </div>
     </div>
@@ -41,7 +41,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics.js";
     import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-    import { getDatabase, ref, set, get, query, orderByChild } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+    import { getDatabase, ref, set, get, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
     // Firebase 專案設定
     const firebaseConfig = {
