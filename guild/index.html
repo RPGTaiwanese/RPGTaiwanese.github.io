@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>场外物语公会网页</title>
+  <!-- 引入 Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background-color: #f8f9fa;
+      padding-top: 60px;
+    }
+    .card {
+      border: none;
+      border-radius: 10px;
+    }
+    .btn-custom {
+      min-width: 150px;
+    }
+    .list-group {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .search-bar {
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card shadow mx-auto" style="max-width: 800px;">
+      <div class="card-body">
+        <h2 class="card-title mb-4 text-center">场外物语公会列表</h2>
+        <input id="searchInput" type="text" class="form-control search-bar" placeholder="搜索公会">
+        <ul id="guildList" class="list-group">
+          <!-- 公会列表将动态插入这里 -->
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase SDK 与模块 -->
+  <script type="module">
+    // 引入 Firebase 模块
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+
+    // Firebase 配置
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      databaseURL: "YOUR_DATABASE_URL",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    // 初始化 Firebase
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
+
+    // 获取 DOM 元素
+    const guildList = document.getElementById("guildList");
+    const searchInput = document.getElementById("searchInput");
+
+    // 从 Realtime Database 中获取公会数据
+    function fetchGuilds() {
+      const guildRef = ref(database, 'guild');
+      onValue(guildRef, (snapshot) => {
+        const data = snapshot.val();
+        displayGuilds(data);
+      });
+    }
+
+    // 显示公会列表
+    function displayGuilds(guilds) {
+      guildList.innerHTML = ''; // 清空列表
+      for (const guildName in guilds) {
+        if (Object.hasOwnProperty.call(guilds, guildName)) {
+          const guild = guilds[guildName];
+          const listItem = document.createElement('li');
+          listItem.className = 'list-group-item';
+          listItem.innerHTML = `
+            <h5>${guildName}</h5>
+            <p>公会长: ${guild.公会长}</p>
+            <p>等级: ${guild.等级}</p>
+            <p>成员: ${guild.成员.join(', ')}</p>
+            <p>经验值: ${guild.经验值}</p>
+          `;
+          guildList.appendChild(listItem);
+        }
+      }
+    }
+
+    // 搜索功能
+    searchInput.addEventListener('input', function() {
+      const filter = searchInput.value.toLowerCase();
+      const items = guildList.getElementsByTagName('li');
+      Array.from(items).forEach(function(item) {
+        const guildName = item.getElementsByTagName('h5')[0].textContent.toLowerCase();
+        if (guildName.includes(filter)) {
+          item.style.display = '';
+        } else {
+          item.style.display = 'none';
+        }
+      });
+    });
+
+    // 初始化获取公会数据
+    fetchGuilds();
+  </script>
+  <!-- 引入 Bootstrap JS（可选，用于交互组件） -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
