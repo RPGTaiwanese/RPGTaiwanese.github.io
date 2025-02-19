@@ -31,6 +31,20 @@
       border-radius: 4px;
       box-sizing: border-box;
     }
+    /* 重整按鈕 */
+    #refreshButton {
+      width: 90%;
+      max-width: 600px;
+      padding: 10px;
+      font-size: 16px;
+      margin-bottom: 20px;
+      border: 1px solid #007BFF;
+      border-radius: 4px;
+      background-color: #007BFF;
+      color: #fff;
+      cursor: pointer;
+      box-sizing: border-box;
+    }
     /* 公會列表區域 */
     #guildList {
       width: 90%;
@@ -68,7 +82,7 @@
 <body>
   <h1>場外物語公會網頁</h1>
   <input type="text" id="searchBar" placeholder="搜尋公會..." />
-
+  <button id="refreshButton">重整列表</button>
   <div id="guildList">
     <!-- 公會列表將在這裡動態產生 -->
   </div>
@@ -114,13 +128,27 @@
       }
     }
 
-    // 從 Firebase Realtime Database 讀取 guild 資料
+    // 從 Firebase Realtime Database 讀取 guild 資料 (初始化監聽)
     function fetchGuilds() {
       const guildRef = database.ref('guild');
       guildRef.on('value', (snapshot) => {
         const data = snapshot.val();
         if (data) {
           window.allGuilds = data; // 全域儲存以利搜尋
+          displayGuilds(data);
+        } else {
+          document.getElementById('guildList').innerHTML = '暫無公會資料';
+        }
+      });
+    }
+
+    // 重整列表：以 once() 方式重新讀取資料
+    function refreshGuilds() {
+      const guildRef = database.ref('guild');
+      guildRef.once('value', (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          window.allGuilds = data;
           displayGuilds(data);
         } else {
           document.getElementById('guildList').innerHTML = '暫無公會資料';
@@ -138,6 +166,11 @@
         }
       }
       displayGuilds(filteredGuilds);
+    });
+
+    // 重整按鈕事件綁定
+    document.getElementById('refreshButton').addEventListener('click', function() {
+      refreshGuilds();
     });
 
     // 啟動資料讀取
