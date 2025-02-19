@@ -12,6 +12,9 @@
       padding: 20px;
       background-color: #f7f7f7;
       color: #333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
     h1 {
       text-align: center;
@@ -19,21 +22,26 @@
     }
     /* 搜尋框 */
     #searchBar {
-      width: 100%;
+      width: 90%;
+      max-width: 600px;
       padding: 10px;
       font-size: 16px;
       margin-bottom: 20px;
       border: 1px solid #ccc;
       border-radius: 4px;
+      box-sizing: border-box;
     }
     /* 公會列表區域 */
     #guildList {
+      width: 90%;
+      max-width: 600px;
       max-height: 400px;
       overflow-y: auto;
       border: 1px solid #ccc;
       background-color: #fff;
       padding: 10px;
       border-radius: 5px;
+      box-sizing: border-box;
     }
     .guildItem {
       padding: 10px;
