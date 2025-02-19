@@ -24,13 +24,13 @@
   <div class="container">
     <div class="card shadow mx-auto" style="max-width: 500px;">
       <div class="card-body text-center">
-        <h2 class="card-title mb-4">場外物語 Google帳號登入</h2>
-        <button id="loginBtn" class="btn btn-primary btn-custom mb-3"> Google 登入</button>
+        <h2 class="card-title mb-4">專業版 Firebase 登入</h2>
+        <button id="loginBtn" class="btn btn-primary btn-custom mb-3">使用 Google 登入</button>
         <button id="logoutBtn" class="btn btn-outline-secondary btn-custom mb-3" style="display:none;">登出</button>
         <div id="userInfo" style="display:none;">
           <p>歡迎，<span id="userName" class="fw-bold"></span>！</p>
           <p>金鑰：<span id="userKey" class="fst-monospace"></span></p>
-          <p>這個金鑰你綁定你的Google帳號,一個帳號只會有一個金鑰,要小心保存</p>
+          <p>這個金鑰你綁定你的 Google 帳號，一個帳號只會有一個金鑰，請小心保存</p>
         </div>
       </div>
     </div>
@@ -38,10 +38,14 @@
 
   <!-- Firebase SDK 與模組 -->
   <script type="module">
+    // Firebase App 與其他服務模組
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics.js";
     import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-    import { getDatabase, ref, set, get, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+    // Realtime Database 模組
+    import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+    // Cloud Firestore 模組
+    import { getFirestore, doc, setDoc, query, where, collection, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
     // Firebase 專案設定
     const firebaseConfig = {
@@ -55,11 +59,12 @@
       measurementId: "G-57PJMMNNWW"
     };
 
-    // 初始化 Firebase
+    // 初始化 Firebase 各服務
     const app = initializeApp(firebaseConfig);
     const analytics = getAnalytics(app);
     const auth = getAuth(app);
     const database = getDatabase(app);
+    const firestore = getFirestore(app);
 
     // 取得 DOM 元素
     const loginBtn = document.getElementById("loginBtn");
@@ -78,20 +83,26 @@
       return key;
     }
 
-    // 從 Realtime Database 取得或建立使用者金鑰
+    // 從 Cloud Firestore 取得或建立使用者金鑰
     async function getOrCreateUserKey(user) {
-      const dbRef = ref(database);
-      // 使用查詢：找出綁定此 Google 帳號的金鑰
-      const userKeyQuery = query(dbRef, orderByChild('googleUid'), equalTo(user.uid));
-      const snapshot = await get(userKeyQuery);
-      if (snapshot.exists()) {
-        // 找到對應的金鑰，回傳第一個金鑰
-        const data = snapshot.val();
-        const keys = Object.keys(data);
-        return keys[0];
+      // 以 "keys" 集合存放所有金鑰文件
+      const keysCollection = collection(firestore, "keys");
+      // 查詢該集合中 googleUid 等於當前使用者 uid 的文件
+      const q = query(keysCollection, where("googleUid", "==", user.uid));
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        // 若找到文件，回傳第一個文件的文件 ID（即金鑰）
+        return querySnapshot.docs[0].id;
       } else {
-        // 若沒有金鑰，則產生新的金鑰並存入資料庫的第一層級
+        // 若未找到，則產生新的金鑰
         const newKey = generateKey();
+        // 在 Cloud Firestore 中建立文件，文件 ID 為 newKey
+        await setDoc(doc(firestore, "keys", newKey), {
+          googleUid: user.uid,
+          userName: user.displayName || user.email,
+          createdAt: serverTimestamp()
+        });
+        // 同時在 Realtime Database 的第一層級建立同樣的節點，方便後續用作集合名稱
         await set(ref(database, newKey), {
           googleUid: user.uid,
           userName: user.displayName || user.email,
@@ -109,7 +120,7 @@
         const user = result.user;
         userNameSpan.textContent = user.displayName || user.email;
 
-        // 取得或建立使用者金鑰
+        // 從 Cloud Firestore 取得或建立金鑰
         const key = await getOrCreateUserKey(user);
 
         // 顯示使用者資訊
