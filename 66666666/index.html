@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>測試用選單頁面</title>
+  <style>
+    /* 隱藏橫向滾動條，防止網頁左右滑動 */
+    body { 
+      overflow-x: hidden; 
+      margin: 0; 
+      padding: 0; 
+      background: url('https://truth.bahamut.com.tw/s01/202502/7a84a855b506e748e4fb62acbb7a09ee.JPG') no-repeat center center fixed; 
+      background-size: cover; /* 讓背景圖片填滿整個畫面 */
+    }
+    /* 設定遊戲容器，確保遊戲置中 */
+    .game-container { 
+      width: 100%; 
+      text-align: center; 
+      position: relative; 
+      padding: 20px; 
+    } 
+    /* 設定 iframe 讓遊戲可以自適應螢幕大小 */
+    iframe { 
+      display: block; 
+      margin: auto; 
+      position: relative; 
+      top: 100px;  /* ← 調整這裡的數值可移動遊戲的「上下位置」，負值往上，正值往下 */
+      left: -20px;   /* ← 調整這裡的數值可移動遊戲的「左右位置」，負值往左，正值往右 */
+      max-width: 100%; /* 讓遊戲在小螢幕時不超出範圍 */
+    }
+  </style>
+</head>
+<body>
+  <!-- 引入動態選單的 JS 檔案 -->
+  <script src="dynamicMenu.js"></script>
+  <!-- 以 ES module 方式引入 online-users-display.js -->
+  <!-- 功能：在網頁右上角顯示透過 Google 登入的在線用戶數量、用戶名稱及頭像 -->
+  <script type="module" src="online-users-display/online-users-display.js"></script>
+
+  <div class="game-container">
+    <iframe frameborder="0" 
+      src="https://itch.io/embed-upload/10112658?color=000000" 
+      allowfullscreen 
+      width="1000" 
+      height="700">
+    </iframe>
+  </div>
+</body>
+</html>
