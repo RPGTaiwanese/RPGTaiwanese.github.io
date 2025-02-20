@@ -1,1 +1,214 @@
-<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>場外物語Online</title><style>body{overflow-x:hidden;margin:0;padding:0;background:url('https://www.toptal.com/designers/subtlepatterns/uploads/double-bubble-outline.png')repeat}.game-container{width:100%;text-align:center;position:relative;padding:20px}iframe{display:block;margin:auto;position:relative;top:110px;left:-20px;max-width:100%}#login-container{position:fixed;top:10px;right:10px;z-index:10000}#login-button{padding:10px 20px;font-size:16px;cursor:pointer;background:rgba(0,0,0,0.7);color:#fff;border:none;border-radius:5px;box-shadow:0 2px 5px rgba(0,0,0,0.5);transition:background 0.3s ease,transform 0.3s ease}#login-button:hover{background:rgba(0,0,0,0.85);transform:scale(1.05)}#online-users-container{position:fixed;top:10px;right:10px;background-color:rgba(0,0,0,0.7);color:#fff;padding:10px;border-radius:5px;z-index:9999;display:none}</style></head><body><script type="module">import{initializeApp,getApps}from"https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";import{getAuth,signInWithPopup,GoogleAuthProvider,onAuthStateChanged,signOut}from"https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";import{getDatabase,ref,push,onChildAdded}from"https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";const firebaseConfig={apiKey:"AIzaSyDt9mJRH-BHlEksl4xla32sVIUGVnLUxWY",authDomain:"future-infusion-368721.firebaseapp.com",databaseURL:"https://future-infusion-368721-default-rtdb.firebaseio.com",projectId:"future-infusion-368721",storageBucket:"future-infusion-368721.firebasestorage.app",messagingSenderId:"345445420847",appId:"1:345445420847:web:070778c173ec6157c6dbda"};const app=getApps().length?getApps()[0]:initializeApp(firebaseConfig);const auth=getAuth(app),database=getDatabase(app);const chatContainer=document.createElement("div");chatContainer.id="firebase-chat-container";chatContainer.style.position="fixed";chatContainer.style.bottom="20px";chatContainer.style.right="20px";chatContainer.style.width="300px";chatContainer.style.height="400px";chatContainer.style.background="rgba(0,0,0,0.8)";chatContainer.style.border="1px solid #ccc";chatContainer.style.borderRadius="5px";chatContainer.style.boxShadow="0 2px 10px rgba(0,0,0,0.1)";chatContainer.style.display="flex";chatContainer.style.flexDirection="column";document.body.appendChild(chatContainer);const chatHeader=document.createElement("div");chatHeader.style.background="transparent";chatHeader.style.color="white";chatHeader.style.padding="10px";chatHeader.style.textAlign="center";chatHeader.style.position="relative";chatHeader.textContent="聊天室";const enlargeButton=document.createElement("button");enlargeButton.textContent="放大";enlargeButton.style.position="absolute";enlargeButton.style.right="10px";enlargeButton.style.top="10px";enlargeButton.style.background="transparent";enlargeButton.style.border="none";enlargeButton.style.color="white";enlargeButton.style.fontSize="14px";enlargeButton.style.cursor="pointer";chatHeader.appendChild(enlargeButton);chatContainer.appendChild(chatHeader);const chatMessages=document.createElement("div");chatMessages.style.flex="1";chatMessages.style.overflowY="auto";chatMessages.style.overflowX="hidden";chatMessages.style.wordWrap="break-word";chatMessages.style.whiteSpace="normal";chatMessages.style.padding="10px";chatMessages.style.background="rgba(0,0,0,0.6)";chatMessages.style.color="white";chatContainer.appendChild(chatMessages);const chatInputContainer=document.createElement("div");chatInputContainer.style.display="flex";chatInputContainer.style.borderTop="1px solid #ccc";const chatInput=document.createElement("input");chatInput.type="text";chatInput.style.flex="1";chatInput.style.padding="10px";chatInput.style.background="#333";chatInput.style.color="white";chatInput.style.border="none";const sendButton=document.createElement("button");sendButton.textContent="發送";sendButton.style.padding="10px";sendButton.style.background="#007bff";sendButton.style.color="white";sendButton.style.border="none";sendButton.style.cursor="pointer";chatInputContainer.appendChild(chatInput);chatInputContainer.appendChild(sendButton);chatContainer.appendChild(chatInputContainer);let isEnlarged=false;enlargeButton.addEventListener("click",()=>{if(!isEnlarged){chatContainer.style.width="800px";chatContainer.style.height="700px";chatContainer.style.top="50%";chatContainer.style.left="50%";chatContainer.style.transform="translate(-50%,-50%)";chatContainer.style.bottom="";chatContainer.style.right="";enlargeButton.textContent="關閉"}else{chatContainer.style.width="300px";chatContainer.style.height="400px";chatContainer.style.bottom="20px";chatContainer.style.right="20px";chatContainer.style.top="";chatContainer.style.left="";chatContainer.style.transform="";enlargeButton.textContent="放大"}isEnlarged=!isEnlarged});function sendMessage(u,t){const m=ref(database,"messages");push(m,{text:t,name:u.displayName,avatar:u.photoURL,timestamp:Date.now()})}function appendMessage(msg){const d=document.createElement("div");d.style.marginBottom="10px";d.style.color="white";const i=document.createElement("img");i.src=msg.avatar||"";i.style.width="20px";i.style.height="20px";i.style.borderRadius="50%";i.style.marginRight="5px";const s=document.createElement("strong");s.textContent=msg.name||"匿名";const sp=document.createElement("span");sp.textContent=": "+msg.text;d.appendChild(i);d.appendChild(s);d.appendChild(sp);chatMessages.appendChild(d);chatMessages.scrollTop=chatMessages.scrollHeight}onAuthStateChanged(auth,u=>{chatMessages.innerHTML="";if(u){loadMessages();sendButton.onclick=()=>{if(chatInput.value.trim()!==""){sendMessage(u,chatInput.value);chatInput.value=""}}}else{const b=document.createElement("button");b.textContent="使用 Google 登入";b.style.padding="10px";b.style.background="#007bff";b.style.color="white";b.style.border="none";b.style.cursor="pointer";b.onclick=()=>{const p=new GoogleAuthProvider();signInWithPopup(auth,p).catch(console.error)};chatMessages.appendChild(b)}});function loadMessages(){const m=ref(database,"messages");onChildAdded(m,snap=>{const msg=snap.val();appendMessage(msg)})}</script><script src="dynamicMenu.js"></script><div id="login-container"><button id="login-button">登入</button></div><div id="online-users-container"></div><div class="game-container"><iframe frameborder="0"src="https://itch.io/embed-upload/12865093?color=333333"allowfullscreen width="1000"height="700"></iframe></div><script type="module">import{getApps}from"https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";import{getAnalytics}from"https://www.gstatic.com/firebasejs/9.22.2/firebase-analytics.js";import{getAuth,signInWithPopup,GoogleAuthProvider,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";import{getDatabase,ref,set,onDisconnect,onValue}from"https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";const app=getApps()[0],analytics=getAnalytics(app),auth=getAuth(app),database=getDatabase(app),loginContainer=document.getElementById("login-container"),loginButton=document.getElementById("login-button"),onlineUsersContainer=document.getElementById("online-users-container");function updateUsersUI(u){onlineUsersContainer.innerHTML="";const c=document.createElement("div");c.textContent=`在線人數：${u.length}`;c.style.fontWeight="bold";c.style.marginBottom="5px";onlineUsersContainer.appendChild(c);u.forEach(user=>{const d=document.createElement("div");d.style.display="flex";d.style.alignItems="center";d.style.marginBottom="5px";const i=document.createElement("img");i.src=user.photoURL;i.alt=user.displayName;i.style.width="30px";i.style.height="30px";i.style.borderRadius="50%";i.style.marginRight="8px";const s=document.createElement("span");s.textContent=user.displayName;d.appendChild(i);d.appendChild(s);onlineUsersContainer.appendChild(d)})}function setUserOnline(u){const r=ref(database,"onlineUsers/"+u.uid);set(r,{uid:u.uid,displayName:u.displayName,photoURL:u.photoURL,lastActive:Date.now()}),onDisconnect(r).remove()}function fetchAndDisplayOnlineUsers(c){const r=ref(database,"onlineUsers/");onValue(r,snap=>{const o=snap.val()||{},a=Object.values(o);a.sort((x,y)=>{if(x.uid===c.uid)return-1;if(y.uid===c.uid)return1;return0});updateUsersUI(a)})}loginButton.addEventListener("click",()=>{signInWithPopup(auth,new GoogleAuthProvider()).then(()=>{}).catch(e=>{console.error("Google 登入錯誤：",e),alert("Google 登入錯誤，請稍後再試。")})});onAuthStateChanged(auth,u=>{if(u){loginContainer.style.display="none";onlineUsersContainer.style.display="block";setUserOnline(u);fetchAndDisplayOnlineUsers(u)}else{loginContainer.style.display="block";onlineUsersContainer.style.display="none"}});</script></body></html>
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RPG鬧爆大師 - 肥宅工作室網站</title>
+  <link rel="icon" href="rswob-newat-001.ico" type="image/x-icon">
+  <link rel="stylesheet" href="styles.css">
+  <!-- Google Adsense -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1928880731403231"
+       crossorigin="anonymous"></script>
+  <!-- 內嵌 CSS 調整行動裝置下的顯示效果 -->
+  <style>
+    /* 基本設定 */
+    header {
+      position: relative;
+    }
+    header nav ul {
+      display: flex;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    /* 漢堡選單按鈕預設隱藏 */
+    .menu-toggle {
+      display: none;
+    }
+    /* 行動裝置響應式設定：隱藏導覽選單及漢堡按鈕 */
+    @media (max-width: 768px) {
+      header nav {
+        display: none;
+      }
+      .menu-toggle {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="particles-bg"></div>
+  <header>
+    <div class="container">
+      <h1 class="logo">
+        RPG鬧爆大師 - 肥宅工作室
+        <!-- Inline SVG icon with CSS animations -->
+        <svg class="logo-icon" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="40" stroke="#ff6b6b" stroke-width="5" fill="none"/>
+        </svg>
+      </h1>
+      <!-- 導覽選單（僅在桌面顯示） -->
+      <nav>
+        <ul>
+          <li><a href="#welcome" data-i18n="navHome">首頁</a></li>
+          <li><a href="#works-list" data-i18n="navWorks">作品亮點</a></li>
+          <li><a href="#about" data-i18n="navAbout">關於我們</a></li>
+          <li><a href="#news" data-i18n="navNews">最新消息 / 公告</a></li>
+          <li><a href="#contact" data-i18n="navContact">聯絡我們</a></li>
+        </ul>
+      </nav>
+      <!-- 漢堡選單按鈕（原本用於行動裝置，此處也隱藏） -->
+      <button class="menu-toggle" id="menuToggle">&#9776;</button>
+      <div class="language-toggle">
+        <button id="langToggle">EN</button>
+      </div>
+    </div>
+  </header>
+  
+  <main>
+    <!-- 歡迎區塊 -->
+    <section id="welcome" class="section">
+      <div class="container welcome-highlight">
+        <h2 data-i18n="headerWelcome">歡迎來到 RPG鬧爆大師 - 肥宅工作室網站！</h2>
+        <p data-i18n="welcomeDescription">
+          這裡是充滿創意與趣味的小遊戲天地，由我（網名：鬧爆）獨立創作運作。雖然目前主要是我一人負責，但偶爾也會有一些夥伴協助，包括常常幫忙的 波波，以及另一位目前保密的神秘夥伴。
+        </p>
+      </div>
+    </section>
+    
+    <!-- 作品列表 -->
+    <section id="works-list" class="section">
+      <div class="container">
+        <h2 data-i18n="worksSectionTitle">作品列表</h2>
+        <!-- 修改標題：由「已上線作品」改為「目前工作室遊戲」 -->
+        <h3 data-i18n="onlineWorks">目前工作室遊戲</h3>
+        <ul>
+          <li data-i18n="worksOnlineItem1">場外大富翁</li>
+          <li data-i18n="worksOnlineItem2">線上文字RPG網頁遊戲</li>
+        </ul>
+        <div class="past-game">
+          <h3 data-i18n="pastGameTitle">場外物語（過去製作的遊戲）</h3>
+          <div class="video-container">
+            <iframe src="https://www.youtube.com/embed/KiX2c1aYPXU" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          </div>
+          <p data-i18n="pastGameDescription">
+            使用RPG Maker MV與Firebase 製作的即時連線戰鬥遊戲
+          </p>
+        </div>
+        <p data-i18n="detailsPage">
+          詳細介紹頁面：各遊戲的詳細介紹頁面目前正在準備中，請持續關注後續更新！
+        </p>
+      </div>
+    </section>
+    
+    <!-- 最新消息 / 公告 -->
+    <section id="news" class="section">
+      <div class="container">
+        <h2 data-i18n="newsTitle">最新消息 / 公告</h2>
+        <p data-i18n="newsUpdate">
+          動態更新：在此區域，我們會定期公布最新的開發進度、版本更新、活動資訊及合作公告。
+        </p>
+        <div class="announcement">
+          <h3 data-i18n="announcementTitle">第一條公告：</h3>
+          <p><strong data-i18n="announcementHeadline">標題： 新版本發布公告</strong></p>
+          <p data-i18n="announcementSummary">
+            內容摘要： 我們很高興宣布《場外大富翁》新版本已經上線，新增多項功能與優化，讓遊戲體驗更上一層樓！
+          </p>
+          <p>
+            <span data-i18n="announcementDetails">詳情： 請點擊 </span>
+            <a href="announcement.html" data-i18n="announcementLinkText">這裡查看詳細公告</a>
+            <span data-i18n="announcementLinkSuffix"> 了解更多。（※點擊後將進入公告詳細內容頁面）</span>
+          </p>
+        </div>
+        <div class="activity-preview">
+          <p data-i18n="activityPreview">
+            活動預告：目前主要活動預告內容將圍繞場外大富翁的更新與優化。未來也會推出其他與遊戲相關的線上活動，請密切關注本站的最新消息！
+          </p>
+        </div>
+      </div>
+    </section>
+    
+    <!-- 關於我們 -->
+    <section id="about" class="section">
+      <div class="container">
+        <h2 data-i18n="aboutTitle">關於我們</h2>
+        <article>
+          <h3 data-i18n="studioIntroTitle">工作室介紹</h3>
+          <p data-i18n="studioIntro">
+            我成立這個工作室，初衷是因為覺得工作太無聊，想透過創作遊戲來點燃生活的熱情。這裡不僅展示各種隨性創作的小遊戲，也代表著我不斷突破自我的決心與嘗試。
+          </p>
+        </article>
+        <article>
+          <h3 data-i18n="backgroundTitle">背景故事</h3>
+          <p data-i18n="background">
+            工作上的無聊感促使我走出舒適圈，開始動手創作。透過遊戲，我希望能夠尋找生活中的樂趣，也讓自己在創作中找到新的挑戰與突破。
+          </p>
+        </article>
+        <article>
+          <h3 data-i18n="teamTitle">團隊成員</h3>
+          <ul>
+            <li data-i18n="team1">鬧爆：目前工作室唯一的主要運作者。</li>
+            <li data-i18n="team2">波波：有時候會來幫忙，提供意見和技術支援。</li>
+            <li data-i18n="team3">神秘夥伴：另一位幫手，但目前暫時保密，未來或許會揭曉其身分。</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+    
+    <!-- 聯絡我們 -->
+    <section id="contact" class="section">
+      <div class="container">
+        <h2 data-i18n="contactTitle">聯絡我們</h2>
+        <ul>
+          <li data-i18n="contactEmail">電子郵件：
+            <a href="mailto:aa020239@gmail.com">aa020239@gmail.com</a>
+          </li>
+          <li data-i18n="contactPhone">手機： 0971717060</li>
+          <li data-i18n="contactBahamut">
+            <a href="https://home.gamer.com.tw/homeindex.php" target="_blank">巴哈姆特： 點此造訪我的巴哈姆特個人頁面</a>
+          </li>
+          <li data-i18n="contactYoutube">
+            <a href="https://www.youtube.com/@020239a" target="_blank">YouTube： 訂閱我的 YouTube 頻道</a>
+          </li>
+        </ul>
+      </div>
+    </section>
+    
+    <!-- 法律聲明與隱私政策 -->
+    <section id="legal" class="section">
+      <div class="container">
+        <h2 data-i18n="legalTitle">法律聲明與隱私政策</h2>
+        <p data-i18n="legalNotice">
+          法律聲明：本工作室所有內容均受版權保護，請勿未經授權隨意使用或轉載「RPG鬧爆大師 - 肥宅工作室」的名稱及相關內容。
+        </p>
+        <p data-i18n="privacyPolicy">
+          隱私政策：我們非常重視訪客的隱私權。本站僅在您自願提供聯絡資訊（例如填寫回報或意見表單）時予以蒐集，並嚴格保管，不會將您的資料外洩或用於非本網站相關用途。（隱私政策內容將持續完善，如有更新請留意本站公告。）
+        </p>
+        <p data-i18n="otherInfo">
+          其他說明：感謝您造訪 RPG鬧爆大師 - 肥宅工作室網站。在這裡，您不僅能體驗到獨具風格的小遊戲，更能感受到我對創作的熱情與追求。未來將持續分享開發過程與幕後故事，敬請期待！
+        </p>
+      </div>
+    </section>
+  </main>
+  
+  <footer>
+    <div class="container">
+      <p>&copy; 2025 RPG鬧爆大師 - 肥宅工作室</p>
+    </div>
+  </footer>
+  
+  <!-- Cloudflare Email Decode Script（若需要） -->
+  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>
+  <!-- tsparticles 庫 -->
+  <script src="https://cdn.jsdelivr.net/npm/tsparticles@2.11.1/tsparticles.min.js"></script>
+  <!-- 主要腳本（若內含 React 元件，請確認使用開發版以便除錯） -->
+  <script type="module" src="scripts.js"></script>
+  <!-- 漢堡選單切換腳本（因行動裝置已隱藏選單，此段可保留或刪除） -->
+  <script>
+    document.getElementById('menuToggle')?.addEventListener('click', function() {
+      var nav = document.querySelector('header nav');
+      nav.classList.toggle('active');
+    });
+  </script>
+</body>
+</html>
