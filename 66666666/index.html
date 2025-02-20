@@ -10,8 +10,8 @@
       overflow-x: hidden; 
       margin: 0; 
       padding: 0; 
-      background: url('https://truth.bahamut.com.tw/s01/202502/7a84a855b506e748e4fb62acbb7a09ee.JPG') no-repeat center center fixed; 
-      background-size: cover; /* 讓背景圖片填滿整個畫面 */
+      background: url('https://www.toptal.com/designers/subtlepatterns/uploads/double-bubble-outline.png') repeat;
+      /* 使用重複的圖片填滿背景，不設定固定定位及cover */
     }
     /* 設定遊戲容器，確保遊戲置中 */
     .game-container { 
@@ -25,7 +25,7 @@
       display: block; 
       margin: auto; 
       position: relative; 
-      top: 100px;  /* ← 調整這裡的數值可移動遊戲的「上下位置」，負值往上，正值往下 */
+      top: 110px;  /* ← 調整這裡的數值可移動遊戲的「上下位置」，負值往上，正值往下 */
       left: -20px;   /* ← 調整這裡的數值可移動遊戲的「左右位置」，負值往左，正值往右 */
       max-width: 100%; /* 讓遊戲在小螢幕時不超出範圍 */
     }
@@ -38,9 +38,11 @@
   <!-- 功能：在網頁右上角顯示透過 Google 登入的在線用戶數量、用戶名稱及頭像 -->
   <script type="module" src="online-users-display/online-users-display.js"></script>
 
+<script type="module" src="Chat Room/chat-room.js"></script>
+
   <div class="game-container">
     <iframe frameborder="0" 
-      src="https://itch.io/embed-upload/10112658?color=000000" 
+      src="https://itch.io/embed-upload/12865093?color=333333" 
       allowfullscreen 
       width="1000" 
       height="700">

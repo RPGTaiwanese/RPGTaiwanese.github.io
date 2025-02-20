@@ -140,7 +140,7 @@
     `;
     document.head.appendChild(style);
 
-    // 定義按鈕資料，圖片檔案放置位置與插件相同
+    // 定義按鈕資料，圖片檔案直接放在網頁資料夾的第一層（與 HTML 同層）
     const buttons = [
       { id: "btn1", label: "按鈕 1", img: "Website Menu Button 1.PNG" },
       { id: "btn2", label: "按鈕 2", img: "Website Menu Button 2.PNG" },
