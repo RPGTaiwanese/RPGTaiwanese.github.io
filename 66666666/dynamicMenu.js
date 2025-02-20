@@ -80,73 +80,72 @@
     // 注入 CSS 樣式（包含選單與 modal 樣式）
     const style = document.createElement("style");
     style.type = "text/css";
-    style.textContent = `
+    style.textContent =
       /* 選單容器，置中並使用暗黑透明背景 */
-      .menu-container {
-        position: fixed;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(0, 0, 0, 0.7);
-        padding: 10px 20px;
-        border-radius: 8px;
-        display: flex;
-        gap: 15px;
-        z-index: 1000;
-      }
+      ".menu-container {" +
+        "position: fixed;" +
+        "top: 20px;" +
+        "left: 50%;" +
+        "transform: translateX(-50%);" +
+        "background: rgba(0, 0, 0, 0.7);" +
+        "padding: 10px 20px;" +
+        "border-radius: 8px;" +
+        "display: flex;" +
+        "gap: 15px;" +
+        "z-index: 1000;" +
+      "}" +
       /* 按鈕圖片樣式 */
-      .menu-button {
-        width: 80px;
-        height: 80px;
-        object-fit: cover;
-        transition: transform 0.3s ease, filter 0.3s ease;
-        cursor: pointer;
-      }
+      ".menu-button {" +
+        "width: 80px;" +
+        "height: 80px;" +
+        "object-fit: cover;" +
+        "transition: transform 0.3s ease, filter 0.3s ease;" +
+        "cursor: pointer;" +
+      "}" +
       /* 滑鼠移入時放大並增加亮度 */
-      .menu-button:hover {
-        transform: scale(1.1);
-        filter: brightness(1.3);
-      }
+      ".menu-button:hover {" +
+        "transform: scale(1.1);" +
+        "filter: brightness(1.3);" +
+      "}" +
       /* Modal 視窗樣式 */
-      .modal {
-        position: fixed;
-        background: #fff;
-        border: 1px solid #ccc;
-        border-radius: 8px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-        z-index: 1001;
-        width: 300px;
-        user-select: none;
-      }
-      .modal-header {
-        padding: 10px;
-        background: #f1f1f1;
-        cursor: move;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-      .modal-content {
-        padding: 20px;
-        text-align: center;
-      }
-      .close-button {
-        border: none;
-        background: transparent;
-        cursor: pointer;
-        font-size: 16px;
-        font-weight: bold;
-      }
-    `;
+      ".modal {" +
+        "position: fixed;" +
+        "background: #fff;" +
+        "border: 1px solid #ccc;" +
+        "border-radius: 8px;" +
+        "box-shadow: 0 2px 10px rgba(0,0,0,0.2);" +
+        "z-index: 1001;" +
+        "width: 300px;" +
+        "user-select: none;" +
+      "}" +
+      ".modal-header {" +
+        "padding: 10px;" +
+        "background: #f1f1f1;" +
+        "cursor: move;" +
+        "display: flex;" +
+        "justify-content: space-between;" +
+        "align-items: center;" +
+      "}" +
+      ".modal-content {" +
+        "padding: 20px;" +
+        "text-align: center;" +
+      "}" +
+      ".close-button {" +
+        "border: none;" +
+        "background: transparent;" +
+        "cursor: pointer;" +
+        "font-size: 16px;" +
+        "font-weight: bold;" +
+      "}";
     document.head.appendChild(style);
 
-    // 定義按鈕資料，圖片檔案直接放在網頁資料夾的第一層（與 HTML 同層）
+    // 定義按鈕資料，圖片檔案改用指定網址
     const buttons = [
-      { id: "btn1", label: "按鈕 1", img: "Website Menu Button 1.PNG" },
-      { id: "btn2", label: "按鈕 2", img: "Website Menu Button 2.PNG" },
-      { id: "btn3", label: "按鈕 3", img: "Website Menu Button 3.PNG" },
-      { id: "btn4", label: "按鈕 4", img: "Website Menu Button 4.PNG" },
-      { id: "btn5", label: "按鈕 5", img: "Website Menu Button 5.PNG" }
+      { id: "btn1", label: "按鈕 1", img: "https://truth.bahamut.com.tw/s01/202502/48fde449d9d35d06418dd575f4940808.JPG" },
+      { id: "btn2", label: "按鈕 2", img: "https://truth.bahamut.com.tw/s01/202502/6bb2581a112c480daa2252baf64b1694.JPG" },
+      { id: "btn3", label: "按鈕 3", img: "https://truth.bahamut.com.tw/s01/202502/e03f7abdfb405bd4b8e1ab1a4cb2f7e1.JPG" },
+      { id: "btn4", label: "按鈕 4", img: "https://truth.bahamut.com.tw/s01/202502/84bda1bb72f6ddec314d88457f37b944.JPG" },
+      { id: "btn5", label: "按鈕 5", img: "https://truth.bahamut.com.tw/s01/202502/e1047580176190709b0447b3206533fe.JPG" }
     ];
 
     // 建立選單容器
