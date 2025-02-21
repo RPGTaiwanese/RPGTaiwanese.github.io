@@ -1,7 +1,7 @@
 (function() {
   "use strict";
 
-  // 顯示提示視窗函式
+  // 顯示預設提示視窗函式（用於按鈕 1~4）
   function showModal() {
     // 如果已存在則不重複建立
     if (document.getElementById("featureModal")) return;
@@ -58,6 +58,96 @@
           modalEl.style.left = (e.clientX - offsetX) + "px";
           modalEl.style.top = (e.clientY - offsetY) + "px";
           // 當手動設定 left/top 時移除 transform
+          modalEl.style.transform = "";
+        }
+      }
+
+      function stopDrag() {
+        isDragging = false;
+        document.removeEventListener("mousemove", moveModal);
+        document.removeEventListener("mouseup", stopDrag);
+      }
+    })(modal);
+
+    // 點擊關閉按鈕關閉 modal
+    closeButton.addEventListener("click", function() {
+      modal.remove();
+    });
+  }
+
+  // 顯示第五個按鈕專屬的 modal（包含超連結按鈕）
+  function showModalForFifth() {
+    // 如果已存在則不重複建立
+    if (document.getElementById("featureModal")) return;
+
+    const modal = document.createElement("div");
+    modal.id = "featureModal";
+    modal.className = "modal";
+    // 初始置中
+    modal.style.top = "50%";
+    modal.style.left = "50%";
+    modal.style.transform = "translate(-50%, -50%)";
+
+    // 建立 modal header（用於拖曳及顯示關閉按鈕）
+    const header = document.createElement("div");
+    header.className = "modal-header";
+
+    const title = document.createElement("span");
+    title.textContent = "提示";
+    header.appendChild(title);
+
+    const closeButton = document.createElement("button");
+    closeButton.className = "close-button";
+    closeButton.textContent = "X";
+    header.appendChild(closeButton);
+
+    modal.appendChild(header);
+
+    // 建立內容區，放入超連結按鈕
+    const content = document.createElement("div");
+    content.className = "modal-content";
+
+    const linkButton = document.createElement("a");
+    linkButton.href = "https://home.gamer.com.tw/artwork.php?sn=6094377";
+    // 可依需求設定 target="_blank" 讓連結另開視窗
+    // linkButton.target = "_blank";
+    linkButton.textContent = "遊戲更新日誌";
+    linkButton.style.display = "inline-block";
+    linkButton.style.padding = "10px 20px";
+    linkButton.style.backgroundColor = "#007BFF";
+    linkButton.style.color = "#fff";
+    linkButton.style.borderRadius = "4px";
+    linkButton.style.textDecoration = "none";
+    linkButton.addEventListener("mouseover", function(){
+      linkButton.style.backgroundColor = "#0056b3";
+    });
+    linkButton.addEventListener("mouseout", function(){
+      linkButton.style.backgroundColor = "#007BFF";
+    });
+    content.appendChild(linkButton);
+
+    modal.appendChild(content);
+
+    document.body.appendChild(modal);
+
+    // 拖曳功能實作
+    (function makeDraggable(modalEl) {
+      let isDragging = false;
+      let offsetX = 0;
+      let offsetY = 0;
+
+      header.addEventListener("mousedown", function(e) {
+        isDragging = true;
+        offsetX = e.clientX - modalEl.offsetLeft;
+        offsetY = e.clientY - modalEl.offsetTop;
+        document.addEventListener("mousemove", moveModal);
+        document.addEventListener("mouseup", stopDrag);
+      });
+
+      function moveModal(e) {
+        if (isDragging) {
+          modalEl.style.left = (e.clientX - offsetX) + "px";
+          modalEl.style.top = (e.clientY - offsetY) + "px";
           modalEl.style.transform = "";
         }
       }
@@ -161,8 +251,12 @@
         btnImg.className = "menu-button";
         btnImg.src = btn.img;
         btnImg.alt = btn.label;
-        // 點擊顯示 modal 視窗
-        btnImg.addEventListener("click", showModal);
+        // 根據不同按鈕設定點擊事件：第五個按鈕顯示超連結 modal
+        if (btn.id === "btn5") {
+          btnImg.addEventListener("click", showModalForFifth);
+        } else {
+          btnImg.addEventListener("click", showModal);
+        }
         menuContainer.appendChild(btnImg);
       };
       tempImg.onerror = function() {
@@ -178,7 +272,11 @@
         btnDiv.style.textAlign = "center";
         btnDiv.style.padding = "5px";
         btnDiv.textContent = btn.label;
-        btnDiv.addEventListener("click", showModal);
+        if (btn.id === "btn5") {
+          btnDiv.addEventListener("click", showModalForFifth);
+        } else {
+          btnDiv.addEventListener("click", showModal);
+        }
         menuContainer.appendChild(btnDiv);
       };
       tempImg.src = btn.img;
