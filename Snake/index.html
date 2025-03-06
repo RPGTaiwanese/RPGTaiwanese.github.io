@@ -2,18 +2,18 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>無限地圖貪食蛇遊戲 - Firebase 排行榜</title>
+  <title>無限地圖貪食蛇遊戲 - 點擊控制 + Firebase 排行榜</title>
   <style>
     body { margin: 0; overflow: hidden; background: #000; }
     canvas { display: block; background: #111; }
-    /* 分數顯示 */
+    /* 分數 HUD */
     #hud {
       position: absolute;
       top: 10px;
       left: 10px;
       color: white;
       font-family: sans-serif;
-      font-size: 18px;
+      font-size: 32px;
       z-index: 100;
     }
     /* 遊戲結束覆蓋層 */
@@ -30,54 +30,19 @@
       z-index: 200;
     }
     #gameOverOverlay input, #gameOverOverlay button {
-      font-size: 16px;
-      padding: 8px;
-      margin: 5px;
+      font-size: 20px;
+      padding: 10px;
+      margin: 10px;
     }
     #leaderboard {
       margin-top: 20px;
-      max-height: 200px;
+      max-height: 300px;
       overflow-y: auto;
     }
     #restartButton {
       margin-top: 20px;
       padding: 10px 20px;
-      font-size: 16px;
-    }
-    /* 預設隱藏手機虛擬方向鍵 */
-    #mobileControls {
-      display: none;
-    }
-    /* 僅在觸控裝置或窄屏下顯示虛擬方向鍵，並調大按鍵與分數字體 */
-    @media (pointer: coarse) and (max-width: 768px) {
-      #mobileControls {
-        display: block;
-        position: fixed;
-        bottom: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 150;
-      }
-      #dpad {
-        display: grid;
-        grid-template-areas: 
-          ". up ."
-          "left down right";
-        grid-gap: 5px;
-      }
-      #upButton { grid-area: up; }
-      #leftButton { grid-area: left; }
-      #downButton { grid-area: down; }
-      #rightButton { grid-area: right; }
-      #mobileControls button {
-        width: 80px;
-        height: 80px;
-        font-size: 32px;
-      }
-      /* 手機版分數顯示更大 */
-      #hud {
-        font-size: 32px;
-      }
+      font-size: 20px;
     }
   </style>
 </head>
@@ -91,15 +56,6 @@
     <button id="submitScore">Submit Score</button>
     <div id="leaderboard"><h3>Leaderboard</h3></div>
     <button id="restartButton">Restart</button>
-  </div>
-  <!-- 手機虛擬方向鍵，只在手機版顯示 -->
-  <div id="mobileControls">
-    <div id="dpad">
-      <button id="upButton">↑</button>
-      <button id="leftButton">←</button>
-      <button id="downButton">↓</button>
-      <button id="rightButton">→</button>
-    </div>
   </div>
   <script type="module">
     // ================= Firebase 初始化 =================
@@ -138,35 +94,40 @@
     const playerNameInput = document.getElementById("playerName");
     const leaderboardDiv = document.getElementById("leaderboard");
 
-    // 鍵盤監聽
-    let keys = {};
-    window.addEventListener("keydown", e => keys[e.key] = true);
-    window.addEventListener("keyup", e => keys[e.key] = false);
-
-    // 手機虛擬方向鍵事件處理
-    function addMobileControl(buttonId, keyName) {
-      const button = document.getElementById(buttonId);
-      button.addEventListener("touchstart", function(e) {
-        e.preventDefault();
-        keys[keyName] = true;
-      });
-      button.addEventListener("touchend", function(e) {
-        e.preventDefault();
-        keys[keyName] = false;
-      });
-      button.addEventListener("mousedown", function(e) {
-        keys[keyName] = true;
-      });
-      button.addEventListener("mouseup", function(e) {
-        keys[keyName] = false;
-      });
+    // 使用點擊或觸控來設定方向
+    function setDirectionFromEvent(e) {
+      let clientX, clientY;
+      if (e.touches && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      } else {
+        clientX = e.clientX;
+        clientY = e.clientY;
+      }
+      // 取得畫布上的點擊座標
+      const rect = canvas.getBoundingClientRect();
+      const clickX = clientX - rect.left;
+      const clickY = clientY - rect.top;
+      // 計算對應世界座標（以攝影機中心為基準）
+      const worldX = camera.x + (clickX - canvas.width / 2);
+      const worldY = camera.y + (clickY - canvas.height / 2);
+      // 計算從蛇頭到點擊位置的向量
+      const head = snake.segments[0];
+      const dx = worldX - head.x;
+      const dy = worldY - head.y;
+      const mag = Math.hypot(dx, dy);
+      if (mag > 0) {
+        snake.direction.x = dx / mag;
+        snake.direction.y = dy / mag;
+      }
     }
-    addMobileControl("upButton", "ArrowUp");
-    addMobileControl("downButton", "ArrowDown");
-    addMobileControl("leftButton", "ArrowLeft");
-    addMobileControl("rightButton", "ArrowRight");
+    canvas.addEventListener("click", setDirectionFromEvent);
+    canvas.addEventListener("touchstart", function(e) {
+      e.preventDefault();
+      setDirectionFromEvent(e);
+    });
 
-    // 攝影機：以蛇頭為中心
+    // 攝影機：始終以蛇頭為中心
     let camera = { x: 0, y: 0 };
     function distance(x1, y1, x2, y2) {
       return Math.hypot(x2 - x1, y2 - y1);
@@ -179,37 +140,32 @@
     let gameOver = false;
     let maxScore = 0;
     let animationFrameId;
-    let score = 0;  // 連續分數 (代表貪食蛇的生命值)
+    let score = 0;  // 連續分數（代表貪食蛇的生命值）
 
     // ========== 貪食蛇類別 ==========
     class Snake {
       constructor() {
         this.segments = [];
         this.desiredLength = 5;
+        // 初始建立 5 節身體
         for (let i = 0; i < this.desiredLength; i++) {
           this.segments.push({ x: -i * 12, y: 0 });
         }
+        // 初始方向向右
         this.direction = { x: 1, y: 0 };
         this.speed = 2;
       }
       update() {
-        let dx = 0, dy = 0;
-        if (keys["ArrowUp"] || keys["w"]) dy -= 1;
-        if (keys["ArrowDown"] || keys["s"]) dy += 1;
-        if (keys["ArrowLeft"] || keys["a"]) dx -= 1;
-        if (keys["ArrowRight"] || keys["d"]) dx += 1;
-        if (dx !== 0 || dy !== 0) {
-          const mag = Math.hypot(dx, dy);
-          this.direction.x = dx / mag;
-          this.direction.y = dy / mag;
-        }
         const prevPositions = this.segments.map(seg => ({ x: seg.x, y: seg.y }));
+        // 蛇頭根據當前方向移動
         this.segments[0].x += this.direction.x * this.speed;
         this.segments[0].y += this.direction.y * this.speed;
+        // 身體節依序跟隨前一節
         for (let i = 1; i < this.segments.length; i++) {
           this.segments[i].x = prevPositions[i - 1].x;
           this.segments[i].y = prevPositions[i - 1].y;
         }
+        // 若有增長需求則補足
         while (this.segments.length < this.desiredLength) {
           let tail = this.segments[this.segments.length - 1];
           this.segments.push({ x: tail.x, y: tail.y });
@@ -224,6 +180,7 @@
         });
       }
     }
+    // 自動攻擊：由蛇頭鎖定最近敵人發射子彈
     Snake.prototype.fireCooldown = 0;
     Snake.prototype.autoFire = function() {
       if (--this.fireCooldown <= 0) {
@@ -299,22 +256,22 @@
         this.radius = 15;
         this.hp = 10;
         this.fireCooldown = 0;
-        this.vx = (Math.random()-0.5)*2;
-        this.vy = (Math.random()-0.5)*2;
-        this.changeCooldown = 60 + Math.floor(Math.random()*60);
+        this.vx = (Math.random() - 0.5) * 2;
+        this.vy = (Math.random() - 0.5) * 2;
+        this.changeCooldown = 60 + Math.floor(Math.random() * 60);
       }
       update() {
         this.x += this.vx;
         this.y += this.vy;
         if (--this.changeCooldown <= 0) {
-          this.vx = (Math.random()-0.5)*2;
-          this.vy = (Math.random()-0.5)*2;
-          this.changeCooldown = 60 + Math.floor(Math.random()*60);
+          this.vx = (Math.random() - 0.5) * 2;
+          this.vy = (Math.random() - 0.5) * 2;
+          this.changeCooldown = 60 + Math.floor(Math.random() * 60);
         }
         if (--this.fireCooldown <= 0) {
           const numBullets = 8;
           for (let i = 0; i < numBullets; i++) {
-            const angle = i * (Math.PI*2/numBullets);
+            const angle = i * (Math.PI * 2 / numBullets);
             bullets.push(new Bullet(this.x, this.y, Math.cos(angle), Math.sin(angle), "enemy"));
           }
           this.fireCooldown = 100;
@@ -329,7 +286,7 @@
         ctx.fill();
         ctx.fillStyle = "white";
         ctx.font = "12px sans-serif";
-        ctx.fillText(this.hp, screenX-4, screenY+4);
+        ctx.fillText(this.hp, screenX - 4, screenY + 4);
       }
     }
 
@@ -349,13 +306,13 @@
         let dist = Math.hypot(dx, dy);
         let speed = 1.5;
         if (dist > 0) {
-          this.x += (dx/dist) * speed;
-          this.y += (dy/dist) * speed;
+          this.x += (dx / dist) * speed;
+          this.y += (dy / dist) * speed;
         }
         if (--this.fireCooldown <= 0) {
           const numBullets = 8;
           for (let i = 0; i < numBullets; i++) {
-            const angle = i * (Math.PI*2/numBullets);
+            const angle = i * (Math.PI * 2 / numBullets);
             bullets.push(new Bullet(this.x, this.y, Math.cos(angle), Math.sin(angle), "enemy"));
           }
           this.fireCooldown = 100;
@@ -370,7 +327,7 @@
         ctx.fill();
         ctx.fillStyle = "white";
         ctx.font = "12px sans-serif";
-        ctx.fillText(this.hp, screenX-4, screenY+4);
+        ctx.fillText(this.hp, screenX - 4, screenY + 4);
       }
     }
 
@@ -393,8 +350,8 @@
           let dist = Math.hypot(dx, dy);
           let speed = 1.5;
           if (dist > 0) {
-            this.x += (dx/dist) * speed;
-            this.y += (dy/dist) * speed;
+            this.x += (dx / dist) * speed;
+            this.y += (dy / dist) * speed;
           }
           this.stateTime--;
           if (this.stateTime <= 0) {
@@ -413,8 +370,8 @@
           let dist = Math.hypot(dx, dy);
           let speed = 6;
           if (dist > 0) {
-            this.x += (dx/dist) * speed;
-            this.y += (dy/dist) * speed;
+            this.x += (dx / dist) * speed;
+            this.y += (dy / dist) * speed;
           }
           this.stateTime--;
           if (this.stateTime <= 0) {
@@ -425,7 +382,7 @@
         if (--this.fireCooldown <= 0) {
           const numBullets = 8;
           for (let i = 0; i < numBullets; i++) {
-            const angle = i * (Math.PI*2/numBullets);
+            const angle = i * (Math.PI * 2 / numBullets);
             bullets.push(new Bullet(this.x, this.y, Math.cos(angle), Math.sin(angle), "enemy"));
           }
           this.fireCooldown = 100;
@@ -440,7 +397,7 @@
         ctx.fill();
         ctx.fillStyle = "white";
         ctx.font = "12px sans-serif";
-        ctx.fillText(this.hp, screenX-4, screenY+4);
+        ctx.fillText(this.hp, screenX - 4, screenY + 4);
       }
     }
 
@@ -491,7 +448,6 @@
     function submitScoreToFirebase(name, scoreValue) {
       push(ref(database, 'scores/'), { name: name, score: scoreValue });
     }
-
     function loadLeaderboard() {
       const scoresQuery = query(ref(database, 'scores/'), orderByChild('score'), limitToLast(10));
       onValue(scoresQuery, (snapshot) => {
@@ -523,7 +479,7 @@
       enemies.forEach(enemy => enemy.update());
       bullets.forEach(bullet => bullet.update());
       
-      // 檢測能量碰撞（以蛇頭為準）：吃到後增加一節與 score +1
+      // 檢測能量碰撞（以蛇頭為準）：吃到後增加一節並 score +1
       for (let i = energyItems.length - 1; i >= 0; i--) {
         const item = energyItems[i];
         if (distance(snake.segments[0].x, snake.segments[0].y, item.x, item.y) < item.radius + 8) {
@@ -584,7 +540,7 @@
         }
       }
       
-      // 移除遠離貪食蛇的子彈
+      // 移除離蛇頭太遠的子彈
       for (let i = bullets.length - 1; i >= 0; i--) {
         if (distance(bullets[i].x, bullets[i].y, snake.segments[0].x, snake.segments[0].y) > 1000) {
           bullets.splice(i, 1);
@@ -610,6 +566,7 @@
     }
     gameLoop();
 
+    // ========== 重新開始與排行榜提交 ==========
     restartButton.addEventListener("click", function() {
       cancelAnimationFrame(animationFrameId);
       gameOver = false;
@@ -623,7 +580,6 @@
       spawnEntities();
       gameLoop();
     });
-
     submitScoreButton.addEventListener("click", function() {
       const name = playerNameInput.value.trim();
       if (name !== "") {
