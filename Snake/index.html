@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>無限地圖貪食蛇遊戲 - Firebase 排行榜</title>
+  <style>
+    body { margin: 0; overflow: hidden; background: #000; }
+    canvas { display: block; background: #111; }
+    #hud {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      color: white;
+      font-family: sans-serif;
+      font-size: 18px;
+      z-index: 100;
+    }
+    #gameOverOverlay {
+      display: none;
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8);
+      color: white;
+      font-family: sans-serif;
+      text-align: center;
+      padding-top: 50px;
+      z-index: 200;
+    }
+    #gameOverOverlay input, #gameOverOverlay button {
+      font-size: 16px;
+      padding: 8px;
+      margin: 5px;
+    }
+    #leaderboard {
+      margin-top: 20px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    #restartButton {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 16px;
+    }
+    /* 手機虛擬方向鍵 (D-Pad) */
+    #mobileControls {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      z-index: 150;
+    }
+    #dpad {
+      display: grid;
+      grid-template-areas: 
+        ". up ."
+        "left down right";
+      grid-gap: 5px;
+    }
+    #upButton { grid-area: up; }
+    #leftButton { grid-area: left; }
+    #downButton { grid-area: down; }
+    #rightButton { grid-area: right; }
+    #mobileControls button {
+      width: 50px;
+      height: 50px;
+      font-size: 24px;
+    }
+  </style>
+</head>
+<body>
+  <div id="hud">Score: 0</div>
+  <canvas id="gameCanvas"></canvas>
+  <div id="gameOverOverlay">
+    <h1>Game Over</h1>
+    <p>Your score: <span id="score">0</span></p>
+    <input id="playerName" type="text" placeholder="Enter your name">
+    <button id="submitScore">Submit Score</button>
+    <div id="leaderboard"><h3>Leaderboard</h3></div>
+    <button id="restartButton">Restart</button>
+  </div>
+  <!-- 手機虛擬方向鍵 -->
+  <div id="mobileControls">
+    <div id="dpad">
+      <button id="upButton">↑</button>
+      <button id="leftButton">←</button>
+      <button id="downButton">↓</button>
+      <button id="rightButton">→</button>
+    </div>
+  </div>
+  <script type="module">
+    // ================= Firebase 初始化 =================
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-analytics.js";
+    import { 
+      getDatabase, ref, push, query, orderByChild, limitToLast, onValue 
+    } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDt9mJRH-BHlEksl4xla32sVIUGVnLUxWY",
+      authDomain: "future-infusion-368721.firebaseapp.com",
+      databaseURL: "https://future-infusion-368721-default-rtdb.firebaseio.com",
+      projectId: "future-infusion-368721",
+      storageBucket: "future-infusion-368721.firebasestorage.app",
+      messagingSenderId: "345445420847",
+      appId: "1:345445420847:web:070778c173ec6157c6dbda",
+      measurementId: "G-57PJMMNNWW"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const database = getDatabase(app);
+    // ====================================================
+
+    // 畫布與 HUD 設定
+    const canvas = document.getElementById("gameCanvas");
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    const ctx = canvas.getContext("2d");
+    const hud = document.getElementById("hud");
+    const gameOverOverlay = document.getElementById("gameOverOverlay");
+    const scoreDisplay = document.getElementById("score");
+    const restartButton = document.getElementById("restartButton");
+    const submitScoreButton = document.getElementById("submitScore");
+    const playerNameInput = document.getElementById("playerName");
+    const leaderboardDiv = document.getElementById("leaderboard");
+
+    // 鍵盤監聽
+    let keys = {};
+    window.addEventListener("keydown", e => keys[e.key] = true);
+    window.addEventListener("keyup", e => keys[e.key] = false);
+
+    // 手機虛擬方向鍵事件處理
+    function addMobileControl(buttonId, keyName) {
+      const button = document.getElementById(buttonId);
+      button.addEventListener("touchstart", function(e) {
+        e.preventDefault();
+        keys[keyName] = true;
+      });
+      button.addEventListener("touchend", function(e) {
+        e.preventDefault();
+        keys[keyName] = false;
+      });
+      button.addEventListener("mousedown", function(e) {
+        keys[keyName] = true;
+      });
+      button.addEventListener("mouseup", function(e) {
+        keys[keyName] = false;
+      });
+    }
+    addMobileControl("upButton", "ArrowUp");
+    addMobileControl("downButton", "ArrowDown");
+    addMobileControl("leftButton", "ArrowLeft");
+    addMobileControl("rightButton", "ArrowRight");
+
+    // 攝影機：以蛇頭為中心
+    let camera = { x: 0, y: 0 };
+    function distance(x1, y1, x2, y2) {
+      return Math.hypot(x2 - x1, y2 - y1);
+    }
+
+    // 全域遊戲變數
+    let energyItems = [];
+    let enemies = [];
+    let bullets = [];
+    let gameOver = false;
+    let maxScore = 0;
+    let animationFrameId;
+    let score = 0;  // 連續分數 (代表貪食蛇的生命值)
+
+    // ========== 貪食蛇類別 ==========
+    // 以蛇身節數表示生命值
+    class Snake {
+      constructor() {
+        this.segments = [];
+        this.desiredLength = 5;
+        for (let i = 0; i < this.desiredLength; i++) {
+          this.segments.push({ x: -i * 12, y: 0 });
+        }
+        this.direction = { x: 1, y: 0 };
+        this.speed = 2;
+      }
+      update() {
+        let dx = 0, dy = 0;
+        if (keys["ArrowUp"] || keys["w"]) dy -= 1;
+        if (keys["ArrowDown"] || keys["s"]) dy += 1;
+        if (keys["ArrowLeft"] || keys["a"]) dx -= 1;
+        if (keys["ArrowRight"] || keys["d"]) dx += 1;
+        if (dx !== 0 || dy !== 0) {
+          const mag = Math.hypot(dx, dy);
+          this.direction.x = dx / mag;
+          this.direction.y = dy / mag;
+        }
+        const prevPositions = this.segments.map(seg => ({ x: seg.x, y: seg.y }));
+        this.segments[0].x += this.direction.x * this.speed;
+        this.segments[0].y += this.direction.y * this.speed;
+        for (let i = 1; i < this.segments.length; i++) {
+          this.segments[i].x = prevPositions[i - 1].x;
+          this.segments[i].y = prevPositions[i - 1].y;
+        }
+        while (this.segments.length < this.desiredLength) {
+          let tail = this.segments[this.segments.length - 1];
+          this.segments.push({ x: tail.x, y: tail.y });
+        }
+      }
+      draw() {
+        ctx.fillStyle = "lime";
+        this.segments.forEach(seg => {
+          const screenX = canvas.width / 2 + seg.x - camera.x;
+          const screenY = canvas.height / 2 + seg.y - camera.y;
+          ctx.fillRect(screenX - 5, screenY - 5, 10, 10);
+        });
+      }
+    }
+    Snake.prototype.fireCooldown = 0;
+    Snake.prototype.autoFire = function() {
+      if (--this.fireCooldown <= 0) {
+        const target = this.findClosestEnemy();
+        if (target) {
+          const head = this.segments[0];
+          const angle = Math.atan2(target.y - head.y, target.x - head.x);
+          bullets.push(new Bullet(head.x, head.y, Math.cos(angle), Math.sin(angle), "snake"));
+          this.fireCooldown = 20;
+        }
+      }
+    };
+    Snake.prototype.findClosestEnemy = function() {
+      const head = this.segments[0];
+      let minDist = Infinity, closest = null;
+      enemies.forEach(enemy => {
+        const d = distance(head.x, head.y, enemy.x, enemy.y);
+        if (d < minDist) {
+          minDist = d;
+          closest = enemy;
+        }
+      });
+      return closest;
+    };
+
+    // ========== 子彈類別 ==========
+    class Bullet {
+      constructor(x, y, dx, dy, owner) {
+        this.x = x;
+        this.y = y;
+        this.dx = dx;
+        this.dy = dy;
+        this.speed = 5;
+        this.owner = owner; // "snake" 或 "enemy"
+        this.radius = 3;
+      }
+      update() {
+        this.x += this.dx * this.speed;
+        this.y += this.dy * this.speed;
+      }
+      draw() {
+        ctx.fillStyle = (this.owner === "snake") ? "yellow" : "red";
+        const screenX = canvas.width / 2 + this.x - camera.x;
+        const screenY = canvas.height / 2 + this.y - camera.y;
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // ========== 能量類別 ==========
+    class Energy {
+      constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.radius = 5;
+      }
+      draw() {
+        ctx.fillStyle = "cyan";
+        const screenX = canvas.width / 2 + this.x - camera.x;
+        const screenY = canvas.height / 2 + this.y - camera.y;
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // ========== 原始敵人 (橘色) ==========
+    class Enemy {
+      constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.radius = 15;
+        this.hp = 10;
+        this.fireCooldown = 0;
+        this.vx = (Math.random()-0.5)*2;
+        this.vy = (Math.random()-0.5)*2;
+        this.changeCooldown = 60 + Math.floor(Math.random()*60);
+      }
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        if (--this.changeCooldown <= 0) {
+          this.vx = (Math.random()-0.5)*2;
+          this.vy = (Math.random()-0.5)*2;
+          this.changeCooldown = 60 + Math.floor(Math.random()*60);
+        }
+        if (--this.fireCooldown <= 0) {
+          const numBullets = 8;
+          for (let i = 0; i < numBullets; i++) {
+            const angle = i * (Math.PI*2/numBullets);
+            bullets.push(new Bullet(this.x, this.y, Math.cos(angle), Math.sin(angle), "enemy"));
+          }
+          this.fireCooldown = 100;
+        }
+      }
+      draw() {
+        ctx.fillStyle = "orange";
+        const screenX = canvas.width / 2 + this.x - camera.x;
+        const screenY = canvas.height / 2 + this.y - camera.y;
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "white";
+        ctx.font = "12px sans-serif";
+        ctx.fillText(this.hp, screenX-4, screenY+4);
+      }
+    }
+
+    // ========== 藍色敵人 ==========
+    // 出現數量依據 score/40，但最多 3 個
+    class BlueEnemy {
+      constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.radius = 15;
+        this.hp = 10;
+        this.fireCooldown = 0;
+      }
+      update() {
+        let head = snake.segments[0];
+        let dx = head.x - this.x;
+        let dy = head.y - this.y;
+        let dist = Math.hypot(dx, dy);
+        let speed = 1.5;
+        if (dist > 0) {
+          this.x += (dx/dist) * speed;
+          this.y += (dy/dist) * speed;
+        }
+        if (--this.fireCooldown <= 0) {
+          const numBullets = 8;
+          for (let i = 0; i < numBullets; i++) {
+            const angle = i * (Math.PI*2/numBullets);
+            bullets.push(new Bullet(this.x, this.y, Math.cos(angle), Math.sin(angle), "enemy"));
+          }
+          this.fireCooldown = 100;
+        }
+      }
+      draw() {
+        ctx.fillStyle = "blue";
+        const screenX = canvas.width / 2 + this.x - camera.x;
+        const screenY = canvas.height / 2 + this.y - camera.y;
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "white";
+        ctx.font = "12px sans-serif";
+        ctx.fillText(this.hp, screenX-4, screenY+4);
+      }
+    }
+
+    // ========== 彩色敵人 ==========
+    // 當 score ≥ 100 時出現，先慢速追蹤、短暫停頓後以高速衝刺
+    class ColorfulEnemy {
+      constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.radius = 15;
+        this.hp = 10;
+        this.fireCooldown = 0;
+        this.state = "chase"; // "chase", "pause", "dash"
+        this.stateTime = 60;
+      }
+      update() {
+        let head = snake.segments[0];
+        if (this.state === "chase") {
+          let dx = head.x - this.x;
+          let dy = head.y - this.y;
+          let dist = Math.hypot(dx, dy);
+          let speed = 1.5;
+          if (dist > 0) {
+            this.x += (dx/dist) * speed;
+            this.y += (dy/dist) * speed;
+          }
+          this.stateTime--;
+          if (this.stateTime <= 0) {
+            this.state = "pause";
+            this.stateTime = 30;
+          }
+        } else if (this.state === "pause") {
+          this.stateTime--;
+          if (this.stateTime <= 0) {
+            this.state = "dash";
+            this.stateTime = 20;
+          }
+        } else if (this.state === "dash") {
+          let dx = head.x - this.x;
+          let dy = head.y - this.y;
+          let dist = Math.hypot(dx, dy);
+          let speed = 6;
+          if (dist > 0) {
+            this.x += (dx/dist) * speed;
+            this.y += (dy/dist) * speed;
+          }
+          this.stateTime--;
+          if (this.stateTime <= 0) {
+            this.state = "chase";
+            this.stateTime = 60;
+          }
+        }
+        if (--this.fireCooldown <= 0) {
+          const numBullets = 8;
+          for (let i = 0; i < numBullets; i++) {
+            const angle = i * (Math.PI*2/numBullets);
+            bullets.push(new Bullet(this.x, this.y, Math.cos(angle), Math.sin(angle), "enemy"));
+          }
+          this.fireCooldown = 100;
+        }
+      }
+      draw() {
+        ctx.fillStyle = "magenta";
+        const screenX = canvas.width / 2 + this.x - camera.x;
+        const screenY = canvas.height / 2 + this.y - camera.y;
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "white";
+        ctx.font = "12px sans-serif";
+        ctx.fillText(this.hp, screenX-4, screenY+4);
+      }
+    }
+
+    // ========== 建立遊戲主物件 ==========
+    let snake = new Snake();
+    score = snake.segments.length;
+
+    // 產生能量與敵人：
+    //  - 能量固定 5 個
+    //  - 原始敵人固定 2 個
+    //  - 藍色敵人依據 score/40，但最多 3 個
+    //  - 當 score ≥ 100 時再產生 1 隻彩色敵人
+    function spawnEntities() {
+      for (let i = 0; i < 5; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 100 + Math.random() * 200;
+        const x = snake.segments[0].x + Math.cos(angle) * dist;
+        const y = snake.segments[0].y + Math.sin(angle) * dist;
+        energyItems.push(new Energy(x, y));
+      }
+      const originalEnemyCount = 2;
+      for (let i = 0; i < originalEnemyCount; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 200 + Math.random() * 300;
+        const x = snake.segments[0].x + Math.cos(angle) * dist;
+        const y = snake.segments[0].y + Math.sin(angle) * dist;
+        enemies.push(new Enemy(x, y));
+      }
+      let blueEnemyCount = Math.min(3, Math.floor(score / 40));
+      for (let i = 0; i < blueEnemyCount; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 200 + Math.random() * 300;
+        const x = snake.segments[0].x + Math.cos(angle) * dist;
+        const y = snake.segments[0].y + Math.sin(angle) * dist;
+        enemies.push(new BlueEnemy(x, y));
+      }
+      if (score >= 100) {
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 200 + Math.random() * 300;
+        const x = snake.segments[0].x + Math.cos(angle) * dist;
+        const y = snake.segments[0].y + Math.sin(angle) * dist;
+        enemies.push(new ColorfulEnemy(x, y));
+      }
+    }
+    spawnEntities();
+
+    // ========== 排行榜相關函數 ==========
+    function submitScoreToFirebase(name, scoreValue) {
+      // 將資料 push 到 "scores" 節點
+      push(ref(database, 'scores/'), { name: name, score: scoreValue });
+    }
+
+    function loadLeaderboard() {
+      // 讀取 scores 節點，依 score 升序取最新 10 筆，然後反轉成降序
+      const scoresQuery = query(ref(database, 'scores/'), orderByChild('score'), limitToLast(10));
+      onValue(scoresQuery, (snapshot) => {
+        let scoresArray = [];
+        snapshot.forEach(childSnapshot => {
+          scoresArray.push(childSnapshot.val());
+        });
+        // 排序為降序
+        scoresArray.sort((a, b) => b.score - a.score);
+        // 更新 leaderboard div
+        let html = "<h3>Leaderboard</h3><ol>";
+        scoresArray.forEach(entry => {
+          html += `<li>${entry.name}: ${entry.score}</li>`;
+        });
+        html += "</ol>";
+        leaderboardDiv.innerHTML = html;
+      }, { onlyOnce: true });
+    }
+
+    // ========== 主遊戲迴圈 ==========
+    function gameLoop() {
+      if (gameOver) {
+        gameOverOverlay.style.display = "block";
+        scoreDisplay.innerText = Math.floor(maxScore);
+        loadLeaderboard();
+        return;
+      }
+      
+      snake.update();
+      snake.autoFire();
+      enemies.forEach(enemy => enemy.update());
+      bullets.forEach(bullet => bullet.update());
+      
+      // 檢測能量碰撞（以蛇頭為準）：吃到後增加一節與 score +1
+      for (let i = energyItems.length - 1; i >= 0; i--) {
+        const item = energyItems[i];
+        if (distance(snake.segments[0].x, snake.segments[0].y, item.x, item.y) < item.radius + 8) {
+          snake.desiredLength++;
+          score++;
+          energyItems.splice(i, 1);
+        }
+      }
+      
+      // 檢測蛇子彈對敵人傷害
+      for (let i = bullets.length - 1; i >= 0; i--) {
+        const b = bullets[i];
+        if (b.owner === "snake") {
+          for (let j = enemies.length - 1; j >= 0; j--) {
+            const enemy = enemies[j];
+            if (distance(b.x, b.y, enemy.x, enemy.y) < enemy.radius) {
+              enemy.hp -= 1;
+              bullets.splice(i, 1);
+              if (enemy.hp <= 0) enemies.splice(j, 1);
+              break;
+            }
+          }
+        }
+      }
+      
+      // 檢測敵子彈對貪食蛇傷害：每命中一次扣 0.1 分，若整數分下降則移除一節
+      for (let i = bullets.length - 1; i >= 0; i--) {
+        const b = bullets[i];
+        if (b.owner === "enemy") {
+          for (let k = 0; k < snake.segments.length; k++) {
+            if (distance(b.x, b.y, snake.segments[k].x, snake.segments[k].y) < 10) {
+              score -= 0.1;
+              bullets.splice(i, 1);
+              // 當 score 的整數部分下降時，移除一節
+              while (snake.segments.length > Math.floor(score)) {
+                snake.segments.pop();
+                snake.desiredLength = snake.segments.length;
+                if (snake.segments.length === 0) {
+                  gameOver = true;
+                  break;
+                }
+              }
+              break;
+            }
+          }
+        }
+      }
+      
+      // 檢測蛇頭與敵人碰撞：碰撞時移除蛇尾一節
+      for (let i = enemies.length - 1; i >= 0; i--) {
+        const enemy = enemies[i];
+        if (distance(snake.segments[0].x, snake.segments[0].y, enemy.x, enemy.y) < enemy.radius + 5) {
+          if (snake.segments.length > 1) {
+            snake.segments.pop();
+            snake.desiredLength = snake.segments.length;
+          } else {
+            gameOver = true;
+          }
+        }
+      }
+      
+      // 移除遠離貪食蛇的子彈
+      for (let i = bullets.length - 1; i >= 0; i--) {
+        if (distance(bullets[i].x, bullets[i].y, snake.segments[0].x, snake.segments[0].y) > 1000) {
+          bullets.splice(i, 1);
+        }
+      }
+      
+      camera.x = snake.segments[0].x;
+      camera.y = snake.segments[0].y;
+      
+      ctx.fillStyle = "#111";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      energyItems.forEach(item => item.draw());
+      enemies.forEach(enemy => enemy.draw());
+      bullets.forEach(bullet => bullet.draw());
+      snake.draw();
+      
+      maxScore = Math.max(maxScore, score);
+      hud.innerText = "Score: " + Math.floor(score);
+      
+      if (Math.random() < 0.01) spawnEntities();
+      
+      animationFrameId = requestAnimationFrame(gameLoop);
+    }
+    gameLoop();
+
+    // ========== 重新開始與排行榜提交 ==========
+    restartButton.addEventListener("click", function() {
+      cancelAnimationFrame(animationFrameId);
+      gameOver = false;
+      energyItems = [];
+      enemies = [];
+      bullets = [];
+      snake = new Snake();
+      score = snake.segments.length;
+      maxScore = 0;
+      gameOverOverlay.style.display = "none";
+      spawnEntities();
+      gameLoop();
+    });
+
+    submitScoreButton.addEventListener("click", function() {
+      const name = playerNameInput.value.trim();
+      if (name !== "") {
+        submitScoreToFirebase(name, Math.floor(score));
+        // 清空輸入框
+        playerNameInput.value = "";
+        // 重新載入排行榜
+        loadLeaderboard();
+      }
+    });
+  </script>
+</body>
+</html>
