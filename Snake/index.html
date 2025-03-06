@@ -6,6 +6,7 @@
   <style>
     body { margin: 0; overflow: hidden; background: #000; }
     canvas { display: block; background: #111; }
+    /* 分數顯示 */
     #hud {
       position: absolute;
       top: 10px;
@@ -15,6 +16,7 @@
       font-size: 18px;
       z-index: 100;
     }
+    /* 遊戲結束覆蓋層 */
     #gameOverOverlay {
       display: none;
       position: absolute;
@@ -42,28 +44,40 @@
       padding: 10px 20px;
       font-size: 16px;
     }
-    /* 手機虛擬方向鍵 (D-Pad) */
+    /* 預設隱藏手機虛擬方向鍵 */
     #mobileControls {
-      position: fixed;
-      bottom: 20px;
-      left: 20px;
-      z-index: 150;
+      display: none;
     }
-    #dpad {
-      display: grid;
-      grid-template-areas: 
-        ". up ."
-        "left down right";
-      grid-gap: 5px;
-    }
-    #upButton { grid-area: up; }
-    #leftButton { grid-area: left; }
-    #downButton { grid-area: down; }
-    #rightButton { grid-area: right; }
-    #mobileControls button {
-      width: 50px;
-      height: 50px;
-      font-size: 24px;
+    /* 僅在觸控裝置或窄屏下顯示虛擬方向鍵，並調大按鍵與分數字體 */
+    @media (pointer: coarse) and (max-width: 768px) {
+      #mobileControls {
+        display: block;
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 150;
+      }
+      #dpad {
+        display: grid;
+        grid-template-areas: 
+          ". up ."
+          "left down right";
+        grid-gap: 5px;
+      }
+      #upButton { grid-area: up; }
+      #leftButton { grid-area: left; }
+      #downButton { grid-area: down; }
+      #rightButton { grid-area: right; }
+      #mobileControls button {
+        width: 80px;
+        height: 80px;
+        font-size: 32px;
+      }
+      /* 手機版分數顯示更大 */
+      #hud {
+        font-size: 32px;
+      }
     }
   </style>
 </head>
@@ -78,7 +92,7 @@
     <div id="leaderboard"><h3>Leaderboard</h3></div>
     <button id="restartButton">Restart</button>
   </div>
-  <!-- 手機虛擬方向鍵 -->
+  <!-- 手機虛擬方向鍵，只在手機版顯示 -->
   <div id="mobileControls">
     <div id="dpad">
       <button id="upButton">↑</button>
@@ -168,7 +182,6 @@
     let score = 0;  // 連續分數 (代表貪食蛇的生命值)
 
     // ========== 貪食蛇類別 ==========
-    // 以蛇身節數表示生命值
     class Snake {
       constructor() {
         this.segments = [];
@@ -321,7 +334,6 @@
     }
 
     // ========== 藍色敵人 ==========
-    // 出現數量依據 score/40，但最多 3 個
     class BlueEnemy {
       constructor(x, y) {
         this.x = x;
@@ -363,7 +375,6 @@
     }
 
     // ========== 彩色敵人 ==========
-    // 當 score ≥ 100 時出現，先慢速追蹤、短暫停頓後以高速衝刺
     class ColorfulEnemy {
       constructor(x, y) {
         this.x = x;
@@ -478,21 +489,17 @@
 
     // ========== 排行榜相關函數 ==========
     function submitScoreToFirebase(name, scoreValue) {
-      // 將資料 push 到 "scores" 節點
       push(ref(database, 'scores/'), { name: name, score: scoreValue });
     }
 
     function loadLeaderboard() {
-      // 讀取 scores 節點，依 score 升序取最新 10 筆，然後反轉成降序
       const scoresQuery = query(ref(database, 'scores/'), orderByChild('score'), limitToLast(10));
       onValue(scoresQuery, (snapshot) => {
         let scoresArray = [];
         snapshot.forEach(childSnapshot => {
           scoresArray.push(childSnapshot.val());
         });
-        // 排序為降序
         scoresArray.sort((a, b) => b.score - a.score);
-        // 更新 leaderboard div
         let html = "<h3>Leaderboard</h3><ol>";
         scoresArray.forEach(entry => {
           html += `<li>${entry.name}: ${entry.score}</li>`;
@@ -550,7 +557,6 @@
             if (distance(b.x, b.y, snake.segments[k].x, snake.segments[k].y) < 10) {
               score -= 0.1;
               bullets.splice(i, 1);
-              // 當 score 的整數部分下降時，移除一節
               while (snake.segments.length > Math.floor(score)) {
                 snake.segments.pop();
                 snake.desiredLength = snake.segments.length;
@@ -604,7 +610,6 @@
     }
     gameLoop();
 
-    // ========== 重新開始與排行榜提交 ==========
     restartButton.addEventListener("click", function() {
       cancelAnimationFrame(animationFrameId);
       gameOver = false;
@@ -623,9 +628,7 @@
       const name = playerNameInput.value.trim();
       if (name !== "") {
         submitScoreToFirebase(name, Math.floor(score));
-        // 清空輸入框
         playerNameInput.value = "";
-        // 重新載入排行榜
         loadLeaderboard();
       }
     });
