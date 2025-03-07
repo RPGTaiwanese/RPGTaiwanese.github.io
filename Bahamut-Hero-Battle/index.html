@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <title>巴哈姆特帳號查詢</title>
+  <title>顯示巴哈姆特帳號內容</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -17,46 +17,54 @@
       font-size: 1rem;
       margin-left: 0.5rem;
     }
-    #result {
+    #content {
       margin-top: 1rem;
-    }
-    /* 可依需要調整 object 大小 */
-    object {
       border: 1px solid #ccc;
-      width: 800px;
-      height: 600px;
+      padding: 1rem;
+      max-height: 600px;
+      overflow-y: auto;
     }
   </style>
 </head>
 <body>
-  <h1>巴哈姆特帳號查詢</h1>
+  <h1>巴哈姆特帳號內容查詢</h1>
   <p>請輸入巴哈姆特帳號（例如：a121232923）：</p>
   <input type="text" id="accountInput" placeholder="請輸入帳號">
-  <button onclick="searchAccount()">查詢</button>
-  <div id="result"></div>
+  <button onclick="fetchContent()">查詢</button>
+  <div id="content"></div>
 
   <script>
-    function searchAccount() {
+    function fetchContent() {
       const account = document.getElementById("accountInput").value.trim();
-      if (account === "") {
+      if (!account) {
         alert("請輸入帳號");
         return;
       }
       
-      // 組成巴哈姆特個人頁面 URL
+      // 組合出巴哈姆特帳號頁面的 URL
       const url = "https://home.gamer.com.tw/profile/index.php?owner=" + account;
-      const resultDiv = document.getElementById("result");
-      resultDiv.innerHTML = ""; // 清除前次查詢結果
-
-      // 利用 object 元素來嵌入外部網頁
-      const obj = document.createElement("object");
-      obj.data = url;
-      obj.width = "800";
-      obj.height = "600";
-      // 當 object 載入失敗時，瀏覽器會顯示內部的 fallback 內容
-      obj.innerHTML = "<p style='color:red;'>查無帳號</p>";
+      // 利用 thingproxy 作為跨域代理
+      const proxyUrl = "https://thingproxy.freeboard.io/fetch/" + url;
       
-      resultDiv.appendChild(obj);
+      fetch(proxyUrl)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error("網頁回應錯誤");
+          }
+          return response.text();
+        })
+        .then(data => {
+          // 可根據取得的內容檢查是否真的有抓到正確頁面
+          if (data.trim() === "" || data.indexOf("查無帳號") !== -1) {
+            document.getElementById("content").innerHTML = "<p style='color:red;'>查無帳號或取得內容失敗</p>";
+          } else {
+            document.getElementById("content").innerHTML = data;
+          }
+        })
+        .catch(error => {
+          console.error("Error:", error);
+          document.getElementById("content").innerHTML = "<p style='color:red;'>查無帳號或取得內容失敗</p>";
+        });
     }
   </script>
 </body>
