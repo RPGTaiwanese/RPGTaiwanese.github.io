@@ -2,125 +2,62 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <title>巴哈姆特勇者資訊查詢器 - 基礎版</title>
+  <title>巴哈姆特帳號查詢</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background-color: #f8f9fa;
-      margin: 20px;
+      margin: 2rem;
     }
-    .container {
-      max-width: 600px;
-      margin: 0 auto;
-      background-color: #fff;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
-    h1 {
-      color: #343a40;
-      text-align: center;
-    }
-    p {
-      font-size: 1em;
-      margin: 10px 0;
-    }
-    input[type="text"] {
-      width: 100%;
-      padding: 10px;
-      font-size: 1em;
-      border: 1px solid #ced4da;
-      border-radius: 4px;
-      box-sizing: border-box;
+    input {
+      padding: 0.5rem;
+      font-size: 1rem;
     }
     button {
-      width: 100%;
-      padding: 10px;
-      font-size: 1em;
-      margin-top: 10px;
-      background-color: #007bff;
-      color: #fff;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #0056b3;
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      margin-left: 0.5rem;
     }
     #result {
-      margin-top: 20px;
-      padding: 15px;
-      background-color: #e9ecef;
-      border-radius: 4px;
+      margin-top: 1rem;
     }
-    .error {
-      color: #dc3545;
-      font-weight: bold;
+    /* 可依需要調整 object 大小 */
+    object {
+      border: 1px solid #ccc;
+      width: 800px;
+      height: 600px;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>巴哈姆特勇者資訊查詢器 - 基礎版</h1>
-    <p>請輸入勇者帳號：</p>
-    <input type="text" id="account" placeholder="例如：abc123">
-    <button id="queryBtn">查詢</button>
-    <div id="result"></div>
-  </div>
+  <h1>巴哈姆特帳號查詢</h1>
+  <p>請輸入巴哈姆特帳號（例如：a121232923）：</p>
+  <input type="text" id="accountInput" placeholder="請輸入帳號">
+  <button onclick="searchAccount()">查詢</button>
+  <div id="result"></div>
 
   <script>
-    document.getElementById('queryBtn').addEventListener('click', function(){
-      const account = document.getElementById('account').value.trim();
-      const resultDiv = document.getElementById('result');
-      
-      if (!account) {
-        alert("請輸入勇者帳號");
+    function searchAccount() {
+      const account = document.getElementById("accountInput").value.trim();
+      if (account === "") {
+        alert("請輸入帳號");
         return;
       }
       
-      resultDiv.innerHTML = "查詢中…";
+      // 組成巴哈姆特個人頁面 URL
+      const url = "https://home.gamer.com.tw/profile/index.php?owner=" + account;
+      const resultDiv = document.getElementById("result");
+      resultDiv.innerHTML = ""; // 清除前次查詢結果
+
+      // 利用 object 元素來嵌入外部網頁
+      const obj = document.createElement("object");
+      obj.data = url;
+      obj.width = "800";
+      obj.height = "600";
+      // 當 object 載入失敗時，瀏覽器會顯示內部的 fallback 內容
+      obj.innerHTML = "<p style='color:red;'>查無帳號</p>";
       
-      // 組合目標網址
-      const targetUrl = 'https://home.gamer.com.tw/homeindex.php?owner=' + encodeURIComponent(account);
-      // 使用 AllOrigins 作為 CORS 代理服務（如有需要，可更換其他代理）
-      const proxyUrl = 'https://api.allorigins.hexocode.repl.co/get?disableCache=true&url=' + encodeURIComponent(targetUrl);
-      
-      fetch(proxyUrl)
-        .then(response => {
-          if (!response.ok) {
-            throw new Error("網路錯誤");
-          }
-          return response.json();
-        })
-        .then(data => {
-          const html = data.contents;
-          // 檢查是否出現錯誤提示字串
-          if (html.indexOf("查無此人") !== -1) {
-            resultDiv.innerHTML = "<p class='error'>查無此人。</p>";
-            return;
-          } else if (html.indexOf("已遭查封") !== -1) {
-            resultDiv.innerHTML = `<p class='error'>${account} 因違反站規，其小屋已遭查封。</p>`;
-            return;
-          }
-          // 利用 DOMParser 解析 HTML
-          const parser = new DOMParser();
-          const doc = parser.parseFromString(html, "text/html");
-          // 假設暱稱在 class="nickname" 的標籤中，實際情況請依目標網站調整選擇器
-          let nickname = "未知暱稱";
-          const nicknameEl = doc.querySelector('.nickname');
-          if (nicknameEl) {
-            nickname = nicknameEl.textContent.trim();
-          }
-          resultDiv.innerHTML = `
-            <h2>查詢結果</h2>
-            <p><strong>帳號：</strong> ${account}</p>
-            <p><strong>暱稱：</strong> ${nickname}</p>
-          `;
-        })
-        .catch(err => {
-          resultDiv.innerHTML = `<p class='error'>查詢失敗：${err.message}</p>`;
-        });
-    });
+      resultDiv.appendChild(obj);
+    }
   </script>
 </body>
 </html>
