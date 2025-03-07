@@ -25,6 +25,8 @@
 可以查詢特定玩家的分數，看看誰是最強的貪食蛇高手！
 現在開始遊戲，看看你能獲得多少分數吧！ 🎯🐍💥
 
+-----------------------------------------------------------------------------------------------------------------------------
+
 Game Instructions (English)
 This is an advanced version of the classic Snake game!
 In addition to eating energy to grow, you must dodge enemy bullet attacks!
