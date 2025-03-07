@@ -1,0 +1,54 @@
+遊戲說明 / Game Instructions
+這是一款進階版的貪食蛇遊戲，除了要吃能量來讓自己變長，還要躲避敵人的彈幕攻擊！
+貪食蛇會自動發射彈幕攻擊最近的敵人，並且會隨著分數的提升增加難度！
+
+🎮 遊戲操作 / Controls
+滑鼠點擊 / 手機點擊：貪食蛇會朝點擊的方向移動
+自動攻擊：貪食蛇會自動發射彈幕攻擊最近的敵人
+🆚 敵人類型 / Enemy Types
+🟠 橘色敵人（基本敵人） / Orange Enemy (Basic Enemy)
+隨機移動並發射彈幕攻擊
+碰撞到貪食蛇會讓貪食蛇減少一節身體
+🔵 藍色敵人（追蹤敵人） / Blue Enemy (Chasing Enemy)
+會主動追蹤貪食蛇的移動
+數量有限制，同時最多只會出現 3 隻
+🌈 彩色敵人（衝刺敵人） / Rainbow Enemy (Dash Enemy)
+只會在 分數超過 100 時出現
+會短暫停頓後，快速衝刺向貪食蛇的位置，攻擊更加致命
+💥 受傷與死亡 / Damage & Game Over
+每節貪食蛇的身體有 10 點生命值
+被敵人彈幕擊中：減少 0.1 分數（分數顯示整數），分數每減 1，就會少一節身體
+撞到敵人：貪食蛇會直接減少 1 節身體
+當貪食蛇身體完全消失時，遊戲結束！
+🏆 排行榜 / Leaderboard
+遊戲結束後，您可以輸入名稱並將分數存入 Firebase 排行榜
+可以查詢特定玩家的分數，看看誰是最強的貪食蛇高手！
+現在開始遊戲，看看你能獲得多少分數吧！ 🎯🐍💥
+
+Game Instructions (English)
+This is an advanced version of the classic Snake game!
+In addition to eating energy to grow, you must dodge enemy bullet attacks!
+The snake will automatically fire bullets at the nearest enemy, and the game will become more difficult as your score increases!
+
+🎮 Controls
+Mouse Click / Tap on Mobile: The snake will move toward the clicked/tapped location
+Auto Attack: The snake automatically shoots bullets at the nearest enemy
+🆚 Enemy Types
+🟠 Orange Enemy (Basic Enemy)
+Moves randomly and shoots bullets at the snake
+Colliding with it will make the snake lose one body segment
+🔵 Blue Enemy (Chasing Enemy)
+Actively follows the snake's movement
+Maximum of 3 blue enemies can exist at the same time
+🌈 Rainbow Enemy (Dash Enemy)
+Appears only when your score exceeds 100
+Stops for a moment and then dashes toward the snake’s position, making it more dangerous
+💥 Damage & Game Over
+Each segment of the snake has 10 HP
+Hit by enemy bullets: Lose 0.1 score (only whole numbers are displayed). Every 1 score lost removes 1 body segment
+Colliding with an enemy: The snake loses 1 body segment instantly
+Game Over when the snake's body disappears!
+🏆 Leaderboard
+After the game ends, enter your name to save your score to the Firebase leaderboard
+You can search for specific players to see who is the best Snake master!
+Now, start the game and see how high you can score! 🎯🐍💥

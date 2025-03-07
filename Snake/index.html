@@ -44,11 +44,66 @@
       padding: 10px 20px;
       font-size: 20px;
     }
+    /* 起始畫面 */
+    #startOverlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.9);
+      color: white;
+      font-family: sans-serif;
+      text-align: center;
+      padding-top: 100px;
+      z-index: 300;
+    }
+    #startOverlay h1 {
+      font-size: 48px;
+      margin-bottom: 20px;
+    }
+    #startOverlay button {
+      font-size: 24px;
+      padding: 10px 20px;
+      margin: 10px;
+    }
+    /* 遊戲說明視窗 */
+    #instructionsModal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #222;
+      padding: 20px;
+      border: 2px solid #555;
+      z-index: 400;
+      display: none;
+    }
+    #instructionsModal pre {
+      text-align: left;
+      max-height: 300px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
   </style>
 </head>
 <body>
   <div id="hud">Score: 0</div>
   <canvas id="gameCanvas"></canvas>
+  
+  <!-- 遊戲起始畫面，先顯示開始遊戲按鈕，再顯示遊戲說明按鈕 -->
+  <div id="startOverlay">
+    <h1>無限地圖彈幕貪食蛇</h1>
+    <button id="startGameButton">開始遊戲</button>
+    <button id="showInstructions">遊戲說明</button>
+  </div>
+  
+  <!-- 遊戲說明小視窗 -->
+  <div id="instructionsModal">
+    <pre id="instructionsText"></pre>
+    <button id="closeInstructions">關閉</button>
+  </div>
+  
   <div id="gameOverOverlay">
     <h1>Game Over</h1>
     <p>Your score: <span id="score">0</span></p>
@@ -94,6 +149,32 @@
     const playerNameInput = document.getElementById("playerName");
     const leaderboardDiv = document.getElementById("leaderboard");
 
+    // ---------------- 持續更新控制（滑鼠/觸控） ----------------
+    let isInputActive = false;
+    canvas.addEventListener("mousedown", function(e) {
+      isInputActive = true;
+      setDirectionFromEvent(e);
+    });
+    canvas.addEventListener("mousemove", function(e) {
+      if (isInputActive) setDirectionFromEvent(e);
+    });
+    canvas.addEventListener("mouseup", function(e) {
+      isInputActive = false;
+    });
+    canvas.addEventListener("touchstart", function(e) {
+      e.preventDefault();
+      isInputActive = true;
+      setDirectionFromEvent(e);
+    });
+    canvas.addEventListener("touchmove", function(e) {
+      if (isInputActive) setDirectionFromEvent(e);
+    });
+    canvas.addEventListener("touchend", function(e) {
+      isInputActive = false;
+    });
+    // 原本的 click/touchstart 保留（若非持續操作時也能控制）
+    canvas.addEventListener("click", setDirectionFromEvent);
+    
     // 使用點擊或觸控來設定方向
     function setDirectionFromEvent(e) {
       let clientX, clientY;
@@ -121,11 +202,6 @@
         snake.direction.y = dy / mag;
       }
     }
-    canvas.addEventListener("click", setDirectionFromEvent);
-    canvas.addEventListener("touchstart", function(e) {
-      e.preventDefault();
-      setDirectionFromEvent(e);
-    });
 
     // 攝影機：始終以蛇頭為中心
     let camera = { x: 0, y: 0 };
@@ -564,7 +640,37 @@
       
       animationFrameId = requestAnimationFrame(gameLoop);
     }
-    gameLoop();
+    // ---------------- 起始畫面邏輯 ----------------
+    const startGameButton = document.getElementById("startGameButton");
+    const showInstructionsButton = document.getElementById("showInstructions");
+    const instructionsModal = document.getElementById("instructionsModal");
+    const closeInstructionsButton = document.getElementById("closeInstructions");
+
+    // 載入 Game Instructions.txt 內容，使用 encodeURI() 處理檔名空格
+    fetch(encodeURI("Game Instructions.txt"))
+      .then(response => {
+        if (!response.ok) throw new Error("無法載入檔案");
+        return response.text();
+      })
+      .then(text => {
+        document.getElementById("instructionsText").textContent = text;
+        console.log("載入 Game Instructions.txt 成功");
+      })
+      .catch(error => {
+        document.getElementById("instructionsText").textContent = "無法載入遊戲說明內容。";
+        console.error("Fetch error:", error);
+      });
+
+    showInstructionsButton.addEventListener("click", function() {
+      instructionsModal.style.display = "block";
+    });
+    closeInstructionsButton.addEventListener("click", function() {
+      instructionsModal.style.display = "none";
+    });
+    startGameButton.addEventListener("click", function() {
+      document.getElementById("startOverlay").style.display = "none";
+      gameLoop();
+    });
 
     // ========== 重新開始與排行榜提交 ==========
     restartButton.addEventListener("click", function() {
