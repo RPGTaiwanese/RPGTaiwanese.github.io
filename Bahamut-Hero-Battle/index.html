@@ -7,8 +7,11 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-analytics.js";
-    import { getDatabase, ref, set, onValue, update } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+    import { 
+      getDatabase, ref, set, onValue, update, onDisconnect 
+    } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
+    // Firebase 設定
     const firebaseConfig = {
       apiKey: "AIzaSyDt9mJRH-BHlEksl4xla32sVIUGVnLUxWY",
       authDomain: "future-infusion-368721.firebaseapp.com",
@@ -29,7 +32,7 @@
     let currentBahamutAccount = "";
     let currentAvatarUrl = "";
     let currentLevel = 1;
-    let currentHP = 300; // 1等：300HP、2等：350HP，以此類推
+    let currentHP = 300; // 1等：300HP, 2等：350HP, 以此類推
     let duelOpponent = null;
     let duelRoomRef = null;
     let isInDuel = false;
@@ -47,7 +50,7 @@
       return moves[Math.floor(Math.random() * moves.length)];
     }
 
-    // 解析招式文字（從字串中取出 Damage、Reply、Effect 數值）
+    // 解析招式文字，取出 Damage、Reply、Effect 數值
     function parseMove(moveText) {
       const parts = moveText.split(" ");
       return {
@@ -58,56 +61,50 @@
       };
     }
 
-    // 使用者輸入巴哈帳號後，產生頭像並讀取/初始化資料庫中的玩家資料
-    window.showAvatar = function() {
-      const username = document.getElementById('bahamut-account').value.trim();
-      if (username.length < 2) {
-        alert('請輸入至少兩個字元的帳號名稱。');
-        return;
-      }
-      currentBahamutAccount = username;
-      const firstChar = username.charAt(0);
-      const secondChar = username.charAt(1);
-      const avatarUrl = `https://avatar2.bahamut.com.tw/avataruserpic/${firstChar}/${secondChar}/${username}/${username}.png`;
+    // 自動遊客登入：產生隨機巴哈帳號，寫入 Firebase 並設定 onDisconnect
+    function autoGuestLogin() {
+      // 產生 Guest 名稱，例如 "Guest1234"
+      const guestName = "Guest" + Math.floor(Math.random() * 10000);
+      currentBahamutAccount = guestName;
+      const firstChar = guestName.charAt(0);
+      const secondChar = guestName.charAt(1);
+      const avatarUrl = `https://avatar2.bahamut.com.tw/avataruserpic/${firstChar}/${secondChar}/${guestName}/${guestName}.png`;
       currentAvatarUrl = avatarUrl;
+      currentLevel = 1;
+      currentHP = 300;
+      currentUser = {
+        uid: guestName,
+        bahamut: guestName,
+        level: currentLevel,
+        hp: currentHP
+      };
+      // 建立或更新 Firebase 中該玩家資料，並設 online 為 true
+      const userRef = ref(database, 'players/' + guestName);
+      set(userRef, {
+        bahamut: guestName,
+        avatar: avatarUrl,
+        level: currentLevel,
+        hp: currentHP,
+        online: true
+      });
+      // 當玩家斷線時，自動移除該玩家資料
+      onDisconnect(userRef).remove();
 
-      // 從資料庫讀取該玩家資料，若無則初始化
-      const userRef = ref(database, 'players/' + username);
-      onValue(userRef, (snapshot) => {
-        const data = snapshot.val();
-        if (data) {
-          currentLevel = data.level;
-          currentHP = data.hp;
-        } else {
-          currentLevel = 1;
-          currentHP = 300;
-          set(userRef, {
-            bahamut: username,
-            avatar: avatarUrl,
-            level: currentLevel,
-            hp: currentHP
-          });
-        }
-        currentUser = {
-          uid: username,
-          bahamut: username,
-          level: currentLevel,
-          hp: currentHP
-        };
-        // 將自己的頭像置中顯示
-        const avatarImg = document.getElementById('my-avatar');
-        avatarImg.src = avatarUrl;
-        avatarImg.alt = `${username}的勇者造型`;
-        avatarImg.style.cursor = "default";
-        // 隱藏輸入框與按鈕
-        document.getElementById('bahamut-account').style.display = 'none';
-        document.getElementById('show-avatar-btn').style.display = 'none';
-        // 載入線上玩家
-        loadPlayers();
-      }, { onlyOnce: true });
-    };
+      // 顯示自己的頭像
+      const avatarImg = document.getElementById('my-avatar');
+      avatarImg.src = avatarUrl;
+      avatarImg.alt = `${guestName}的勇者造型`;
+      avatarImg.style.cursor = "default";
 
-    // 讀取資料庫中的所有玩家，並顯示線上玩家列表（排除自己）
+      // 若有登入區塊則隱藏（此範例已移除輸入區）
+      const loginArea = document.getElementById('login-area');
+      if (loginArea) loginArea.style.display = 'none';
+
+      // 讀取線上玩家
+      loadPlayers();
+    }
+
+    // 讀取 Firebase 中的玩家資料，僅顯示在線的玩家（且排除自己）
     function loadPlayers() {
       const playersRef = ref(database, 'players/');
       onValue(playersRef, (snapshot) => {
@@ -116,6 +113,9 @@
         onlinePlayersDiv.innerHTML = "";
         for (let key in players) {
           const player = players[key];
+          // 僅顯示 online 為 true 的玩家
+          if (!player.online) continue;
+          // 排除自己
           if (player.bahamut === currentUser.uid) continue;
           const img = document.createElement("img");
           img.src = player.avatar;
@@ -124,7 +124,7 @@
           img.style.height = "100px";
           img.style.margin = "10px";
           img.style.cursor = "pointer";
-          // 點擊其他玩家的頭像時顯示選單（傳入 event 以便依點擊位置定位）
+          // 點擊其他玩家頭像時，顯示選單（決鬥、看小屋、加好友）
           img.addEventListener("click", function(e) {
             e.stopPropagation();
             if (isInDuel) {
@@ -150,16 +150,14 @@
         <a href="https://home.gamer.com.tw/homeindex.php?owner=${player.bahamut}" target="_blank"><button>看小屋</button></a>
         <a href="https://home.gamer.com.tw/homeindex.php?owner=${player.bahamut}" target="_blank"><button>加好友</button></a>
       `;
-      // 依照點擊位置顯示選單
       menuDiv.style.top = event.clientY + "px";
       menuDiv.style.left = event.clientX + "px";
-      // 防止點選選單內部時冒泡關閉選單
+      // 防止點選選單內容時冒泡
       menuDiv.addEventListener("click", function(e) {
         e.stopPropagation();
       });
       document.body.appendChild(menuDiv);
-
-      // 當點選選單區域以外，自動關閉選單
+      // 點選選單以外自動關閉選單
       function closeMenu(e) {
         if (!menuDiv.contains(e.target)) {
           menuDiv.remove();
@@ -167,7 +165,6 @@
         }
       }
       document.addEventListener("click", closeMenu);
-
       menuDiv.querySelector("#duel-btn").addEventListener("click", function(e) {
         e.stopPropagation();
         menuDiv.remove();
@@ -179,7 +176,6 @@
     function startDuel(opponent) {
       isInDuel = true;
       duelOpponent = opponent;
-      // 房間 ID 以兩個巴哈帳號字母排序組合以保持一致性
       let roomId = "";
       if (currentUser.uid < opponent.bahamut) {
         roomId = currentUser.uid + "_" + opponent.bahamut;
@@ -213,14 +209,13 @@
       });
     }
 
-    // 監聽決鬥房間的更新
+    // 監聽決鬥房間的狀態更新
     function listenDuelUpdates(roomId) {
       const roomRef = ref(database, 'duels/' + roomId);
       onValue(roomRef, (snapshot) => {
         const duelState = snapshot.val();
         if (duelState) {
           updateDuelUI(duelState);
-          // 當任一玩家 HP 小於等於 0 時結束決鬥
           if (duelState.player1.hp <= 0 || duelState.player2.hp <= 0) {
             endDuel(duelState);
           }
@@ -228,7 +223,7 @@
       });
     }
 
-    // 更新決鬥畫面：顯示雙方頭像、HP 與戰鬥記錄，並判斷輪到哪一方攻擊
+    // 根據決鬥狀態更新畫面內容
     function updateDuelUI(state) {
       document.getElementById("player1-avatar").src = state.player1.avatar;
       document.getElementById("player2-avatar").src = state.player2.avatar;
@@ -293,7 +288,7 @@
       }, { onlyOnce: true });
     }
 
-    // 決鬥結束：依照 HP 判斷勝負，並返回主畫面
+    // 決鬥結束後判斷勝負並返回主畫面
     function endDuel(state) {
       let resultMsg = "";
       if (state.player1.hp <= 0 && state.player2.hp <= 0) {
@@ -309,13 +304,16 @@
       isInDuel = false;
     }
 
-    // 當點擊自己的頭像（決鬥中只顯示提示）
+    // 當點擊自己的頭像（決鬥中只提示）
     window.myAvatarClick = function() {
       if (isInDuel) {
         alert("正在決鬥中");
       }
     };
 
+    window.onload = function() {
+      autoGuestLogin();
+    };
   </script>
   <style>
     body { text-align: center; font-family: Arial, sans-serif; }
@@ -333,13 +331,9 @@
   </style>
 </head>
 <body>
-  <!-- 主畫面：輸入巴哈帳號後顯示自己的頭像與線上玩家列表 -->
+  <!-- 主畫面：自動登入後顯示自己的頭像與線上玩家列表 -->
   <div id="main-section">
     <h1>巴哈勇者大亂鬥</h1>
-    <label for="bahamut-account">輸入巴哈帳號：</label>
-    <input type="text" id="bahamut-account" name="bahamut-account">
-    <button id="show-avatar-btn" onclick="showAvatar()">顯示勇者造型</button>
-    <br><br>
     <img id="my-avatar" src="" alt="" style="max-width:200px; max-height:200px;" onclick="myAvatarClick()">
     <h2>線上玩家</h2>
     <div id="online-players"></div>
