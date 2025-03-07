@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>無限地圖貪食蛇遊戲 - 點擊控制 + Firebase 排行榜</title>
+  <title>無限地圖彈幕貪食蛇遊戲 - 點擊控制 + Firebase 排行榜</title>
   <style>
     body { margin: 0; overflow: hidden; background: #000; }
     canvas { display: block; background: #111; }
@@ -67,24 +67,43 @@
       padding: 10px 20px;
       margin: 10px;
     }
-    /* 遊戲說明視窗 */
+    /* 遊戲說明視窗：白底黑字 */
     #instructionsModal {
       position: fixed;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      background: #222;
+      background: white;
       padding: 20px;
       border: 2px solid #555;
       z-index: 400;
       display: none;
+      color: black;
     }
-    /* 將遊戲說明文字放大 */
     #instructionsModal pre {
       text-align: left;
       max-height: 300px;
       overflow-y: auto;
       white-space: pre-wrap;
+      font-size: 20px;
+    }
+    /* 排行榜視窗：白底黑字 */
+    #leaderboardModal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 20px;
+      border: 2px solid #555;
+      z-index: 400;
+      display: none;
+      color: black;
+    }
+    #leaderboardModal #leaderboardContent {
+      text-align: left;
+      max-height: 300px;
+      overflow-y: auto;
       font-size: 20px;
     }
   </style>
@@ -93,17 +112,24 @@
   <div id="hud">Score: 0</div>
   <canvas id="gameCanvas"></canvas>
   
-  <!-- 遊戲起始畫面，先顯示開始遊戲按鈕，再顯示遊戲說明按鈕 -->
+  <!-- 遊戲起始畫面，包含開始遊戲、遊戲說明、排行榜按鈕 -->
   <div id="startOverlay">
     <h1>無限地圖彈幕貪食蛇</h1>
     <button id="startGameButton">開始遊戲</button>
     <button id="showInstructions">遊戲說明</button>
+    <button id="showLeaderboard">排行榜</button>
   </div>
   
   <!-- 遊戲說明小視窗 -->
   <div id="instructionsModal">
     <pre id="instructionsText"></pre>
     <button id="closeInstructions">關閉</button>
+  </div>
+  
+  <!-- 排行榜小視窗 -->
+  <div id="leaderboardModal">
+    <div id="leaderboardContent"></div>
+    <button id="closeLeaderboard">關閉</button>
   </div>
   
   <div id="gameOverOverlay">
@@ -300,7 +326,7 @@
         this.y += this.dy * this.speed;
       }
       draw() {
-        ctx.fillStyle = (this.owner === "snake") ? "yellow" : "red";
+        ctx.fillStyle = (this.owner === "snake") ? "yellow" : "salmon";
         const screenX = canvas.width / 2 + this.x - camera.x;
         const screenY = canvas.height / 2 + this.y - camera.y;
         ctx.beginPath();
@@ -542,6 +568,22 @@
         leaderboardDiv.innerHTML = html;
       }, { onlyOnce: true });
     }
+    function loadLeaderboardModal() {
+      const scoresQuery = query(ref(database, 'scores/'), orderByChild('score'), limitToLast(10));
+      onValue(scoresQuery, (snapshot) => {
+        let scoresArray = [];
+        snapshot.forEach(childSnapshot => {
+          scoresArray.push(childSnapshot.val());
+        });
+        scoresArray.sort((a, b) => b.score - a.score);
+        let html = "<h3>Leaderboard</h3><ol>";
+        scoresArray.forEach(entry => {
+          html += `<li>${entry.name}: ${entry.score}</li>`;
+        });
+        html += "</ol>";
+        document.getElementById("leaderboardContent").innerHTML = html;
+      }, { onlyOnce: true });
+    }
 
     // ========== 主遊戲迴圈 ==========
     function gameLoop() {
@@ -647,6 +689,9 @@
     const showInstructionsButton = document.getElementById("showInstructions");
     const instructionsModal = document.getElementById("instructionsModal");
     const closeInstructionsButton = document.getElementById("closeInstructions");
+    const showLeaderboardButton = document.getElementById("showLeaderboard");
+    const leaderboardModal = document.getElementById("leaderboardModal");
+    const closeLeaderboardButton = document.getElementById("closeLeaderboard");
 
     // 載入 Game Instructions.txt 內容，使用 encodeURI() 處理檔名空格
     fetch(encodeURI("Game Instructions.txt"))
@@ -668,6 +713,13 @@
     });
     closeInstructionsButton.addEventListener("click", function() {
       instructionsModal.style.display = "none";
+    });
+    showLeaderboardButton.addEventListener("click", function() {
+      loadLeaderboardModal();
+      leaderboardModal.style.display = "block";
+    });
+    closeLeaderboardButton.addEventListener("click", function() {
+      leaderboardModal.style.display = "none";
     });
     startGameButton.addEventListener("click", function() {
       document.getElementById("startOverlay").style.display = "none";
@@ -698,3 +750,4 @@
     });
   </script>
 </body>
+</html>
