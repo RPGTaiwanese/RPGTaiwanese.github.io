@@ -2,70 +2,352 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <title>顯示巴哈姆特帳號內容</title>
+  <title>巴哈勇者大亂鬥</title>
+  <!-- Firebase SDK (v9 模組化版) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-analytics.js";
+    import { getDatabase, ref, set, onValue, update } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDt9mJRH-BHlEksl4xla32sVIUGVnLUxWY",
+      authDomain: "future-infusion-368721.firebaseapp.com",
+      databaseURL: "https://future-infusion-368721-default-rtdb.firebaseio.com",
+      projectId: "future-infusion-368721",
+      storageBucket: "future-infusion-368721.firebasestorage.app",
+      messagingSenderId: "345445420847",
+      appId: "1:345445420847:web:070778c173ec6157c6dbda",
+      measurementId: "G-57PJMMNNWW"
+    };
+
+    // 初始化 Firebase
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const database = getDatabase(app);
+
+    // 全域變數
+    let currentUser = null;
+    let currentBahamutAccount = "";
+    let currentAvatarUrl = "";
+    let currentLevel = 1;
+    let currentHP = 300; // 1等：300HP、2等：350HP，以此類推
+    let duelOpponent = null;
+    let duelRoomRef = null;
+    let isInDuel = false;
+
+    // 模擬 Confrontation.txt 檔案內的招式文字
+    const moves = [
+      "嫩 Damage 20 Reply 0 Effect 0",
+      "好喔 Damage 10 Reply 0 Effect 0",
+      "太弱了 Damage 15 Reply 5 Effect 0",
+      "你輸了 Damage 25 Reply 0 Effect 0"
+    ];
+
+    // 隨機取一個招式
+    function getRandomMove() {
+      return moves[Math.floor(Math.random() * moves.length)];
+    }
+
+    // 解析招式文字，擷取 Damage、Reply、Effect 數值
+    function parseMove(moveText) {
+      const parts = moveText.split(" ");
+      return {
+        text: parts[0],
+        damage: parseInt(parts[2]),
+        reply: parseInt(parts[4]),
+        effect: parseInt(parts[6])
+      };
+    }
+
+    // 用戶輸入巴哈帳號後，產生頭像並讀取/初始化資料庫中的玩家資料
+    window.showAvatar = function() {
+      const username = document.getElementById('bahamut-account').value.trim();
+      if (username.length < 2) {
+        alert('請輸入至少兩個字元的帳號名稱。');
+        return;
+      }
+      currentBahamutAccount = username;
+      const firstChar = username.charAt(0);
+      const secondChar = username.charAt(1);
+      const avatarUrl = `https://avatar2.bahamut.com.tw/avataruserpic/${firstChar}/${secondChar}/${username}/${username}.png`;
+      currentAvatarUrl = avatarUrl;
+      
+      // 讀取 Firebase 中該巴哈帳號的資料，若不存在則初始化
+      const userRef = ref(database, 'players/' + username);
+      onValue(userRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          currentLevel = data.level;
+          currentHP = data.hp;
+        } else {
+          currentLevel = 1;
+          currentHP = 300;
+          set(userRef, {
+            bahamut: username,
+            avatar: avatarUrl,
+            level: currentLevel,
+            hp: currentHP
+          });
+        }
+        // 設定 currentUser 物件
+        currentUser = {
+          uid: username,
+          bahamut: username,
+          level: currentLevel,
+          hp: currentHP
+        };
+        // 將自己的頭像置中顯示
+        const avatarImg = document.getElementById('my-avatar');
+        avatarImg.src = avatarUrl;
+        avatarImg.alt = `${username}的勇者造型`;
+        avatarImg.style.cursor = "default";
+        // 載入線上玩家
+        loadPlayers();
+      }, { onlyOnce: true });
+    };
+
+    // 讀取線上玩家資料（排除自己）
+    function loadPlayers() {
+      const playersRef = ref(database, 'players/');
+      onValue(playersRef, (snapshot) => {
+        const players = snapshot.val();
+        const onlinePlayersDiv = document.getElementById("online-players");
+        onlinePlayersDiv.innerHTML = "";
+        for (let key in players) {
+          const player = players[key];
+          if (player.bahamut === currentUser.uid) continue;
+          const img = document.createElement("img");
+          img.src = player.avatar;
+          img.alt = player.bahamut + " 的勇者造型";
+          img.style.width = "100px";
+          img.style.height = "100px";
+          img.style.margin = "10px";
+          img.style.cursor = "pointer";
+          // 點擊其他玩家的頭像時顯示選單
+          img.addEventListener("click", function() {
+            if (isInDuel) {
+              alert("正在決鬥中");
+              return;
+            }
+            showPlayerOptions(player);
+          });
+          onlinePlayersDiv.appendChild(img);
+        }
+      });
+    }
+
+    // 顯示選單：決鬥、看小屋、加好友
+    function showPlayerOptions(player) {
+      const menuDiv = document.createElement("div");
+      menuDiv.style.position = "absolute";
+      menuDiv.style.backgroundColor = "#fff";
+      menuDiv.style.border = "1px solid #000";
+      menuDiv.style.padding = "10px";
+      menuDiv.innerHTML = `
+        <button id="duel-btn">決鬥</button>
+        <a href="https://home.gamer.com.tw/homeindex.php?owner=${player.bahamut}" target="_blank"><button>看小屋</button></a>
+        <a href="https://home.gamer.com.tw/homeindex.php?owner=${player.bahamut}" target="_blank"><button>加好友</button></a>
+      `;
+      document.body.appendChild(menuDiv);
+      // 點選選單區域以外自動關閉
+      document.addEventListener("click", function handler(e) {
+        if (!menuDiv.contains(e.target)) {
+          menuDiv.remove();
+          document.removeEventListener("click", handler);
+        }
+      });
+      document.getElementById("duel-btn").addEventListener("click", function() {
+        menuDiv.remove();
+        startDuel(player);
+      });
+    }
+
+    // 開始決鬥：建立對戰房間並初始化狀態
+    function startDuel(opponent) {
+      isInDuel = true;
+      duelOpponent = opponent;
+      // 房間 ID 使用兩個巴哈帳號組合（以字母排序以保持一致性）
+      let roomId = "";
+      if (currentUser.uid < opponent.bahamut) {
+        roomId = currentUser.uid + "_" + opponent.bahamut;
+      } else {
+        roomId = opponent.bahamut + "_" + currentUser.uid;
+      }
+      duelRoomRef = ref(database, 'duels/' + roomId);
+      const duelState = {
+        player1: {
+          uid: currentUser.uid,
+          bahamut: currentUser.uid,
+          avatar: currentAvatarUrl,
+          level: currentLevel,
+          hp: currentHP
+        },
+        player2: {
+          uid: opponent.bahamut,
+          bahamut: opponent.bahamut,
+          avatar: opponent.avatar,
+          level: opponent.level,
+          hp: opponent.hp
+        },
+        turn: currentUser.uid, // 先由發起決鬥者攻擊
+        log: []
+      };
+      set(duelRoomRef, duelState).then(() => {
+        // 顯示決鬥畫面
+        document.getElementById("main-section").style.display = "none";
+        document.getElementById("duel-section").style.display = "block";
+        updateDuelUI(duelState);
+        listenDuelUpdates(roomId);
+      });
+    }
+
+    // 監聽對戰房間的更新
+    function listenDuelUpdates(roomId) {
+      const roomRef = ref(database, 'duels/' + roomId);
+      onValue(roomRef, (snapshot) => {
+        const duelState = snapshot.val();
+        if (duelState) {
+          updateDuelUI(duelState);
+          // 當任一玩家 HP 小於等於 0 時結束決鬥
+          if (duelState.player1.hp <= 0 || duelState.player2.hp <= 0) {
+            endDuel(duelState);
+          }
+        }
+      });
+    }
+
+    // 根據對戰狀態更新決鬥畫面
+    function updateDuelUI(state) {
+      document.getElementById("player1-avatar").src = state.player1.avatar;
+      document.getElementById("player2-avatar").src = state.player2.avatar;
+      document.getElementById("player1-hp").innerText = "HP: " + state.player1.hp;
+      document.getElementById("player2-hp").innerText = "HP: " + state.player2.hp;
+      const logDiv = document.getElementById("duel-log");
+      logDiv.innerHTML = "";
+      state.log.forEach((msg) => {
+        const p = document.createElement("p");
+        p.innerText = msg;
+        logDiv.appendChild(p);
+      });
+      if (state.turn === currentUser.uid) {
+        document.getElementById("turn-indicator").innerText = "輪到你攻擊";
+        showMoveOptions();
+      } else {
+        document.getElementById("turn-indicator").innerText = "等待對方攻擊";
+        hideMoveOptions();
+      }
+    }
+
+    // 顯示 3 個隨機招式按鈕
+    function showMoveOptions() {
+      const movesDiv = document.getElementById("move-options");
+      movesDiv.innerHTML = "";
+      for (let i = 0; i < 3; i++) {
+        const moveText = getRandomMove();
+        const btn = document.createElement("button");
+        btn.innerText = moveText;
+        btn.addEventListener("click", function() {
+          performMove(moveText);
+        });
+        movesDiv.appendChild(btn);
+      }
+    }
+
+    function hideMoveOptions() {
+      document.getElementById("move-options").innerHTML = "";
+    }
+
+    // 執行招式：扣除對手 HP、回復自己的 HP
+    function performMove(moveText) {
+      const move = parseMove(moveText);
+      if (!duelRoomRef) return;
+      onValue(duelRoomRef, (snapshot) => {
+        const state = snapshot.val();
+        if (!state) return;
+        if (state.turn !== currentUser.uid) return; // 確保輪到自己
+        let attacker, defender;
+        if (state.player1.uid === currentUser.uid) {
+          attacker = state.player1;
+          defender = state.player2;
+        } else {
+          attacker = state.player2;
+          defender = state.player1;
+        }
+        defender.hp -= move.damage;
+        attacker.hp += move.reply;
+        state.log.push(`${attacker.bahamut} 使用 "${move.text}" 造成 ${move.damage} 傷害，回復 ${move.reply} HP`);
+        state.turn = (state.turn === state.player1.uid) ? state.player2.uid : state.player1.uid;
+        update(duelRoomRef, state);
+      }, { onlyOnce: true });
+    }
+
+    // 決鬥結束：依照 HP 判斷勝負，並返回主畫面
+    function endDuel(state) {
+      let resultMsg = "";
+      if (state.player1.hp <= 0 && state.player2.hp <= 0) {
+        resultMsg = "平手！";
+      } else if (state.player1.hp <= 0) {
+        resultMsg = (state.player1.uid === currentUser.uid) ? "你輸了！" : "你贏了！";
+      } else if (state.player2.hp <= 0) {
+        resultMsg = (state.player2.uid === currentUser.uid) ? "你輸了！" : "你贏了！";
+      }
+      alert("決鬥結束：" + resultMsg);
+      document.getElementById("duel-section").style.display = "none";
+      document.getElementById("main-section").style.display = "block";
+      isInDuel = false;
+    }
+
+    // 當點擊自己的頭像（決鬥中只顯示提示）則顯示「正在決鬥中」
+    window.myAvatarClick = function() {
+      if (isInDuel) {
+        alert("正在決鬥中");
+      }
+    };
+
+  </script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 2rem;
+    body { text-align: center; font-family: Arial, sans-serif; }
+    #online-players img { border: 2px solid #000; }
+    #duel-section { 
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+      background-color: #eee; 
     }
-    input {
-      padding: 0.5rem;
-      font-size: 1rem;
+    #duel-container { margin-top: 50px; }
+    #duel-log { 
+      height: 150px; overflow-y: scroll; border: 1px solid #000; 
+      margin: 20px; padding: 10px; background-color: #fff; 
     }
-    button {
-      padding: 0.5rem 1rem;
-      font-size: 1rem;
-      margin-left: 0.5rem;
-    }
-    #content {
-      margin-top: 1rem;
-      border: 1px solid #ccc;
-      padding: 1rem;
-      max-height: 600px;
-      overflow-y: auto;
-    }
+    button { margin: 5px; }
   </style>
 </head>
 <body>
-  <h1>巴哈姆特帳號內容查詢</h1>
-  <p>請輸入巴哈姆特帳號（例如：a121232923）：</p>
-  <input type="text" id="accountInput" placeholder="請輸入帳號">
-  <button onclick="fetchContent()">查詢</button>
-  <div id="content"></div>
+  <!-- 主畫面：輸入巴哈帳號、顯示自己與線上玩家 -->
+  <div id="main-section">
+    <h1>巴哈勇者大亂鬥</h1>
+    <label for="bahamut-account">輸入巴哈帳號：</label>
+    <input type="text" id="bahamut-account" name="bahamut-account">
+    <button onclick="showAvatar()">顯示勇者造型</button>
+    <br><br>
+    <img id="my-avatar" src="" alt="" style="max-width:200px; max-height:200px;" onclick="myAvatarClick()">
+    <h2>線上玩家</h2>
+    <div id="online-players"></div>
+  </div>
 
-  <script>
-    function fetchContent() {
-      const account = document.getElementById("accountInput").value.trim();
-      if (!account) {
-        alert("請輸入帳號");
-        return;
-      }
-      
-      // 組合出巴哈姆特帳號頁面的 URL
-      const url = "https://home.gamer.com.tw/profile/index.php?owner=" + account;
-      // 利用 thingproxy 作為跨域代理
-      const proxyUrl = "https://thingproxy.freeboard.io/fetch/" + url;
-      
-      fetch(proxyUrl)
-        .then(response => {
-          if (!response.ok) {
-            throw new Error("網頁回應錯誤");
-          }
-          return response.text();
-        })
-        .then(data => {
-          // 可根據取得的內容檢查是否真的有抓到正確頁面
-          if (data.trim() === "" || data.indexOf("查無帳號") !== -1) {
-            document.getElementById("content").innerHTML = "<p style='color:red;'>查無帳號或取得內容失敗</p>";
-          } else {
-            document.getElementById("content").innerHTML = data;
-          }
-        })
-        .catch(error => {
-          console.error("Error:", error);
-          document.getElementById("content").innerHTML = "<p style='color:red;'>查無帳號或取得內容失敗</p>";
-        });
-    }
-  </script>
+  <!-- 決鬥畫面 -->
+  <div id="duel-section" style="display:none;">
+    <div id="duel-container">
+      <div>
+        <img id="player1-avatar" src="" alt="" style="width:150px; height:150px;">
+        <div id="player1-hp"></div>
+      </div>
+      <div id="turn-indicator" style="font-size:24px; margin:20px;"></div>
+      <div>
+        <img id="player2-avatar" src="" alt="" style="width:150px; height:150px;">
+        <div id="player2-hp"></div>
+      </div>
+      <div id="duel-log"></div>
+      <div id="move-options"></div>
+    </div>
+  </div>
 </body>
 </html>
