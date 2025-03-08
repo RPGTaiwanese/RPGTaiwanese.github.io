@@ -15,6 +15,8 @@ h1 { margin: 0; font-size: 32px; display: inline-block; }
 #player-count { font-size: 18px; margin-left: 20px; vertical-align: middle; }
 #history-leaderboard-btn { margin-left: 10px; padding: 4px 8px; font-size: 14px; cursor: pointer; background: #2c3e50; color: #fff; border: none; border-radius: 4px; transition: background 0.3s; }
 #history-leaderboard-btn:hover { background: #34495e; }
+/* 將排行榜文字大小調小：僅修改 font-size */
+#leaderboard { position: fixed; top: 140px; left: 10px; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px; font-size: 14px; z-index: 1100; text-align: left; }
 #map { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; overflow: hidden; background: linear-gradient(135deg, #2c3e50, #bdc3c7); }
 .player { position: absolute; width: 50px; height: 80px; text-align: center; transition: left 0.05s linear, top 0.05s linear; animation: fadeIn 0.5s; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -30,7 +32,6 @@ h1 { margin: 0; font-size: 32px; display: inline-block; }
 #login-area input:focus { border-color: #34495e; }
 #login-area button { padding: 8px 16px; font-size: 16px; border: none; border-radius: 4px; background: linear-gradient(45deg, #2c3e50, #34495e); color: #fff; cursor: pointer; transition: background 0.3s; margin-left: 10px; }
 #login-area button:hover { background: linear-gradient(45deg, #34495e, #2c3e50); }
-#leaderboard { position: fixed; top: 140px; left: 10px; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px; font-size: 18px; z-index: 1100; text-align: left; }
 #intro-modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0,0,0,0.5); z-index: 1500; }
 #intro-modal-content { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; padding: 20px; border-radius: 8px; max-width: 80%; max-height: 80%; overflow-y: auto; text-align: left; }
 #intro-modal-close { position: absolute; top: 5px; right: 10px; background: #e74c3c; color: #fff; border: none; padding: 5px 10px; cursor: pointer; }
@@ -349,7 +350,7 @@ function loadItems() {
 // 1. 若地圖上已有 items 數量超過 80，則不生成新通知圖片。
 // 2. 生成的 x、y 值均在 0 ~ MAP_SIZE 範圍內。
 function spawnItemIfNone() {
-  if(Object.keys(items).length >= 80) return;
+  if(Object.keys(items).length >= 150) return;
   const scoreRef = ref(db, "BahamutScore");
   onValue(scoreRef, (snapshot) => {
     const scoreData = snapshot.val();
