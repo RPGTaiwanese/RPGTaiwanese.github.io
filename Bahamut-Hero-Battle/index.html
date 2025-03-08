@@ -15,7 +15,7 @@ h1 { margin: 0; font-size: 32px; display: inline-block; }
 #player-count { font-size: 18px; margin-left: 20px; vertical-align: middle; }
 #history-leaderboard-btn { margin-left: 10px; padding: 4px 8px; font-size: 14px; cursor: pointer; background: #2c3e50; color: #fff; border: none; border-radius: 4px; transition: background 0.3s; }
 #history-leaderboard-btn:hover { background: #34495e; }
-/* 將排行榜文字大小調小：僅修改 font-size */
+/* 將排行榜文字大小調小 */
 #leaderboard { position: fixed; top: 140px; left: 10px; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px; font-size: 14px; z-index: 1100; text-align: left; }
 #map { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; overflow: hidden; background: linear-gradient(135deg, #2c3e50, #bdc3c7); }
 .player { position: absolute; width: 50px; height: 80px; text-align: center; transition: left 0.05s linear, top 0.05s linear; animation: fadeIn 0.5s; }
@@ -35,10 +35,30 @@ h1 { margin: 0; font-size: 32px; display: inline-block; }
 #intro-modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0,0,0,0.5); z-index: 1500; }
 #intro-modal-content { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; padding: 20px; border-radius: 8px; max-width: 80%; max-height: 80%; overflow-y: auto; text-align: left; }
 #intro-modal-close { position: absolute; top: 5px; right: 10px; background: #e74c3c; color: #fff; border: none; padding: 5px 10px; cursor: pointer; }
+/* 歷史高分排行榜視窗 */
 #history-leaderboard-modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0,0,0,0.5); z-index: 1600; }
 #history-leaderboard-content { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; padding: 40px 20px 20px 20px; border-radius: 8px; max-width: 80%; max-height: 80%; overflow-y: auto; text-align: left; }
-#history-leaderboard-list { font-size: 36px; font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, serif; text-shadow: 1px 1px 2px #aaa; }
-@media (max-width: 600px) { header { padding: 10px; } h1 { font-size: 24px; } #game-intro-btn, #history-leaderboard-btn { left: 10px; top: 10px; padding: 6px 12px; font-size: 12px; } #player-count { font-size: 14px; margin-left: 10px; } #leaderboard { top: 120px; left: 5px; font-size: 16px; padding: 8px; } #login-area input { font-size: 14px; padding: 6px 10px; } #login-area button { font-size: 14px; padding: 6px 12px; margin-left: 5px; } }
+#history-leaderboard-list { font-size: 25px; font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, serif; text-shadow: 1px 1px 2px #aaa; }
+/* 調整歷史排行榜視窗的關閉按鈕風格，與其他關閉按鈕一致 */
+#history-leaderboard-close {
+  position: absolute;
+  top: 5px;
+  right: 10px;
+  background: #e74c3c;
+  color: #fff;
+  border: none;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+@media (max-width: 600px) { 
+  header { padding: 10px; } 
+  h1 { font-size: 24px; } 
+  #game-intro-btn, #history-leaderboard-btn { left: 10px; top: 10px; padding: 6px 12px; font-size: 12px; } 
+  #player-count { font-size: 14px; margin-left: 10px; } 
+  #leaderboard { top: 120px; left: 5px; font-size: 16px; padding: 8px; } 
+  #login-area input { font-size: 14px; padding: 6px 10px; } 
+  #login-area button { font-size: 14px; padding: 6px 12px; margin-left: 5px; } 
+}
 </style>
 </head>
 <body>
@@ -132,25 +152,20 @@ function getScreenPosition(objX, objY) {
   return { x: dx * PIXEL_SCALE + centerX, y: dy * PIXEL_SCALE + centerY };
 }
 function updateHistoricalLeaderboard() {
-  set(ref(db, "historicalLeaderboard/" + myID), {
-    bahamut: allPlayersData[myID] ? allPlayersData[myID].bahamut : myID,
-    avatar: myAvatar,
-    notifications: maxNotifications,
-    timestamp: Date.now()
-  }).then(() => {
-    const histRef = ref(db, "historicalLeaderboard");
-    onValue(histRef, (snapshot) => {
-      const data = snapshot.val() || {};
-      let entries = Object.entries(data);
-      entries.sort((a, b) => ((b[1].notifications || 0) - (a[1].notifications || 0)));
-      if(entries.length > 50) {
-        let toRemove = entries.slice(50);
-        toRemove.forEach(([id, record]) => {
-          remove(ref(db, "historicalLeaderboard/" + id));
-        });
-      }
-    }, { onlyOnce: true });
-  });
+  // 使用 myID 作為 key，確保同一巴哈帳號只保留一筆記錄
+  const recordRef = ref(db, "historicalLeaderboard/" + myID);
+  onValue(recordRef, (snapshot) => {
+    const data = snapshot.val();
+    // 只有當新分數超越原有分數時才更新
+    if(!data || maxNotifications > (data.notifications || 0)) {
+      set(recordRef, {
+        bahamut: allPlayersData[myID] ? allPlayersData[myID].bahamut : myID,
+        avatar: myAvatar,
+        notifications: maxNotifications,
+        timestamp: Date.now()
+      });
+    }
+  }, { onlyOnce: true });
 }
 function gameOver() {
   updateHistoricalLeaderboard();
@@ -347,10 +362,10 @@ function loadItems() {
   });
 }
 // 修改 spawnItemIfNone：
-// 1. 若地圖上已有 items 數量超過 80，則不生成新通知圖片。
+// 1. 若地圖上已有 items 數量超過 150，則不生成新通知圖片。
 // 2. 生成的 x、y 值均在 0 ~ MAP_SIZE 範圍內。
 function spawnItemIfNone() {
-  if(Object.keys(items).length >= 700) return;
+  if(Object.keys(items).length >= 150) return;
   const scoreRef = ref(db, "BahamutScore");
   onValue(scoreRef, (snapshot) => {
     const scoreData = snapshot.val();
@@ -489,7 +504,8 @@ function loadHistoricalLeaderboard() {
     let entries = Object.entries(data);
     entries.sort((a, b) => ((b[1].notifications || 0) - (a[1].notifications || 0)));
     let html = "<strong>史上最多通知的勇者</strong><br>";
-    entries.forEach(([id, record], index) => {
+    // 僅顯示前 10 名
+    entries.slice(0, 10).forEach(([id, record], index) => {
       html += `${index+1}. ${record.bahamut}：通知 ${(record.notifications || 0)}<br>`;
     });
     document.getElementById('history-leaderboard-list').innerHTML = html;
