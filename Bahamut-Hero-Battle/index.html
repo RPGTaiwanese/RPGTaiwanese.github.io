@@ -439,15 +439,13 @@
     // 將 guestLogin 掛到全域物件上，供 HTML onclick 呼叫
     window.guestLogin = guestLogin;
 
-    // 繪製或更新玩家畫面：修改後當玩家死亡或資料錯誤時直接移除 DOM
+    // 繪製或更新玩家畫面：若資料中 dead 為 true 或 bahamut 不正確，則移除 DOM
     function drawPlayer(id, avatarUrl, x, y, isMine = false, collectedItems = {}) {
-      // 若該玩家資料不存在或 Bahamut 帳號資料不正確，則移除畫面上的玩家元素
       if (!allPlayersData[id] || !allPlayersData[id].bahamut) {
         const existingElem = document.getElementById("player-" + id);
         if (existingElem) existingElem.remove();
         return;
       }
-      // 如果該玩家已死亡，直接移除其畫面上的元素
       if (allPlayersData[id].dead) {
         const existingElem = document.getElementById("player-" + id);
         if (existingElem) existingElem.remove();
@@ -476,7 +474,7 @@
       label.innerText = allPlayersData[id].bahamut;
       const avatarDiv = container.querySelector(".avatar");
       avatarDiv.style.backgroundImage = `url(${avatarUrl})`;
-      
+
       container.style.position = "absolute";
       const pos = getScreenPosition(x, y);
       container.style.left = pos.x + "px";
@@ -526,10 +524,17 @@
       itemElem.style.backgroundImage = `url(${imageUrl})`;
     }
 
+    // 更新畫面時先檢查 dead 狀態，若 dead 為 true，則不呼叫 drawPlayer（且移除已有的 DOM）
     function updateView() {
       for (let id in allPlayersData) {
         const p = allPlayersData[id];
-        drawPlayer(p.bahamut, p.avatar, p.x, p.y, id === myID, p.collectedItems || {});
+        if (p.dead) {
+          const elem = document.getElementById("player-" + id);
+          if (elem) elem.remove();
+          continue;
+        }
+        // 傳入 Firebase 的 key 作為 id
+        drawPlayer(id, p.avatar, p.x, p.y, id === myID, p.collectedItems || {});
       }
       for (let itemId in items) {
         const item = items[itemId];
@@ -555,9 +560,15 @@
       onValue(playersRef, (snapshot) => {
         const players = snapshot.val() || {};
         allPlayersData = players;
+        // 每次更新時，依據 dead 狀態來決定是否顯示該玩家
         for (let id in players) {
           const p = players[id];
-          drawPlayer(p.bahamut, p.avatar, p.x, p.y, id === myID, p.collectedItems || {});
+          if (p.dead) {
+            const elem = document.getElementById("player-" + id);
+            if (elem) elem.remove();
+          } else {
+            drawPlayer(id, p.avatar, p.x, p.y, id === myID, p.collectedItems || {});
+          }
         }
         updateLeaderboard();
         updateStatus();
