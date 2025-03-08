@@ -710,7 +710,7 @@
     document.getElementById('game-intro-btn').addEventListener('click', function() {
       var modal = document.getElementById('intro-modal');
       modal.style.display = 'block';
-      // 從 Game Instructions.txt 讀取說明內容
+      // 從 Game-Instructions.txt 讀取說明內容
       fetch('Game Instructions.txt')
         .then(response => response.text())
         .then(text => {
