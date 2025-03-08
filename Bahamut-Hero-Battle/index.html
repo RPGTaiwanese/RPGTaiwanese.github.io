@@ -30,14 +30,23 @@ h1 { margin: 0; font-size: 32px; display: inline-block; }
 #login-area input:focus { border-color: #34495e; }
 #login-area button { padding: 8px 16px; font-size: 16px; border: none; border-radius: 4px; background: linear-gradient(45deg, #2c3e50, #34495e); color: #fff; cursor: pointer; transition: background 0.3s; margin-left: 10px; }
 #login-area button:hover { background: linear-gradient(45deg, #34495e, #2c3e50); }
-/* 將排行榜文字調大 */
+/* 側邊排行榜樣式 */
 #leaderboard { position: fixed; top: 140px; left: 10px; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px; font-size: 18px; z-index: 1100; text-align: left; }
+/* 歷史排行榜模態框 */
 #intro-modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0,0,0,0.5); z-index: 1500; }
 #intro-modal-content { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; padding: 20px; border-radius: 8px; max-width: 80%; max-height: 80%; overflow-y: auto; text-align: left; }
-#intro-modal-close { position: absolute; top: 10px; right: 10px; background: #e74c3c; color: #fff; border: none; padding: 5px 10px; cursor: pointer; }
+/* 將關閉按鈕往上移，避免遮住標題 */
+#intro-modal-close { position: absolute; top: 5px; right: 10px; background: #e74c3c; color: #fff; border: none; padding: 5px 10px; cursor: pointer; }
 #history-leaderboard-modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0,0,0,0.5); z-index: 1600; }
-#history-leaderboard-content { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; padding: 20px; border-radius: 8px; max-width: 80%; max-height: 80%; overflow-y: auto; text-align: left; }
-#history-leaderboard-close { position: absolute; top: 10px; right: 10px; background: #e74c3c; color: #fff; border: none; padding: 5px 10px; cursor: pointer; }
+/* 調整內部內容，上方留空 */
+#history-leaderboard-content { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; padding: 40px 20px 20px 20px; border-radius: 8px; max-width: 80%; max-height: 80%; overflow-y: auto; text-align: left; }
+/* 調整歷史排行榜文字：大且華麗 */
+#history-leaderboard-list {
+    font-size: 36px;
+    font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, serif;
+    text-shadow: 1px 1px 2px #aaa;
+}
+/* 如手機則稍作調整 */
 @media (max-width: 600px) {
   header { padding: 10px; }
   h1 { font-size: 24px; }
@@ -80,7 +89,7 @@ h1 { margin: 0; font-size: 32px; display: inline-block; }
 <div id="main-section" style="display:none;">
   <div id="map"></div>
 </div>
-<!-- 模組腳本 -->
+<!-- 模組腳本：包含所有功能與事件監聽器 -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
 import { getDatabase, ref, set, onValue, onDisconnect, update, push, remove } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
@@ -110,7 +119,7 @@ let items = {};
 let allPlayersData = {};
 let lastPlayerCollisionTime = 0;
 let currentCollectedItems = {};
-// 用來記錄玩家達成過的最高通知數
+// 記錄玩家創下的最高通知數
 let maxNotifications = 0;
 function getMoveSpeed() {
   let notifCount = Object.keys(currentCollectedItems || {}).length;
@@ -149,7 +158,7 @@ function getScreenPosition(objX, objY) {
   let dy = objY - myY;
   return { x: dx * PIXEL_SCALE + centerX, y: dy * PIXEL_SCALE + centerY };
 }
-// 當玩家創下新高通知數時更新資料庫（避免每次更新都歸零）
+// 當玩家創下新高通知數時更新資料庫
 function updateHistoricalLeaderboard() {
   set(ref(db, "historicalLeaderboard/" + myID), {
     bahamut: allPlayersData[myID] ? allPlayersData[myID].bahamut : myID,
@@ -435,7 +444,7 @@ function checkPlayerCollision() {
     }
   }
 }
-// 只有當通知數超過歷史最高值時才更新歷史排行榜
+// 當玩家通知數創下新高時更新
 function listenMyCollected() {
   const myCollectedRef = ref(db, "players/" + myID + "/collectedItems");
   onValue(myCollectedRef, (snapshot) => {
@@ -521,28 +530,24 @@ function loadHistoricalLeaderboard() {
   }, { onlyOnce: true });
 }
 window.loadHistoricalLeaderboard = loadHistoricalLeaderboard;
-</script>
-<!-- 非模組腳本：等待所有資源載入後再設定事件監聽器 -->
-<script>
-window.addEventListener("load", function(){
-  document.getElementById('game-intro-btn').addEventListener('click', function(){
-    var modal = document.getElementById('intro-modal');
-    modal.style.display = 'block';
-    fetch('Game-Instructions.txt')
-      .then(response => response.text())
-      .then(text => { document.getElementById('intro-modal-text').innerText = text; })
-      .catch(err => { document.getElementById('intro-modal-text').innerText = '無法載入遊戲說明。'; });
-  });
-  document.getElementById('intro-modal-close').addEventListener('click', function(){
-    document.getElementById('intro-modal').style.display = 'none';
-  });
-  document.getElementById('history-leaderboard-btn').addEventListener('click', function(){
-    document.getElementById('history-leaderboard-modal').style.display = 'block';
-    window.loadHistoricalLeaderboard();
-  });
-  document.getElementById('history-leaderboard-close').addEventListener('click', function(){
-    document.getElementById('history-leaderboard-modal').style.display = 'none';
-  });
+// 將排行榜及遊戲說明等事件監聽器統一放在這裡
+document.getElementById('game-intro-btn').addEventListener('click', function(){
+  const modal = document.getElementById('intro-modal');
+  modal.style.display = 'block';
+  fetch('Game-Instructions.txt')
+    .then(response => response.text())
+    .then(text => { document.getElementById('intro-modal-text').innerText = text; })
+    .catch(err => { document.getElementById('intro-modal-text').innerText = '無法載入遊戲說明。'; });
+});
+document.getElementById('intro-modal-close').addEventListener('click', function(){
+  document.getElementById('intro-modal').style.display = 'none';
+});
+document.getElementById('history-leaderboard-btn').addEventListener('click', function(){
+  document.getElementById('history-leaderboard-modal').style.display = 'block';
+  loadHistoricalLeaderboard();
+});
+document.getElementById('history-leaderboard-close').addEventListener('click', function(){
+  document.getElementById('history-leaderboard-modal').style.display = 'none';
 });
 </script>
 </body>
