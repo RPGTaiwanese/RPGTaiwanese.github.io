@@ -347,7 +347,7 @@
       lb.innerHTML = html;
     }
 
-    // 計算畫面座標：若玩家死亡則只會使用一次記錄的死亡位置
+    // 計算畫面座標：所有玩家皆依此計算
     function getScreenPosition(objX, objY) {
       const centerX = window.innerWidth / 2;
       const centerY = window.innerHeight / 2;
@@ -439,8 +439,21 @@
     // 將 guestLogin 掛到全域物件上，供 HTML onclick 呼叫
     window.guestLogin = guestLogin;
 
-    // 繪製或更新玩家畫面：每次都更新頭貼，避免重用造成錯誤
+    // 繪製或更新玩家畫面：修改後當玩家死亡或資料錯誤時直接移除 DOM
     function drawPlayer(id, avatarUrl, x, y, isMine = false, collectedItems = {}) {
+      // 若該玩家資料不存在或 Bahamut 帳號資料不正確，則移除畫面上的玩家元素
+      if (!allPlayersData[id] || !allPlayersData[id].bahamut) {
+        const existingElem = document.getElementById("player-" + id);
+        if (existingElem) existingElem.remove();
+        return;
+      }
+      // 如果該玩家已死亡，直接移除其畫面上的元素
+      if (allPlayersData[id].dead) {
+        const existingElem = document.getElementById("player-" + id);
+        if (existingElem) existingElem.remove();
+        return;
+      }
+
       const map = document.getElementById("map");
       let container = document.getElementById("player-" + id);
       if (!container) {
@@ -458,23 +471,17 @@
         container.appendChild(orbitCountElem);
         map.appendChild(container);
       }
-      // 更新 label 與頭貼 (避免重用錯誤)
+      // 更新 label 與頭貼
       const label = container.querySelector(".label");
-      label.innerText = (allPlayersData[id] && allPlayersData[id].bahamut) ? allPlayersData[id].bahamut : id;
+      label.innerText = allPlayersData[id].bahamut;
       const avatarDiv = container.querySelector(".avatar");
       avatarDiv.style.backgroundImage = `url(${avatarUrl})`;
       
-      if (allPlayersData[id] && allPlayersData[id].dead && id !== myID) {
-        container.style.position = "fixed";
-        let pos = allPlayersData[id].deathScreenPos || { x: 50, y: 50 };
-        container.style.left = pos.x + "px";
-        container.style.top = pos.y + "px";
-      } else {
-        container.style.position = "absolute";
-        const pos = getScreenPosition(x, y);
-        container.style.left = pos.x + "px";
-        container.style.top = pos.y + "px";
-      }
+      container.style.position = "absolute";
+      const pos = getScreenPosition(x, y);
+      container.style.left = pos.x + "px";
+      container.style.top = pos.y + "px";
+
       const orbitCountElem = container.querySelector(".orbit-count");
       const orbitCount = collectedItems ? Object.keys(collectedItems).length : 0;
       orbitCountElem.innerText = "通知: " + orbitCount;
@@ -620,7 +627,7 @@
       }
     }
 
-    // 檢查玩家碰撞，並修正死亡玩家固定畫面位置的 BUG
+    // 檢查玩家碰撞
     function checkPlayerCollision() {
       const now = Date.now();
       if (now - lastPlayerCollisionTime < 500) return;
@@ -639,7 +646,6 @@
             gameOver();
             return;
           }
-          // 若對方通知數少於或等於 1，即認定被殺，更新其狀態與死亡螢幕位置
           if (otherNotif <= 1) {
             const deathPos = getScreenPosition(other.x, other.y);
             update(ref(db, "players/" + id), { dead: true, deathScreenPos: deathPos });
