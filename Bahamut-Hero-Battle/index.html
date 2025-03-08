@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
@@ -294,7 +294,7 @@
     const MAP_SIZE = 150; // 地圖範圍 0 ~ 150
     let baseSpeed = 3.0;  // 初始移動速度
     const MIN_SPEED = 1.0;
-    const SPEED_FACTOR = 0.05; // 每則通知減少的速度，調整為 0.05
+    const SPEED_FACTOR = 0.05; // 每則通知減少的速度
   
     let myID = "", myAvatar = "", myLevel = 1, myHP = 300;
     // 初始座標隨機產生在 0～MAP_SIZE 之間
@@ -711,7 +711,7 @@
       var modal = document.getElementById('intro-modal');
       modal.style.display = 'block';
       // 從 Game-Instructions.txt 讀取說明內容
-      fetch('Game-Instructions')
+      fetch('Game-Instructions.txt')
         .then(response => response.text())
         .then(text => {
           document.getElementById('intro-modal-text').innerText = text;
