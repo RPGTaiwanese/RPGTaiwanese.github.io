@@ -30,32 +30,14 @@ h1 { margin: 0; font-size: 32px; display: inline-block; }
 #login-area input:focus { border-color: #34495e; }
 #login-area button { padding: 8px 16px; font-size: 16px; border: none; border-radius: 4px; background: linear-gradient(45deg, #2c3e50, #34495e); color: #fff; cursor: pointer; transition: background 0.3s; margin-left: 10px; }
 #login-area button:hover { background: linear-gradient(45deg, #34495e, #2c3e50); }
-/* 側邊排行榜樣式 */
 #leaderboard { position: fixed; top: 140px; left: 10px; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px; font-size: 18px; z-index: 1100; text-align: left; }
-/* 歷史排行榜模態框 */
 #intro-modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0,0,0,0.5); z-index: 1500; }
 #intro-modal-content { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; padding: 20px; border-radius: 8px; max-width: 80%; max-height: 80%; overflow-y: auto; text-align: left; }
-/* 將關閉按鈕往上移，避免遮住標題 */
 #intro-modal-close { position: absolute; top: 5px; right: 10px; background: #e74c3c; color: #fff; border: none; padding: 5px 10px; cursor: pointer; }
 #history-leaderboard-modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0,0,0,0.5); z-index: 1600; }
-/* 調整內部內容，上方留空 */
 #history-leaderboard-content { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; padding: 40px 20px 20px 20px; border-radius: 8px; max-width: 80%; max-height: 80%; overflow-y: auto; text-align: left; }
-/* 調整歷史排行榜文字：大且華麗 */
-#history-leaderboard-list {
-    font-size: 36px;
-    font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, serif;
-    text-shadow: 1px 1px 2px #aaa;
-}
-/* 如手機則稍作調整 */
-@media (max-width: 600px) {
-  header { padding: 10px; }
-  h1 { font-size: 24px; }
-  #game-intro-btn, #history-leaderboard-btn { left: 10px; top: 10px; padding: 6px 12px; font-size: 12px; }
-  #player-count { font-size: 14px; margin-left: 10px; }
-  #leaderboard { top: 120px; left: 5px; font-size: 16px; padding: 8px; }
-  #login-area input { font-size: 14px; padding: 6px 10px; }
-  #login-area button { font-size: 14px; padding: 6px 12px; margin-left: 5px; }
-}
+#history-leaderboard-list { font-size: 36px; font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, serif; text-shadow: 1px 1px 2px #aaa; }
+@media (max-width: 600px) { header { padding: 10px; } h1 { font-size: 24px; } #game-intro-btn, #history-leaderboard-btn { left: 10px; top: 10px; padding: 6px 12px; font-size: 12px; } #player-count { font-size: 14px; margin-left: 10px; } #leaderboard { top: 120px; left: 5px; font-size: 16px; padding: 8px; } #login-area input { font-size: 14px; padding: 6px 10px; } #login-area button { font-size: 14px; padding: 6px 12px; margin-left: 5px; } }
 </style>
 </head>
 <body>
@@ -89,20 +71,10 @@ h1 { margin: 0; font-size: 32px; display: inline-block; }
 <div id="main-section" style="display:none;">
   <div id="map"></div>
 </div>
-<!-- 模組腳本：包含所有功能與事件監聽器 -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
 import { getDatabase, ref, set, onValue, onDisconnect, update, push, remove } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
-const firebaseConfig = {
-  apiKey: "AIzaSyDt9mJRH-BHlEksl4xla32sVIUGVnLUxWY",
-  authDomain: "future-infusion-368721.firebaseapp.com",
-  databaseURL: "https://future-infusion-368721-default-rtdb.firebaseio.com",
-  projectId: "future-infusion-368721",
-  storageBucket: "future-infusion-368721.firebasestorage.app",
-  messagingSenderId: "345445420847",
-  appId: "1:345445420847:web:070778c173ec6157c6dbda",
-  measurementId: "G-57PJMMNNWW"
-};
+const firebaseConfig = {apiKey:"AIzaSyDt9mJRH-BHlEksl4xla32sVIUGVnLUxWY",authDomain:"future-infusion-368721.firebaseapp.com",databaseURL:"https://future-infusion-368721-default-rtdb.firebaseio.com",projectId:"future-infusion-368721",storageBucket:"future-infusion-368721.firebasestorage.app",messagingSenderId:"345445420847",appId:"1:345445420847:web:070778c173ec6157c6dbda",measurementId:"G-57PJMMNNWW"};
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const MAP_SIZE = 150;
@@ -119,7 +91,6 @@ let items = {};
 let allPlayersData = {};
 let lastPlayerCollisionTime = 0;
 let currentCollectedItems = {};
-// 記錄玩家創下的最高通知數
 let maxNotifications = 0;
 function getMoveSpeed() {
   let notifCount = Object.keys(currentCollectedItems || {}).length;
@@ -128,9 +99,7 @@ function getMoveSpeed() {
 }
 function updateStatus() {
   const count = Object.keys(allPlayersData).length;
-  if(myID) {
-    document.getElementById("player-count").innerText = "在線玩家 " + count + " 位 | 座標 (" + Math.floor(myX) + ", " + Math.floor(myY) + ")";
-  }
+  if(myID) { document.getElementById("player-count").innerText = "在線玩家 " + count + " 位 | 座標 (" + Math.floor(myX) + ", " + Math.floor(myY) + ")"; }
 }
 function updateLeaderboard() {
   const lb = document.getElementById("leaderboard");
@@ -154,11 +123,9 @@ function updateLeaderboard() {
 function getScreenPosition(objX, objY) {
   const centerX = window.innerWidth / 2;
   const centerY = window.innerHeight / 2;
-  let dx = objX - myX;
-  let dy = objY - myY;
+  let dx = objX - myX, dy = objY - myY;
   return { x: dx * PIXEL_SCALE + centerX, y: dy * PIXEL_SCALE + centerY };
 }
-// 當玩家創下新高通知數時更新資料庫
 function updateHistoricalLeaderboard() {
   set(ref(db, "historicalLeaderboard/" + myID), {
     bahamut: allPlayersData[myID] ? allPlayersData[myID].bahamut : myID,
@@ -280,32 +247,32 @@ function drawPlayer(id, avatarUrl, x, y, isMine = false, collectedItems = {}) {
   container.style.left = pos.x + "px";
   container.style.top = pos.y + "px";
   const orbitCountElem = container.querySelector(".orbit-count");
-  const orbitCount = collectedItems ? Object.keys(collectedItems).length : 0;
-  orbitCountElem.innerText = "通知: " + orbitCount;
+  const actualCount = collectedItems ? Object.keys(collectedItems).length : 0;
+  orbitCountElem.innerText = "通知: " + actualCount;
   let orbitContainer = container.querySelector(".orbit-container");
-  if(orbitCount > 0) {
+  if(actualCount > 0) {
     if(!orbitContainer) {
       orbitContainer = document.createElement("div");
       orbitContainer.classList.add("orbit-container");
       container.appendChild(orbitContainer);
     }
-    if(orbitContainer.childNodes.length !== orbitCount) {
+    // 只顯示最多 30 個軌道圖片
+    const displayCount = actualCount > 30 ? 30 : actualCount;
+    if(orbitContainer.childNodes.length !== displayCount) {
       orbitContainer.innerHTML = "";
-      const keys = Object.keys(collectedItems);
+      const keys = Object.keys(collectedItems).slice(0, displayCount);
       keys.forEach((key, index) => {
         const itemObj = collectedItems[key];
         const itemUrl = typeof itemObj === "string" ? itemObj : itemObj.imageUrl;
         const orbitItem = document.createElement("div");
         orbitItem.classList.add("orbit-item");
         orbitItem.style.backgroundImage = `url(${itemUrl})`;
-        const delay = -(index * (4 / orbitCount));
+        const delay = -(index * (4 / displayCount));
         orbitItem.style.animationDelay = delay + "s";
         orbitContainer.appendChild(orbitItem);
       });
     }
-  } else {
-    if(orbitContainer) orbitContainer.remove();
-  }
+  } else { if(orbitContainer) orbitContainer.remove(); }
 }
 function drawItem(itemId, imageUrl, x, y) {
   const map = document.getElementById("map");
@@ -388,6 +355,7 @@ function checkCollision() {
     let dx = myX - item.x, dy = myY - item.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
     if(distance < 5) {
+      // 無論目前通知數是否超過 30，都直接新增，讓通知分數持續累加
       const collectedRef = push(ref(db, "players/" + myID + "/collectedItems"));
       set(collectedRef, { imageUrl: item.imageUrl, timestamp: Date.now() });
       remove(ref(db, "items/" + itemId));
@@ -444,7 +412,6 @@ function checkPlayerCollision() {
     }
   }
 }
-// 當玩家通知數創下新高時更新
 function listenMyCollected() {
   const myCollectedRef = ref(db, "players/" + myID + "/collectedItems");
   onValue(myCollectedRef, (snapshot) => {
@@ -462,13 +429,8 @@ function initMovement() {
   function getPointerCoords(e) {
     const rect = mapElem.getBoundingClientRect();
     let clientX, clientY;
-    if(e.touches && e.touches.length > 0) {
-      clientX = e.touches[0].clientX;
-      clientY = e.touches[0].clientY;
-    } else {
-      clientX = e.clientX;
-      clientY = e.clientY;
-    }
+    if(e.touches && e.touches.length > 0) { clientX = e.touches[0].clientX; clientY = e.touches[0].clientY; }
+    else { clientX = e.clientX; clientY = e.clientY; }
     return { x: clientX, y: clientY };
   }
   function updateDirection(e) {
@@ -477,10 +439,7 @@ function initMovement() {
     const centerY = window.innerHeight / 2;
     let dx = pointer.x - centerX, dy = pointer.y - centerY;
     const len = Math.sqrt(dx * dx + dy * dy);
-    if(len > 0) { 
-      moveDx = dx / len;
-      moveDy = dy / len;
-    }
+    if(len > 0) { moveDx = dx / len; moveDy = dy / len; }
   }
   function startMovement(e) {
     e.preventDefault();
@@ -495,10 +454,7 @@ function initMovement() {
     mapElem.addEventListener("touchmove", updateDirection);
   }
   function stopMovement(e) {
-    if(moveInterval) {
-      clearInterval(moveInterval);
-      moveInterval = null;
-    }
+    if(moveInterval) { clearInterval(moveInterval); moveInterval = null; }
     mapElem.removeEventListener("mousemove", updateDirection);
     mapElem.removeEventListener("touchmove", updateDirection);
   }
@@ -510,10 +466,7 @@ function initMovement() {
   window.stopMovement = stopMovement;
 }
 window.addEventListener("beforeunload", () => {
-  if(myID) {
-    const playerRef = ref(db, "players/" + myID);
-    remove(playerRef);
-  }
+  if(myID) { const playerRef = ref(db, "players/" + myID); remove(playerRef); }
 });
 function loadHistoricalLeaderboard() {
   const histRef = ref(db, "historicalLeaderboard");
@@ -521,7 +474,6 @@ function loadHistoricalLeaderboard() {
     const data = snapshot.val() || {};
     let entries = Object.entries(data);
     entries.sort((a, b) => ((b[1].notifications || 0) - (a[1].notifications || 0)));
-    // 標題改成「史上最多通知的勇者」
     let html = "<strong>史上最多通知的勇者</strong><br>";
     entries.forEach(([id, record], index) => {
       html += `${index+1}. ${record.bahamut}：通知 ${(record.notifications || 0)}<br>`;
@@ -530,7 +482,6 @@ function loadHistoricalLeaderboard() {
   }, { onlyOnce: true });
 }
 window.loadHistoricalLeaderboard = loadHistoricalLeaderboard;
-// 將排行榜及遊戲說明等事件監聽器統一放在這裡
 document.getElementById('game-intro-btn').addEventListener('click', function(){
   const modal = document.getElementById('intro-modal');
   modal.style.display = 'block';
