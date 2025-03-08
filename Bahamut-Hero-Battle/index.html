@@ -313,7 +313,7 @@ function updateMyPosition(newX, newY) {
   checkPlayerCollision();
   updateView();
 }
-// 修改 loadPlayers：當資料庫中不存在該玩家時，移除其 DOM 元素
+// 當資料庫中不存在該玩家時，移除其 DOM 元素
 function loadPlayers() {
   const playersRef = ref(db, "players/");
   onValue(playersRef, (snapshot) => {
@@ -345,19 +345,21 @@ function loadItems() {
     }
   });
 }
+// 修改 spawnItemIfNone：
+// 1. 若地圖上已有 items 數量超過 80，則不生成新通知圖片。
+// 2. 生成的 x、y 值均在 0 ~ MAP_SIZE 範圍內。
 function spawnItemIfNone() {
+  if(Object.keys(items).length >= 80) return;
   const scoreRef = ref(db, "BahamutScore");
   onValue(scoreRef, (snapshot) => {
     const scoreData = snapshot.val();
     if(scoreData) {
-      if(Math.random() < 1/3) {
          const imageUrls = Object.values(scoreData);
          const randomImage = imageUrls[Math.floor(Math.random() * imageUrls.length)];
          const randomX = Math.floor(Math.random() * MAP_SIZE);
          const randomY = Math.floor(Math.random() * MAP_SIZE);
          const newItemRef = push(ref(db, "items/"));
          set(newItemRef, { imageUrl: randomImage, x: randomX, y: randomY });
-      }
     }
   }, { onlyOnce: true });
 }
