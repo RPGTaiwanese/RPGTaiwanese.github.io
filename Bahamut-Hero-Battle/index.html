@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
@@ -24,12 +24,24 @@
       from { opacity: 0; transform: translateY(-20px); }
       to { opacity: 1; transform: translateY(0); }
     }
-    /* 遊戲介紹按紐 */
-    #instructionsButton {
-      margin-right: 10px;
-      padding: 5px 10px;
+    /* 新增的「遊戲介紹」按紐：半透明黑色有質感按鈕 */
+    #game-intro-btn {
+      position: absolute;
+      left: 20px;
+      top: 20px;
+      padding: 8px 16px;
       font-size: 14px;
       cursor: pointer;
+      z-index: 1100;
+      background: rgba(0, 0, 0, 0.7);
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      transition: background 0.3s;
+    }
+    #game-intro-btn:hover {
+      background: rgba(0, 0, 0, 0.85);
     }
     /* 顯示登入資訊 */
     #my-info {
@@ -130,10 +142,36 @@
       margin-top: 50px;
       animation: fadeIn 1s;
     }
-    /* 排行榜區塊：離標題下方稍遠、文字顏色較淡 */
+    /* 登入區塊的輸入框與按鈕樣式：更具質感 */
+    #login-area input {
+      padding: 8px 12px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+    #login-area input:focus {
+      border-color: #34495e;
+    }
+    #login-area button {
+      padding: 8px 16px;
+      font-size: 16px;
+      border: none;
+      border-radius: 4px;
+      background: linear-gradient(45deg, #2c3e50, #34495e);
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.3s;
+      margin-left: 10px;
+    }
+    #login-area button:hover {
+      background: linear-gradient(45deg, #34495e, #2c3e50);
+    }
+    /* 排行榜區塊：位置下移，避免與標題重疊 */
     #leaderboard {
       position: fixed;
-      top: 100px;
+      top: 140px;
       left: 10px;
       background: rgba(0, 0, 0, 0.7);
       padding: 10px;
@@ -142,46 +180,58 @@
       z-index: 1100;
       text-align: left;
     }
-    /* 遊戲介紹視窗 */
-    #instructionsModal {
+    /* 遊戲介紹視窗的 CSS */
+    #intro-modal {
       display: none;
       position: fixed;
       top: 0;
       left: 0;
       width: 100vw;
       height: 100vh;
-      background: rgba(0, 0, 0, 0.5);
-      z-index: 3000;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 1500;
     }
-    #instructionsModal .modal-content {
+    #intro-modal-content {
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      background: white;
-      color: black;
+      background: #fff;
       padding: 20px;
-      border-radius: 10px;
+      border-radius: 8px;
       max-width: 80%;
       max-height: 80%;
       overflow-y: auto;
+      text-align: left;
     }
-    #instructionsModal .close-btn {
+    #intro-modal-close {
       position: absolute;
-      top: 5px;
+      top: 10px;
       right: 10px;
+      background: #e74c3c;
+      color: #fff;
+      border: none;
+      padding: 5px 10px;
       cursor: pointer;
-      font-size: 18px;
     }
   </style>
 </head>
 <body>
   <header>
-    <!-- 在標題前加入「遊戲介紹」按紐 -->
-    <button id="instructionsButton">遊戲介紹</button>
+    <p id="my-info"></p>
+    <button id="game-intro-btn">遊戲介紹</button>
     <h1>巴哈姆特勇者大亂鬥</h1>
     <span id="player-count">在線玩家 0 位</span>
   </header>
+  
+  <!-- 遊戲介紹視窗 -->
+  <div id="intro-modal">
+    <div id="intro-modal-content">
+      <button id="intro-modal-close">關閉</button>
+      <div id="intro-modal-text">載入中...</div>
+    </div>
+  </div>
+
   <!-- 排行榜區塊 -->
   <div id="leaderboard"></div>
   <div id="login-area">
@@ -191,14 +241,6 @@
   </div>
   <div id="main-section" style="display:none;">
     <div id="map"></div>
-  </div>
-
-  <!-- 遊戲介紹視窗 -->
-  <div id="instructionsModal">
-    <div class="modal-content">
-      <span class="close-btn" id="closeInstructions">&times;</span>
-      <pre id="instructionsContent" style="text-align: left;"></pre>
-    </div>
   </div>
 
   <!-- 使用 Firebase CDN 模組 -->
@@ -223,11 +265,12 @@
     const MAP_SIZE = 150; // 地圖範圍 0 ~ 150
     let baseSpeed = 3.0;  // 初始移動速度
     const MIN_SPEED = 1.0;
-    const SPEED_FACTOR = 0.2; // 每則通知減少的速度
+    const SPEED_FACTOR = 0.1; // 每則通知減少的速度（調低減速數值）
 
     let myID = "", myAvatar = "", myLevel = 1, myHP = 300;
+    // 初始座標隨機產生在 0～MAP_SIZE 之間
     let myX = Math.floor(Math.random() * MAP_SIZE), myY = Math.floor(Math.random() * MAP_SIZE);
-    const PIXEL_SCALE = 6;
+    const PIXEL_SCALE = 6; // 1 單位 = 6px
     const INTERVAL_DELAY = 50;
     let moveInterval = null;
     let moveDx = 0, moveDy = 0;
@@ -237,12 +280,14 @@
     let lastPlayerCollisionTime = 0;
     let currentCollectedItems = {};
 
+    // 根據目前的通知數計算移動速度（通知越多速度越慢）
     function getMoveSpeed() {
       let notifCount = Object.keys(currentCollectedItems || {}).length;
       let speed = baseSpeed - SPEED_FACTOR * notifCount;
       return speed < MIN_SPEED ? MIN_SPEED : speed;
     }
 
+    // 更新狀態顯示：在線玩家數與自己的座標（整數顯示）
     function updateStatus() {
       const count = Object.keys(allPlayersData).length;
       if(myID) {
@@ -251,6 +296,7 @@
       }
     }
 
+    // 更新排行榜：依據 allPlayersData 顯示各玩家帳號與通知數，並加入名次與淡色文字
     function updateLeaderboard() {
       const lb = document.getElementById("leaderboard");
       let html = "<strong style='color: rgba(255,255,255,0.8);'>排行榜</strong><br>";
@@ -271,6 +317,7 @@
       lb.innerHTML = html;
     }
 
+    // 將世界座標轉換為螢幕上位置（非死亡玩家採用絕對定位）
     function getScreenPosition(objX, objY) {
       const centerX = window.innerWidth / 2;
       const centerY = window.innerHeight / 2;
@@ -282,10 +329,13 @@
       };
     }
 
+    // 遊戲結束處理（僅針對自己的畫面）：更新 Firebase（設定 dead 與死亡時的螢幕座標），顯示全螢幕黑底提示，並停止移動
     function gameOver() {
+      // 計算死亡時的螢幕位置（用於其他玩家顯示鬼魂）
       const deathPos = getScreenPosition(myX, myY);
       update(ref(db, "players/" + myID), { dead: true, deathScreenPos: deathPos });
       
+      // 顯示全螢幕黑色遮罩與提示文字
       let overlay = document.createElement("div");
       overlay.id = "game-over";
       overlay.style.position = "fixed";
@@ -338,6 +388,7 @@
       listenMyCollected();
     };
 
+    // 繪製或更新玩家畫面
     function drawPlayer(id, avatarUrl, x, y, isMine = false, collectedItems = {}) {
       const map = document.getElementById("map");
       let container = document.getElementById("player-" + id);
@@ -358,6 +409,7 @@
         container.appendChild(orbitCountElem);
         map.appendChild(container);
       }
+      // 若該玩家已死亡且非自己，採用 fixed 定位，並使用死亡時存的螢幕座標
       if(container && allPlayersData[id] && allPlayersData[id].dead && id !== myID) {
         container.style.position = "fixed";
         let pos = allPlayersData[id].deathScreenPos || { x: 50, y: 50 };
@@ -398,6 +450,7 @@
       }
     }
 
+    // 繪製道具項目
     function drawItem(itemId, imageUrl, x, y) {
       const map = document.getElementById("map");
       let itemElem = document.getElementById("item-" + itemId);
@@ -413,6 +466,7 @@
       itemElem.style.backgroundImage = `url(${imageUrl})`;
     }
 
+    // 更新所有玩家與道具位置
     function updateView() {
       for(let id in allPlayersData) {
         const p = allPlayersData[id];
@@ -426,6 +480,7 @@
       updateStatus();
     }
 
+    // 更新自己的座標，限制在邊界內
     function updateMyPosition(newX, newY) {
       myX = Math.max(0, Math.min(newX, MAP_SIZE));
       myY = Math.max(0, Math.min(newY, MAP_SIZE));
@@ -437,6 +492,7 @@
       updateView();
     }
 
+    // 監聽其他玩家資料
     function loadPlayers(){
       const playersRef = ref(db, "players/");
       onValue(playersRef, (snapshot) => {
@@ -451,6 +507,7 @@
       });
     }
 
+    // 監聽道具
     function loadItems(){
       const itemsRef = ref(db, "items/");
       onValue(itemsRef, (snapshot) => {
@@ -464,6 +521,7 @@
       });
     }
 
+    // 從 BahamutScore 產生道具
     function spawnItemIfNone(){
       const scoreRef = ref(db, "BahamutScore");
       onValue(scoreRef, (snapshot) => {
@@ -479,6 +537,7 @@
       }, { onlyOnce: true });
     }
 
+    // 檢查道具碰撞：若中心距離小於 5 單位，則吃掉道具
     function checkCollision(){
       for(let itemId in items){
         const item = items[itemId];
@@ -495,6 +554,7 @@
       }
     }
 
+    // 移除指定玩家的多則通知
     function removeOrbits(playerID, count) {
       if(playerID === myID) {
         let keys = Object.keys(currentCollectedItems || {});
@@ -512,13 +572,15 @@
       }
     }
 
+    // 檢查玩家碰撞：若中心距離小於 8 單位則處理碰撞
     function checkPlayerCollision(){
       const now = Date.now();
       if(now - lastPlayerCollisionTime < 500) return;
       for(let id in allPlayersData){
         if(id === myID) continue;
         const other = allPlayersData[id];
-        if(other.dead) continue; // 死亡玩家不再產生碰撞扣分
+        // 如果對方已死亡，則不處理碰撞
+        if(other.dead) continue;
         let dx = myX - other.x;
         let dy = myY - other.y;
         const distance = Math.sqrt(dx*dx + dy*dy);
@@ -526,6 +588,7 @@
           lastPlayerCollisionTime = now;
           let myNotif = Object.keys(currentCollectedItems || {}).length;
           let otherNotif = Object.keys(other.collectedItems || {}).length;
+          // 若自己通知數小於等於 1 時，觸發死亡
           if(myNotif <= 1){
             gameOver();
             return;
@@ -533,7 +596,7 @@
           let myReduction = Math.max(1, Math.floor(myNotif * 0.7));
           let otherReduction = Math.max(1, Math.floor(otherNotif * 0.7));
           let len = Math.sqrt(dx*dx + dy*dy) || 1;
-          const bounceDistance = 4;
+          const bounceDistance = 4; // 增加反彈距離，讓斥力更明顯
           const bounceX = (dx / len) * bounceDistance;
           const bounceY = (dy / len) * bounceDistance;
           let newMyX = myX + bounceX;
@@ -554,6 +617,7 @@
       });
     }
 
+    // 初始化移動：根據指標與畫面中心的偏差決定方向
     function initMovement(){
       const mapElem = document.getElementById("map");
 
@@ -616,23 +680,24 @@
     window.addEventListener("load", () => {
       // 登入後會呼叫 listenMyCollected()
     });
-
-    // 遊戲介紹視窗功能
-    document.getElementById("instructionsButton").addEventListener("click", () => {
-      fetch("Game Instructions.txt")
+  </script>
+  <script>
+    // 為「遊戲介紹」按紐與視窗設定事件監聽
+    document.getElementById('game-intro-btn').addEventListener('click', function() {
+      var modal = document.getElementById('intro-modal');
+      modal.style.display = 'block';
+      // 從 Game Instructions.txt 讀取說明內容
+      fetch('Game Instructions.txt')
         .then(response => response.text())
         .then(text => {
-          document.getElementById("instructionsContent").innerText = text;
-          document.getElementById("instructionsModal").style.display = "block";
+          document.getElementById('intro-modal-text').innerText = text;
         })
         .catch(err => {
-          document.getElementById("instructionsContent").innerText = "無法載入遊戲說明。";
-          document.getElementById("instructionsModal").style.display = "block";
+          document.getElementById('intro-modal-text').innerText = '無法載入遊戲說明。';
         });
     });
-
-    document.getElementById("closeInstructions").addEventListener("click", () => {
-      document.getElementById("instructionsModal").style.display = "none";
+    document.getElementById('intro-modal-close').addEventListener('click', function() {
+      document.getElementById('intro-modal').style.display = 'none';
     });
   </script>
 </body>
