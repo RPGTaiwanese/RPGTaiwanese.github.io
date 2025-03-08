@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>BahamutScore 管理</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      background: #f5f5f5;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      font-size: 28px;
+      margin-bottom: 10px;
+    }
+    #guest-info {
+      margin-bottom: 20px;
+      color: #333;
+    }
+    #drop-area {
+      border: 2px dashed #999;
+      border-radius: 10px;
+      padding: 20px;
+      margin: 20px auto;
+      width: 80%;
+      max-width: 500px;
+      background: #fff;
+    }
+    #drop-area.hover {
+      border-color: #666;
+      background: #eee;
+    }
+    #image-list {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 20px;
+    }
+    .image-item {
+      margin: 10px;
+      cursor: pointer;
+      border: 1px solid #ccc;
+      padding: 5px;
+      border-radius: 5px;
+      transition: transform 0.2s;
+    }
+    .image-item:hover {
+      transform: scale(1.05);
+    }
+    .image-item img {
+      max-width: 100px;
+      max-height: 100px;
+      display: block;
+    }
+    #url-input {
+      width: 80%;
+      max-width: 400px;
+      padding: 10px;
+      font-size: 16px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>BahamutScore 管理</h1>
+  <p id="guest-info">遊客登入中...</p>
+  <div id="drop-area">
+    <p>拖放圖片或圖片網址到此區域即可新增圖片</p>
+    <p>也可以直接貼上圖片網址，然後按 Enter 鍵</p>
+    <input type="text" id="url-input" placeholder="貼上圖片網址">
+  </div>
+  <div id="image-list"></div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getDatabase, ref, push, set, onValue, remove } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+
+    // Firebase 設定
+    const firebaseConfig = {
+      apiKey: "AIzaSyDt9mJRH-BHlEksl4xla32sVIUGVnLUxWY",
+      authDomain: "future-infusion-368721.firebaseapp.com",
+      databaseURL: "https://future-infusion-368721-default-rtdb.firebaseio.com",
+      projectId: "future-infusion-368721",
+      storageBucket: "future-infusion-368721.firebasestorage.app",
+      messagingSenderId: "345445420847",
+      appId: "1:345445420847:web:070778c173ec6157c6dbda",
+      measurementId: "G-57PJMMNNWW"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    
+    // 模擬遊客登入，顯示登入訊息
+    document.getElementById("guest-info").innerText = "遊客登入成功";
+
+    const scoreRef = ref(db, "BahamutScore");
+    const imageListDiv = document.getElementById("image-list");
+
+    // 監聽 BahamutScore 節點變化，顯示所有圖片
+    onValue(scoreRef, (snapshot) => {
+      const data = snapshot.val() || {};
+      imageListDiv.innerHTML = "";
+      for (const key in data) {
+        const imageUrl = data[key];
+        const div = document.createElement("div");
+        div.className = "image-item";
+        div.dataset.key = key;
+        div.title = "點擊以刪除";
+        const img = document.createElement("img");
+        img.src = imageUrl;
+        div.appendChild(img);
+        // 點擊刪除圖片
+        div.addEventListener("click", () => {
+          if (confirm("確定要刪除這個圖片嗎？")) {
+            remove(ref(db, "BahamutScore/" + key));
+          }
+        });
+        imageListDiv.appendChild(div);
+      }
+    });
+
+    // 處理拖放事件
+    const dropArea = document.getElementById("drop-area");
+    dropArea.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dropArea.classList.add("hover");
+    });
+    dropArea.addEventListener("dragleave", (e) => {
+      e.preventDefault();
+      dropArea.classList.remove("hover");
+    });
+    dropArea.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropArea.classList.remove("hover");
+      // 嘗試取得拖放的文字資料（通常是網址）
+      let imageUrl = e.dataTransfer.getData("text/uri-list");
+      if (!imageUrl) {
+        imageUrl = e.dataTransfer.getData("text/plain");
+      }
+      if (imageUrl) {
+        addImageUrl(imageUrl);
+      }
+    });
+
+    // 處理輸入框的 Enter 事件
+    const urlInput = document.getElementById("url-input");
+    urlInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        const url = urlInput.value.trim();
+        if (url) {
+          addImageUrl(url);
+          urlInput.value = "";
+        }
+      }
+    });
+
+    // 新增圖片網址到 BahamutScore
+    function addImageUrl(url) {
+      const newScoreRef = push(scoreRef);
+      set(newScoreRef, url)
+        .then(() => {
+          console.log("圖片已添加: " + url);
+        })
+        .catch((error) => {
+          console.error("添加圖片時發生錯誤:", error);
+        });
+    }
+  </script>
+</body>
+</html>
