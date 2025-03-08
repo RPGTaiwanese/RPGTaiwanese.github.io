@@ -426,13 +426,15 @@
       img.src = potentialAvatar;
     };
 
-    // 新增遊客登入函式：直接指定預設大頭貼，並強制顯示名稱為「遊客」
+    // 新增遊客登入函式：直接指定預設大頭貼，並強制顯示名稱為「遊客」後接隨機五位數字
     function guestLogin() {
-      const randomAccount = "Guest" + Math.floor(Math.random() * 1000000);
-      document.getElementById("bahamut-account").value = randomAccount;
-      myID = randomAccount;
+      // 產生隨機五位數字 (範圍 10000 ~ 99999)
+      const randomFiveDigits = Math.floor(Math.random() * 90000) + 10000;
+      const guestName = "遊客" + randomFiveDigits;
+      document.getElementById("bahamut-account").value = guestName;
+      myID = guestName;
       myAvatar = "avatar.png";
-      continueLogin("遊客");
+      continueLogin(guestName);
     }
     // 將 guestLogin 掛到全域物件上，供 HTML onclick 呼叫
     window.guestLogin = guestLogin;
