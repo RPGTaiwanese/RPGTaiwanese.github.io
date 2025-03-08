@@ -350,7 +350,7 @@ function loadItems() {
 // 1. 若地圖上已有 items 數量超過 80，則不生成新通知圖片。
 // 2. 生成的 x、y 值均在 0 ~ MAP_SIZE 範圍內。
 function spawnItemIfNone() {
-  if(Object.keys(items).length >= 150) return;
+  if(Object.keys(items).length >= 500) return;
   const scoreRef = ref(db, "BahamutScore");
   onValue(scoreRef, (snapshot) => {
     const scoreData = snapshot.val();
