@@ -278,14 +278,14 @@
     import { getDatabase, ref, set, onValue, onDisconnect, update, push, remove } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
   
     const firebaseConfig = {
-      apiKey: "xxx",
-      authDomain: "xxx.firebaseapp.com",
-      databaseURL: "https://xxx-default-rtdb.firebaseio.com",
-      projectId: "xxx",
-      storageBucket: "xxx.appspot.com",
-      messagingSenderId: "xxx",
-      appId: "xxx",
-      measurementId: "xxx"
+      apiKey: "AIzaSyDt9mJRH-BHlEksl4xla32sVIUGVnLUxWY",
+      authDomain: "future-infusion-368721.firebaseapp.com",
+      databaseURL: "https://future-infusion-368721-default-rtdb.firebaseio.com",
+      projectId: "future-infusion-368721",
+      storageBucket: "future-infusion-368721.firebasestorage.app",
+      messagingSenderId: "345445420847",
+      appId: "1:345445420847:web:070778c173ec6157c6dbda",
+      measurementId: "G-57PJMMNNWW"
     };
   
     const app = initializeApp(firebaseConfig);
@@ -294,7 +294,7 @@
     const MAP_SIZE = 150; // 地圖範圍 0 ~ 150
     let baseSpeed = 3.0;  // 初始移動速度
     const MIN_SPEED = 1.0;
-    const SPEED_FACTOR = 0.05; // 每則通知減少的速度
+    const SPEED_FACTOR = 0.05; // 每則通知減少的速度，調整為 0.05
   
     let myID = "", myAvatar = "", myLevel = 1, myHP = 300;
     // 初始座標隨機產生在 0～MAP_SIZE 之間
@@ -710,8 +710,8 @@
     document.getElementById('game-intro-btn').addEventListener('click', function() {
       var modal = document.getElementById('intro-modal');
       modal.style.display = 'block';
-      // ★ 將檔名改為「Game-Instructions.txt」 (無空白) ★
-      fetch('Game-Instructions.txt')
+      // 從 Game Instructions.txt 讀取說明內容
+      fetch('Game Instructions.txt')
         .then(response => response.text())
         .then(text => {
           document.getElementById('intro-modal-text').innerText = text;
