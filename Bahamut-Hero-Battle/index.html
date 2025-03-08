@@ -263,10 +263,14 @@
 
   <!-- 排行榜區塊 -->
   <div id="leaderboard"></div>
+
+  <!-- 登入區塊：增加了遊客登入按鈕與提示文字 -->
   <div id="login-area">
     <label for="bahamut-account">輸入巴哈帳號：</label>
     <input type="text" id="bahamut-account" placeholder="至少兩個字元">
     <button onclick="login()">登入</button>
+    <button onclick="guestLogin()">遊客登入</button>
+    <div style="font-size:12px; color:#555;">(其實隨便輸入也能玩遊戲)</div>
   </div>
   <div id="main-section" style="display:none;">
     <div id="map"></div>
@@ -297,7 +301,6 @@
     const SPEED_FACTOR = 0.05; // 每則通知減少的速度
 
     let myID = "", myAvatar = "", myLevel = 1, myHP = 300;
-    // 初始座標隨機產生在 0～MAP_SIZE 之間
     let myX = Math.floor(Math.random() * MAP_SIZE),
         myY = Math.floor(Math.random() * MAP_SIZE);
     const PIXEL_SCALE = 6; // 1 單位 = 6px
@@ -310,14 +313,12 @@
     let lastPlayerCollisionTime = 0;
     let currentCollectedItems = {};
 
-    // 根據目前的通知數計算移動速度（通知越多速度越慢）
     function getMoveSpeed() {
       let notifCount = Object.keys(currentCollectedItems || {}).length;
       let speed = baseSpeed - SPEED_FACTOR * notifCount;
       return speed < MIN_SPEED ? MIN_SPEED : speed;
     }
 
-    // 更新狀態顯示：在線玩家數與自己的座標（整數顯示）
     function updateStatus() {
       const count = Object.keys(allPlayersData).length;
       if(myID) {
@@ -326,7 +327,6 @@
       }
     }
 
-    // 更新排行榜：依據 allPlayersData 顯示各玩家帳號與通知數
     function updateLeaderboard() {
       const lb = document.getElementById("leaderboard");
       let html = "<strong style='color: rgba(255,255,255,0.8);'>排行榜</strong><br>";
@@ -347,7 +347,7 @@
       lb.innerHTML = html;
     }
 
-    // 將世界座標轉換為螢幕上位置（非死亡玩家採用絕對定位）
+    // 計算畫面座標：若玩家死亡則只會使用一次記錄的死亡位置
     function getScreenPosition(objX, objY) {
       const centerX = window.innerWidth / 2;
       const centerY = window.innerHeight / 2;
@@ -359,7 +359,6 @@
       };
     }
 
-    // 遊戲結束處理：更新 Firebase 並顯示全螢幕提示
     function gameOver() {
       const deathPos = getScreenPosition(myX, myY);
       update(ref(db, "players/" + myID), { dead: true, deathScreenPos: deathPos });
@@ -380,11 +379,11 @@
       stopMovement();
     }
 
-    // 繼續登入動作：設定玩家資料並啟動遊戲流程
-    function continueLogin() {
+    // 修改 continueLogin()，可接受 displayName 參數作為顯示名稱
+    function continueLogin(displayName) {
       const playerRef = ref(db, "players/" + myID);
       set(playerRef, {
-        bahamut: myID,
+        bahamut: displayName || myID,
         avatar: myAvatar,
         level: myLevel,
         hp: myHP,
@@ -397,7 +396,7 @@
       onDisconnect(playerRef).remove();
       document.getElementById("login-area").style.display = "none";
       document.getElementById("main-section").style.display = "block";
-      document.getElementById("my-info").innerText = "巴哈帳號: " + myID;
+      document.getElementById("my-info").innerText = "巴哈帳號: " + (displayName || myID);
       drawPlayer(myID, myAvatar, myX, myY, true, {});
       loadPlayers();
       loadItems();
@@ -406,7 +405,7 @@
       listenMyCollected();
     }
 
-    // 登入：檢查輸入之巴哈帳號並驗證大頭貼有效性，若無效則採用預設圖片
+    // 登入：驗證輸入之巴哈帳號並檢查大頭貼是否有效
     window.login = function(){
       const account = document.getElementById("bahamut-account").value.trim();
       if(account.length < 2){
@@ -414,23 +413,31 @@
         return;
       }
       myID = account;
-      // 組出 Bahamut 大頭貼 URL
       const potentialAvatar = `https://avatar2.bahamut.com.tw/avataruserpic/${account.charAt(0)}/${account.charAt(1)}/${account}/${account}.png`;
-      // 利用 Image 物件檢查是否存在該大頭貼
       const img = new Image();
       img.onload = function() {
         myAvatar = potentialAvatar;
         continueLogin();
       };
       img.onerror = function() {
-        // 若大頭貼無效，使用預設圖片
         myAvatar = "avatar.png";
         continueLogin();
       };
       img.src = potentialAvatar;
     };
 
-    // 繪製或更新玩家畫面
+    // 新增遊客登入函式：直接指定預設大頭貼，並強制顯示名稱為「遊客」
+    function guestLogin() {
+      const randomAccount = "Guest" + Math.floor(Math.random() * 1000000);
+      document.getElementById("bahamut-account").value = randomAccount;
+      myID = randomAccount;
+      myAvatar = "avatar.png";
+      continueLogin("遊客");
+    }
+    // 將 guestLogin 掛到全域物件上，供 HTML onclick 呼叫
+    window.guestLogin = guestLogin;
+
+    // 繪製或更新玩家畫面：每次都更新頭貼，避免重用造成錯誤
     function drawPlayer(id, avatarUrl, x, y, isMine = false, collectedItems = {}) {
       const map = document.getElementById("map");
       let container = document.getElementById("player-" + id);
@@ -440,19 +447,22 @@
         container.classList.add("player");
         const label = document.createElement("div");
         label.classList.add("label");
-        label.innerText = id;
         container.appendChild(label);
         const avatarDiv = document.createElement("div");
         avatarDiv.classList.add("avatar");
-        avatarDiv.style.backgroundImage = `url(${avatarUrl})`;
         container.appendChild(avatarDiv);
         const orbitCountElem = document.createElement("div");
         orbitCountElem.classList.add("orbit-count");
         container.appendChild(orbitCountElem);
         map.appendChild(container);
       }
-      // 若該玩家已死亡且非自己，採用 fixed 定位，並使用死亡時存的螢幕座標
-      if (container && allPlayersData[id] && allPlayersData[id].dead && id !== myID) {
+      // 更新 label 與頭貼 (避免重用錯誤)
+      const label = container.querySelector(".label");
+      label.innerText = (allPlayersData[id] && allPlayersData[id].bahamut) ? allPlayersData[id].bahamut : id;
+      const avatarDiv = container.querySelector(".avatar");
+      avatarDiv.style.backgroundImage = `url(${avatarUrl})`;
+      
+      if (allPlayersData[id] && allPlayersData[id].dead && id !== myID) {
         container.style.position = "fixed";
         let pos = allPlayersData[id].deathScreenPos || { x: 50, y: 50 };
         container.style.left = pos.x + "px";
@@ -492,7 +502,6 @@
       }
     }
 
-    // 繪製道具項目
     function drawItem(itemId, imageUrl, x, y) {
       const map = document.getElementById("map");
       let itemElem = document.getElementById("item-" + itemId);
@@ -508,7 +517,6 @@
       itemElem.style.backgroundImage = `url(${imageUrl})`;
     }
 
-    // 更新所有玩家與道具位置
     function updateView() {
       for (let id in allPlayersData) {
         const p = allPlayersData[id];
@@ -522,7 +530,6 @@
       updateStatus();
     }
 
-    // 更新自己的座標，限制在邊界內
     function updateMyPosition(newX, newY) {
       myX = Math.max(0, Math.min(newX, MAP_SIZE));
       myY = Math.max(0, Math.min(newY, MAP_SIZE));
@@ -534,7 +541,6 @@
       updateView();
     }
 
-    // 監聽其他玩家資料
     function loadPlayers() {
       const playersRef = ref(db, "players/");
       onValue(playersRef, (snapshot) => {
@@ -549,7 +555,6 @@
       });
     }
 
-    // 監聽道具
     function loadItems() {
       const itemsRef = ref(db, "items/");
       onValue(itemsRef, (snapshot) => {
@@ -563,7 +568,6 @@
       });
     }
 
-    // 從 BahamutScore 產生道具
     function spawnItemIfNone() {
       const scoreRef = ref(db, "BahamutScore");
       onValue(scoreRef, (snapshot) => {
@@ -579,7 +583,7 @@
       }, { onlyOnce: true });
     }
 
-    // 檢查道具碰撞：若中心距離小於 5 單位，則吃掉道具
+    // 檢查道具碰撞：若中心距離小於 5 單位則吃掉道具
     function checkCollision() {
       for (let itemId in items) {
         const item = items[itemId];
@@ -596,7 +600,7 @@
       }
     }
 
-    // 移除指定玩家的多則通知
+    // 移除指定玩家的通知
     function removeOrbits(playerID, count) {
       if (playerID === myID) {
         let keys = Object.keys(currentCollectedItems || {});
@@ -614,7 +618,7 @@
       }
     }
 
-    // 檢查玩家碰撞：若中心距離小於 8 單位則處理碰撞
+    // 檢查玩家碰撞，並修正死亡玩家固定畫面位置的 BUG
     function checkPlayerCollision() {
       const now = Date.now();
       if (now - lastPlayerCollisionTime < 500) return;
@@ -632,6 +636,11 @@
           if (myNotif <= 1) {
             gameOver();
             return;
+          }
+          // 若對方通知數少於或等於 1，即認定被殺，更新其狀態與死亡螢幕位置
+          if (otherNotif <= 1) {
+            const deathPos = getScreenPosition(other.x, other.y);
+            update(ref(db, "players/" + id), { dead: true, deathScreenPos: deathPos });
           }
           let myReduction = Math.max(1, Math.floor(myNotif * 0.7));
           let otherReduction = Math.max(1, Math.floor(otherNotif * 0.7));
@@ -657,10 +666,8 @@
       });
     }
 
-    // 初始化移動：根據指標與畫面中心的偏差決定方向
     function initMovement() {
       const mapElem = document.getElementById("map");
-
       function getPointerCoords(e) {
         const rect = mapElem.getBoundingClientRect();
         let clientX, clientY;
@@ -673,7 +680,6 @@
         }
         return { x: clientX, y: clientY };
       }
-
       function updateDirection(e) {
         const pointer = getPointerCoords(e);
         const centerX = window.innerWidth / 2;
@@ -686,7 +692,6 @@
           moveDy = dy / len;
         }
       }
-
       function startMovement(e) {
         e.preventDefault();
         updateDirection(e);
@@ -699,7 +704,6 @@
         mapElem.addEventListener("mousemove", updateDirection);
         mapElem.addEventListener("touchmove", updateDirection);
       }
-
       function stopMovement(e) {
         if (moveInterval) {
           clearInterval(moveInterval);
@@ -708,7 +712,6 @@
         mapElem.removeEventListener("mousemove", updateDirection);
         mapElem.removeEventListener("touchmove", updateDirection);
       }
-
       mapElem.addEventListener("mousedown", startMovement);
       mapElem.addEventListener("touchstart", startMovement);
       document.addEventListener("mouseup", stopMovement);
@@ -717,7 +720,6 @@
       window.stopMovement = stopMovement;
     }
 
-    // 當使用者離開頁面時，主動移除玩家資料
     window.addEventListener("beforeunload", () => {
       if (myID) {
         const playerRef = ref(db, "players/" + myID);
@@ -730,11 +732,10 @@
     });
   </script>
   <script>
-    // 為「遊戲介紹」按紐與視窗設定事件監聽
+    // 遊戲介紹按紐與視窗事件
     document.getElementById('game-intro-btn').addEventListener('click', function() {
       var modal = document.getElementById('intro-modal');
       modal.style.display = 'block';
-      // 從 Game-Instructions.txt 讀取說明內容
       fetch('Game-Instructions.txt')
         .then(response => response.text())
         .then(text => {
