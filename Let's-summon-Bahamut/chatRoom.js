@@ -1,13 +1,13 @@
 import { ref, onValue, push } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
-export function initChat(db, currentAccount) {
+export default function initChat(db, currentAccount) {
   const chatPanel = document.getElementById("chat-panel");
   const chatContent = document.getElementById("chat-content");
   const chatMessagesElem = document.getElementById("chat-messages");
   const chatInput = document.getElementById("chat-input");
   const toggleChatBtn = document.getElementById("toggle-chat-btn");
 
-  // 切換聊天室展開與收合（同時縮放寬度）
+  // 切換聊天室展開與收合（同步縮放寬度）
   toggleChatBtn.addEventListener("click", () => {
     if (chatPanel.classList.contains("collapsed")) {
       chatPanel.classList.remove("collapsed");

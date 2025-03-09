@@ -294,8 +294,8 @@
   </div>
 
   <script type="module">
-    // 匯入聊天室功能模組
-    import { initChat } from "./onlinePlayers.js";
+    // 匯入聊天室模組（預設匯出）
+    import initChat from "./onlinePlayers.js";
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
     import { getDatabase, ref, set, push, onValue, onDisconnect, onChildAdded, onChildChanged, onChildRemoved } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
@@ -449,7 +449,7 @@
       onDisconnect(playerRef).remove();
       document.getElementById("login-area").style.display = "none";
       document.getElementById("chat-panel").style.display = "block";
-      // 初始化聊天室功能，傳入 Firebase db 與使用者帳號
+      // 初始化聊天室功能
       initChat(db, currentAccount);
     }
     function guestLogin() {
