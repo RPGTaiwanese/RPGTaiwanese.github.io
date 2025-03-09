@@ -155,6 +155,86 @@
       font-size: 14px;
       z-index: 40;
     }
+    /* 聊天面板 */
+    #chat-panel {
+      display: block;
+      position: fixed;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 300px;
+      background: rgba(0, 0, 0, 0.5);
+      color: #fff;
+      padding: 10px;
+      border-radius: 5px;
+      z-index: 55;
+      transition: width 0.3s ease;
+    }
+    /* 收合狀態：縮小寬度 */
+    #chat-panel.collapsed {
+      width: 90px;
+    }
+    /* 聊天面板內的切換按鈕 - 改大按鈕尺寸 */
+    #toggle-chat-btn {
+      width: 100%;
+      padding: 10px 20px;
+      font-size: 16px;
+      background: rgba(0, 0, 0, 0.5);
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      margin-bottom: 10px;
+      cursor: pointer;
+    }
+    /* 聊天內容區 */
+    #chat-content {
+      display: flex;
+      flex-direction: column;
+    }
+    #chat-messages {
+      flex: 1;
+      max-height: 300px;
+      overflow-y: auto;
+      margin-bottom: 10px;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+    #chat-panel input {
+      width: 100%;
+      padding: 5px;
+      font-size: 16px;
+      box-sizing: border-box;
+      margin-bottom: 5px;
+    }
+    /* 放置物件對話框 */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal .modal-content {
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      max-width: 400px;
+      width: 90%;
+      margin: auto;
+    }
+    #object-image-list img {
+      width: 50px;
+      height: 50px;
+      object-fit: cover;
+      margin: 2px;
+      cursor: pointer;
+      border: 1px solid #ccc;
+    }
   </style>
 </head>
 <body>
@@ -162,7 +242,7 @@
     <h1>讓我們一起召喚巴哈姆特</h1>
     <div>
       <button id="place-object-btn">放置物件</button>
-      <!-- 聊天室部分已由外部模組處理 -->
+      <!-- 原先聊天室的送出按鈕已移除 -->
     </div>
   </header>
 
@@ -191,12 +271,33 @@
   <!-- 左下角座標顯示 -->
   <div id="coord-display">X: 0, Y: 0</div>
 
-  <!-- 主腳本 -->
+  <!-- 聊天面板 -->
+  <div id="chat-panel">
+    <button id="toggle-chat-btn">聊天</button>
+    <div id="chat-content">
+      <div id="chat-messages">
+        <!-- 此處將顯示 Firebase chatHistory 內的聊天紀錄 -->
+      </div>
+      <input type="text" id="chat-input" placeholder="輸入聊天內容">
+    </div>
+  </div>
+
+  <!-- 放置物件對話框 -->
+  <div id="place-object-modal" class="modal">
+    <div class="modal-content">
+      <h3>放置物件</h3>
+      <input type="text" id="object-image-url" placeholder="輸入圖片網址" style="width:100%; margin-bottom:10px;">
+      <div id="object-image-list" style="max-height: 150px; overflow-y: auto; margin-bottom:10px;"></div>
+      <button id="submit-object-btn">放置</button>
+      <button id="cancel-object-btn">取消</button>
+    </div>
+  </div>
+
   <script type="module">
-    // 主程式相關模組引用（Firebase、玩家、地圖物件等）
+    // 匯入聊天室功能模組
+    import { initChat } from "./onlinePlayers.js";
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-    import { getDatabase, ref, set, push, onValue, onDisconnect, onChildAdded, onChildChanged, onChildRemoved, update } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
-    import { enableChat } from "./chatRoom.js";
+    import { getDatabase, ref, set, push, onValue, onDisconnect, onChildAdded, onChildChanged, onChildRemoved } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
     // Firebase 初始化設定
     const firebaseConfig = {
@@ -263,7 +364,7 @@
     });
     document.addEventListener('touchend', () => { isMouseDown = false; });
 
-    // 從 Firebase 讀取地圖背景
+    // Firebase 讀取地圖背景
     const mapRef = ref(db, 'map');
     onValue(mapRef, (snapshot) => {
       const mapData = snapshot.val();
@@ -336,7 +437,7 @@
       set(playerRef, { x, y, account: currentAccount, image: currentHeroImageURL });
     }
 
-    // 登入與遊客登入：登入後隱藏登入區，並啟用聊天室
+    // 登入與遊客登入：登入後隱藏登入區，同時顯示聊天室
     function login() {
       const account = document.getElementById("bahamut-account").value.trim();
       if (account.length < 2) {
@@ -347,7 +448,9 @@
       const playerRef = ref(db, 'players/' + account);
       onDisconnect(playerRef).remove();
       document.getElementById("login-area").style.display = "none";
-      enableChat(account);
+      document.getElementById("chat-panel").style.display = "block";
+      // 初始化聊天室功能，傳入 Firebase db 與使用者帳號
+      initChat(db, currentAccount);
     }
     function guestLogin() {
       const randomGuest = "遊客" + (Math.floor(Math.random() * 90000) + 10000);
@@ -356,7 +459,9 @@
       const playerRef = ref(db, 'players/' + randomGuest);
       onDisconnect(playerRef).remove();
       document.getElementById("login-area").style.display = "none";
-      enableChat(randomGuest);
+      document.getElementById("chat-panel").style.display = "block";
+      // 初始化聊天室功能
+      initChat(db, currentAccount);
     }
     document.getElementById("login-btn").addEventListener("click", login);
     document.getElementById("guest-login-btn").addEventListener("click", guestLogin);
@@ -489,7 +594,7 @@
       }
     }
 
-    // 動畫循環：根據滑鼠或觸控移動玩家並更新畫面
+    // 遊戲動畫循環
     function animate() {
       if (currentAccount) {
         if (isMouseDown) {
@@ -546,8 +651,5 @@
     }
     animate();
   </script>
-
-  <!-- 載入聊天室模組 -->
-  <script type="module" src="chatRoom.js"></script>
 </body>
 </html>
