@@ -80,7 +80,6 @@
       overflow: hidden;
       background: #000;
     }
-    /* 世界容器：內含地圖與所有玩家及物件 */
     #world {
       position: absolute;
       top: 0;
@@ -88,7 +87,6 @@
       width: 5000px;
       height: 5000px;
     }
-    /* 地圖背景 */
     #map {
       position: absolute;
       top: 0;
@@ -114,7 +112,6 @@
       display: block;
       pointer-events: none;
     }
-    /* 帳號標籤 */
     .player .player-label {
       position: absolute;
       top: 75px;
@@ -125,7 +122,7 @@
       white-space: nowrap;
       pointer-events: none;
     }
-    /* 玩家聊天訊息 */
+    /* 玩家聊天訊息（附在玩家上） */
     .chat-message {
       position: absolute;
       top: -40px;
@@ -137,7 +134,7 @@
       pointer-events: none;
       white-space: nowrap;
     }
-    /* 地圖物件 (放置的圖片) */
+    /* 地圖物件 */
     .map-object {
       position: absolute;
       width: 100px;
@@ -158,57 +155,6 @@
       font-size: 14px;
       z-index: 40;
     }
-    /* 共用對話框樣式 */
-    .modal {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.5);
-      z-index: 100;
-      align-items: center;
-      justify-content: center;
-    }
-    .modal .modal-content {
-      background: #fff;
-      padding: 20px;
-      border-radius: 8px;
-      max-width: 400px;
-      width: 90%;
-      margin: auto;
-    }
-    #object-image-list img,
-    #chat-history-list img {
-      width: 50px;
-      height: 50px;
-      object-fit: cover;
-      margin: 2px;
-      cursor: pointer;
-      border: 1px solid #ccc;
-    }
-    /* 聊天紀錄列表文字 */
-    #chat-history-list {
-      text-align: left;
-      font-size: 16px;
-    }
-    #chat-history-list div {
-      border-bottom: 1px solid #ccc;
-      padding: 4px 0;
-    }
-    /* 調整聊天輸入框 */
-    #chat-input {
-      width: 100%;
-      margin-bottom: 10px;
-      font-size: 20px;
-      height: 40px;
-      background: rgba(0, 0, 0, 0.5);
-      color: #000;
-      border: none;
-      padding: 5px;
-      box-sizing: border-box;
-    }
   </style>
 </head>
 <body>
@@ -216,7 +162,7 @@
     <h1>讓我們一起召喚巴哈姆特</h1>
     <div>
       <button id="place-object-btn">放置物件</button>
-      <button id="chat-btn">聊天</button>
+      <!-- 聊天室部分已由外部模組處理 -->
     </div>
   </header>
 
@@ -245,40 +191,12 @@
   <!-- 左下角座標顯示 -->
   <div id="coord-display">X: 0, Y: 0</div>
 
-  <!-- 放置物件對話框 -->
-  <div id="place-object-modal" class="modal">
-    <div class="modal-content">
-      <h3>放置物件</h3>
-      <input type="text" id="object-image-url" placeholder="輸入圖片網址" style="width:100%; margin-bottom:10px;">
-      <div id="object-image-list" style="max-height: 150px; overflow-y: auto; margin-bottom:10px;"></div>
-      <button id="submit-object-btn">放置</button>
-      <button id="cancel-object-btn">取消</button>
-    </div>
-  </div>
-
-  <!-- 聊天對話框 -->
-  <div id="chat-modal" class="modal">
-    <div class="modal-content">
-      <input type="text" id="chat-input" value="">
-      <button id="send-chat-btn">送出</button>
-      <button id="view-chat-history-btn">聊天紀錄</button>
-      <button id="close-chat-modal-btn">取消</button>
-    </div>
-  </div>
-
-  <!-- 聊天紀錄對話框 -->
-  <div id="chat-history-modal" class="modal">
-    <div class="modal-content">
-      <h3>聊天紀錄</h3>
-      <div id="chat-history-list" style="max-height: 300px; overflow-y: auto; margin-bottom:10px;"></div>
-      <button id="close-chat-history-btn">關閉</button>
-    </div>
-  </div>
-
   <!-- 主腳本 -->
   <script type="module">
+    // 主程式相關模組引用（Firebase、玩家、地圖物件等）
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
     import { getDatabase, ref, set, push, onValue, onDisconnect, onChildAdded, onChildChanged, onChildRemoved, update } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+    import { enableChat } from "./chatRoom.js";
 
     // Firebase 初始化設定
     const firebaseConfig = {
@@ -309,34 +227,26 @@
     const worldElem = document.getElementById("world");
     const gameWrapper = document.getElementById("game-wrapper");
     const coordDisplay = document.getElementById("coord-display");
+    const onlinePlayersListElem = document.getElementById("online-players-list");
 
     // 放置物件對話框 DOM
     const placeObjectModal = document.getElementById("place-object-modal");
     const objectImageUrlInput = document.getElementById("object-image-url");
     const objectImageList = document.getElementById("object-image-list");
 
-    // 聊天對話框與聊天紀錄 DOM
-    const chatModal = document.getElementById("chat-modal");
-    const chatInput = document.getElementById("chat-input");
-    const chatHistoryModal = document.getElementById("chat-history-modal");
-    const chatHistoryList = document.getElementById("chat-history-list");
-
     // 其他按鈕 DOM
     const placeObjectBtn = document.getElementById("place-object-btn");
-    const chatBtn = document.getElementById("chat-btn");
 
     // 滑鼠與觸控控制
     let isMouseDown = false;
     let currentMouseX = 0, currentMouseY = 0;
 
-    // 桌面滑鼠事件
     gameWrapper.addEventListener('mousedown', () => { isMouseDown = true; });
     document.addEventListener('mouseup', () => { isMouseDown = false; });
     document.addEventListener('mousemove', (e) => {
       currentMouseX = e.clientX;
       currentMouseY = e.clientY;
     });
-    // 手機觸控事件
     gameWrapper.addEventListener('touchstart', (e) => {
       isMouseDown = true;
       if(e.touches && e.touches.length > 0) {
@@ -369,7 +279,7 @@
       const data = snapshot.val();
       mapObjectsData[key] = data;
       createOrUpdateObjectElement(key, data);
-      updateObjectImageList(); // 更新對話框列表
+      updateObjectImageList();
     });
     onChildChanged(objectsRef, (snapshot) => {
       const key = snapshot.key;
@@ -426,7 +336,7 @@
       set(playerRef, { x, y, account: currentAccount, image: currentHeroImageURL });
     }
 
-    // 登入與遊客登入
+    // 登入與遊客登入：登入後隱藏登入區，並啟用聊天室
     function login() {
       const account = document.getElementById("bahamut-account").value.trim();
       if (account.length < 2) {
@@ -437,6 +347,7 @@
       const playerRef = ref(db, 'players/' + account);
       onDisconnect(playerRef).remove();
       document.getElementById("login-area").style.display = "none";
+      enableChat(account);
     }
     function guestLogin() {
       const randomGuest = "遊客" + (Math.floor(Math.random() * 90000) + 10000);
@@ -445,18 +356,18 @@
       const playerRef = ref(db, 'players/' + randomGuest);
       onDisconnect(playerRef).remove();
       document.getElementById("login-area").style.display = "none";
+      enableChat(randomGuest);
     }
     document.getElementById("login-btn").addEventListener("click", login);
     document.getElementById("guest-login-btn").addEventListener("click", guestLogin);
 
-    // 建立或更新玩家元素（所有玩家皆在 #world 中）
+    // 建立或更新玩家元素
     const playersDom = {};
     function updatePlayerElement(account, playerData) {
       let playerElem = playersDom[account];
       if (!playerElem) {
         playerElem = document.createElement("div");
         playerElem.classList.add("player");
-        // 英雄圖片
         const img = document.createElement("img");
         img.classList.add("player-image");
         img.onerror = function() {
@@ -464,7 +375,6 @@
           this.src = "avatar.png";
         };
         playerElem.appendChild(img);
-        // 帳號標籤
         const label = document.createElement("div");
         label.classList.add("player-label");
         label.textContent = playerData.account;
@@ -479,7 +389,6 @@
       playerElem.querySelector("img").src = playerData.image;
       playerElem.querySelector(".player-label").textContent = playerData.account;
       
-      // 顯示聊天訊息（如果有 chat 屬性且不為空）
       if(playerData.chat && playerData.chat.trim() !== "") {
         let chatElem = playerElem.querySelector('.chat-message');
         if(!chatElem) {
@@ -488,7 +397,7 @@
           playerElem.appendChild(chatElem);
         }
         chatElem.innerText = playerData.chat;
-        chatElem.style.color = "#000"; 
+        chatElem.style.color = "#000";
         if(playerElem._chatTimer) clearTimeout(playerElem._chatTimer);
         playerElem._chatTimer = setTimeout(() => {
           if(chatElem.parentNode) chatElem.parentNode.removeChild(chatElem);
@@ -580,94 +489,7 @@
       }
     }
 
-    // 聊天對話框處理
-    chatBtn.addEventListener("click", () => {
-      chatInput.value = "";
-      chatModal.style.display = "flex";
-    });
-    document.getElementById("close-chat-modal-btn").addEventListener("click", () => {
-      chatModal.style.display = "none";
-    });
-    document.getElementById("send-chat-btn").addEventListener("click", () => {
-      const message = chatInput.value.trim();
-      if(!message) {
-        alert("請輸入聊天內容");
-        return;
-      }
-      if(!playersDom[currentAccount]){
-        updatePlayerElement(currentAccount, { 
-          x: localX, 
-          y: localY, 
-          account: currentAccount, 
-          image: currentHeroImageURL,
-          chat: ""
-        });
-      }
-      let chatElem = playersDom[currentAccount].querySelector('.chat-message');
-      if(!chatElem){
-        chatElem = document.createElement("div");
-        chatElem.classList.add("chat-message");
-        playersDom[currentAccount].appendChild(chatElem);
-      }
-      chatElem.innerText = message;
-      chatElem.style.color = "#000";
-      if(playersDom[currentAccount]._chatTimer) clearTimeout(playersDom[currentAccount]._chatTimer);
-      playersDom[currentAccount]._chatTimer = setTimeout(() => {
-        if(chatElem.parentNode) chatElem.parentNode.removeChild(chatElem);
-        playersDom[currentAccount]._chatTimer = null;
-      }, 5000);
-      
-      update(ref(db, 'players/' + currentAccount), { chat: message });
-      push(ref(db, 'chatHistory'), {
-        account: currentAccount,
-        message: message,
-        timestamp: Date.now()
-      }).then(() => {
-        maintainChatHistoryLimit();
-      });
-      chatModal.style.display = "none";
-    });
-    document.getElementById("view-chat-history-btn").addEventListener("click", () => {
-      const chatHistoryRef = ref(db, 'chatHistory');
-      onValue(chatHistoryRef, (snapshot) => {
-        const data = snapshot.val();
-        chatHistoryList.innerHTML = "";
-        if(data) {
-          let messages = Object.keys(data).map(key => data[key]);
-          messages.sort((a, b) => b.timestamp - a.timestamp);
-          messages.forEach(msg => {
-            let div = document.createElement("div");
-            div.innerText = `[${msg.account}] ${msg.message}`;
-            chatHistoryList.appendChild(div);
-          });
-        }
-      }, { onlyOnce: true });
-      chatHistoryModal.style.display = "flex";
-    });
-    document.getElementById("close-chat-history-btn").addEventListener("click", () => {
-      chatHistoryModal.style.display = "none";
-    });
-
-    // 維護 chatHistory 條數不超過 150 筆
-    function maintainChatHistoryLimit() {
-      const chatHistoryRef = ref(db, 'chatHistory');
-      onValue(chatHistoryRef, (snapshot) => {
-        const data = snapshot.val();
-        if(data) {
-          const keys = Object.keys(data);
-          if(keys.length > 150) {
-            let messages = keys.map(key => ({ key, timestamp: data[key].timestamp }));
-            messages.sort((a, b) => a.timestamp - b.timestamp);
-            const numToRemove = messages.length - 150;
-            for(let i = 0; i < numToRemove; i++){
-              set(ref(db, 'chatHistory/' + messages[i].key), null);
-            }
-          }
-        }
-      }, { onlyOnce: true });
-    }
-
-    // 動畫循環
+    // 動畫循環：根據滑鼠或觸控移動玩家並更新畫面
     function animate() {
       if (currentAccount) {
         if (isMouseDown) {
@@ -725,7 +547,7 @@
     animate();
   </script>
 
-  <!-- 載入在線玩家視窗處理模組 -->
-  <script type="module" src="onlinePlayers.js"></script>
+  <!-- 載入聊天室模組 -->
+  <script type="module" src="chatRoom.js"></script>
 </body>
 </html>
