@@ -4,257 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>讓我們一起召喚巴哈姆特</title>
+  <link rel="stylesheet" href="style.css">
   <style>
-    /* 基本樣式 */
-    html, body {
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      width: 100%;
-      height: 100%;
-    }
-    body {
-      background: #fff;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      text-align: center;
-    }
-    header {
-      background: #34495e;
-      color: #ecf0f1;
-      padding: 20px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-    header h1 {
-      margin: 0;
-    }
-    /* 登入區 */
-    #login-area {
-      margin: 20px auto;
-      padding: 20px;
-      background: #fff;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      display: inline-block;
-      z-index: 60;
-      position: relative;
-    }
-    /* 在線玩家視窗 */
-    #online-players {
-      position: fixed;
-      top: 100px;
-      left: 10px;
-      background: rgba(0,0,0,0.5);
-      color: #fff;
-      padding: 10px;
-      border-radius: 5px;
-      font-size: 14px;
-      z-index: 50;
-      max-height: 200px;
-      overflow-y: auto;
-    }
-    #online-players strong {
-      display: block;
-      margin-bottom: 5px;
-    }
-    #online-players ul {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-    }
-    #online-players li {
-      margin: 2px 0;
-      pointer-events: none;
-    }
-    /* 遊戲區塊與世界容器 */
-    #game-wrapper {
-      position: relative;
-      width: 100%;
-      height: calc(100vh - 80px);
-      overflow: hidden;
-      /* 預設背景圖片（若 Firebase 資料有誤則使用預設） */
-      background-image: url('https://via.placeholder.com/500x500/ffffff/cccccc?text=BG');
-      background-repeat: repeat;
-    }
-    #world {
+    /* 針對文字物件的額外樣式 */
+    .text-object {
       position: absolute;
-      top: 0;
-      left: 0;
-      width: 5000px;
-      height: 5000px;
-    }
-    /* 玩家（勇者）元素 */
-    .player {
-      position: absolute;
-      width: 50px;
-      height: 75px;
-      transform: translate(-50%, -50%);
-      z-index: 3;
-      pointer-events: none;
-    }
-    .player img {
-      width: 50px;
-      height: 75px;
-      object-fit: contain;
-      display: block;
-      pointer-events: none;
-    }
-    .player .player-label {
-      position: absolute;
-      top: 75px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 12px;
-      color: #333;
-      white-space: nowrap;
-      pointer-events: none;
-    }
-    /* 玩家聊天訊息 */
-    .chat-message {
-      position: absolute;
-      top: -40px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 24px;
+      z-index: 1; /* 最低層 */
+      font-size: 16px;
       color: #000;
-      z-index: 10;
+      background: transparent;
       pointer-events: none;
       white-space: nowrap;
-    }
-    /* 地圖物件 */
-    .map-object {
-      position: absolute;
-      width: 100px;
-      height: 100px;
-      transform: translate(-50%, -50%);
-      z-index: 5;
-      pointer-events: none;
-      border: 2px solid #000;
-      border-radius: 10px;
-    }
-    /* 左下角座標顯示 */
-    #coord-display {
-      position: fixed;
-      bottom: 10px;
-      left: 10px;
-      background: rgba(0,0,0,0.5);
-      color: #fff;
-      padding: 5px;
-      border-radius: 5px;
-      font-size: 14px;
-      z-index: 40;
-    }
-    /* 聊天面板 */
-    #chat-panel {
-      position: fixed;
-      left: 10px;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 300px;
-      background: rgba(0, 0, 0, 0.5);
-      color: #fff;
-      padding: 10px;
-      border-radius: 5px;
-      z-index: 55;
-      transition: width 0.3s ease;
-    }
-    /* 當折疊時隱藏內部內容 */
-    #chat-panel.collapsed {
-      width: 90px;
-    }
-    #chat-panel.collapsed #chat-content {
-      display: none;
-    }
-    #toggle-chat-btn {
-      width: 100%;
-      padding: 10px 20px;
-      font-size: 16px;
-      background: rgba(0,0,0,0.5);
-      color: #fff;
-      border: none;
-      border-radius: 4px;
-      margin-bottom: 10px;
-      cursor: pointer;
-    }
-    /* 聊天內容區 */
-    #chat-content {
-      display: flex;
-      flex-direction: column;
-    }
-    #chat-messages {
-      flex: 1;
-      max-height: 300px;
-      overflow-y: auto;
-      margin-bottom: 10px;
-      font-size: 14px;
-      line-height: 1.4;
-    }
-    /* 限制輸入框寬度，避免展開後變形 */
-    #chat-panel input {
-      width: 100%;
-      max-width: 100%;
-      padding: 5px;
-      font-size: 16px;
-      box-sizing: border-box;
-      margin-bottom: 5px;
-    }
-    /* 放置物件按鈕 (右側中間) */
-    #toggle-object-btn {
-      position: fixed;
-      right: 10px;
-      top: 50%;
-      transform: translateY(-50%);
-      padding: 10px 20px;
-      font-size: 16px;
-      background: rgba(0,0,0,0.5);
-      color: #fff;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      z-index: 55;
-    }
-    /* 放置物件選單 (右側選單) */
-    #object-menu {
-      position: fixed;
-      right: 0;
-      top: 0;
-      width: 300px;
-      height: 100%;
-      background: rgba(0,0,0,0.5);
-      color: #fff;
-      padding: 20px;
-      display: none;
-      z-index: 54;
-      overflow-y: auto;
-    }
-    #object-menu h3 {
-      margin-top: 0;
-    }
-    #object-menu input[type="text"] {
-      width: 100%;
-      padding: 5px;
-      margin-bottom: 10px;
-      box-sizing: border-box;
-      font-size: 16px;
-    }
-    #object-menu button {
-      padding: 6px 12px;
-      font-size: 14px;
-      cursor: pointer;
-      margin-right: 5px;
-      border: none;
-      border-radius: 4px;
-      background: rgba(0,0,0,0.5);
-      color: #fff;
-    }
-    #object-image-list img {
-      width: 50px;
-      height: 50px;
-      object-fit: cover;
-      margin: 2px;
-      cursor: pointer;
-      border: 1px solid #ccc;
     }
   </style>
 </head>
@@ -300,7 +60,7 @@
   <!-- 放置物件選單 (右側選單) -->
   <div id="object-menu">
     <h3>放置物件</h3>
-    <input type="text" id="object-image-url" placeholder="輸入圖片網址">
+    <input type="text" id="object-image-url" placeholder="輸入圖片網址或輸入文字">
     <div id="object-image-list" style="max-height: 150px; overflow-y: auto; margin-bottom:10px;"></div>
     <button id="submit-object-btn">放置</button>
     <button id="cancel-object-btn">取消</button>
@@ -308,7 +68,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-    import { getDatabase, ref, set, push, onValue, onDisconnect, onChildAdded, onChildChanged, onChildRemoved } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+    import { getDatabase, ref, set, push, onValue, onDisconnect, onChildAdded, onChildChanged, onChildRemoved, remove, update } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
     // Firebase 初始化設定
     const firebaseConfig = {
@@ -333,9 +93,13 @@
     // 遠端玩家資料儲存
     let remotePlayersData = {};
 
-    // 地圖物件資料與 DOM 參考
+    // 物件資料與 DOM 參考
     let mapObjectsData = {};
     const mapObjectsDom = {};
+
+    // 文字物件資料與 DOM 參考
+    let textObjectsData = {};
+    const textObjectsDom = {};
 
     // DOM 參考
     const worldElem = document.getElementById("world");
@@ -398,34 +162,62 @@
     cancelObjectBtn.addEventListener("click", () => {
       objectMenu.style.display = "none";
     });
-    // 新增「放置」按鈕的事件監聽，參照原始檔案邏輯
+
+    // 新增「放置」按鈕的事件監聽
     submitObjectBtn.addEventListener("click", () => {
-      let imageUrl = objectImageUrlInput.value.trim();
-      if (!imageUrl) {
-        alert("請輸入圖片網址");
-        return;
-      }
+      let inputValue = objectImageUrlInput.value.trim();
       // 以玩家目前座標對齊至最近100格
       let gridX = Math.round(localX / 100) * 100;
       let gridY = Math.round(localY / 100) * 100;
-      // 檢查該格子是否已有物件
-      for (let key in mapObjectsData) {
-        let objPos = mapObjectsData[key]["XY座標"];
-        if (Math.round(objPos.x) === gridX && Math.round(objPos.y) === gridY) {
-          alert("這裡不能放物件");
-          return;
+
+      // 若輸入內容以 "http" 開頭，視為圖片物件
+      if (inputValue.startsWith("http")) {
+        // 檢查該格子是否已有物件
+        for (let key in mapObjectsData) {
+          let objPos = mapObjectsData[key]["XY座標"];
+          if (Math.round(objPos.x) === gridX && Math.round(objPos.y) === gridY) {
+            alert("這裡不能放物件");
+            return;
+          }
+        }
+        // 將圖片物件 push 到 Firebase Realtime Database
+        push(ref(db, 'map/objects'), {
+          "圖片網址": inputValue,
+          "XY座標": { x: gridX, y: gridY }
+        });
+      } else {
+        // 否則視為文字物件
+        // 先檢查該格是否已存在文字物件
+        let existingKey = null;
+        for (let key in textObjectsData) {
+          let pos = textObjectsData[key]["XY座標"];
+          if (Math.round(pos.x) === gridX && Math.round(pos.y) === gridY) {
+            existingKey = key;
+            break;
+          }
+        }
+        if (inputValue !== "") {
+          // 有輸入文字則放置或更新文字物件
+          if (existingKey) {
+            update(ref(db, 'textObjects/' + existingKey), { "Text": inputValue });
+          } else {
+            push(ref(db, 'textObjects'), {
+              "Text": inputValue,
+              "XY座標": { x: gridX, y: gridY }
+            });
+          }
+        } else {
+          // 如果輸入空字串則刪除該格的文字物件（若有的話）
+          if (existingKey) {
+            remove(ref(db, 'textObjects/' + existingKey));
+          }
         }
       }
-      // 將物件資訊 push 到 Firebase Realtime Database
-      push(ref(db, 'map/objects'), {
-        "圖片網址": imageUrl,
-        "XY座標": { x: gridX, y: gridY }
-      });
-      // 提交後隱藏選單
-      objectMenu.style.display = "none";
+      // 清空輸入框
+      objectImageUrlInput.value = "";
     });
 
-    // 從 Firebase 讀取地圖背景，檢查資料有效性以避免錯誤
+    // 從 Firebase 讀取地圖背景
     const mapRef = ref(db, 'map');
     onValue(mapRef, (snapshot) => {
       const mapData = snapshot.val();
@@ -446,7 +238,7 @@
       }
     });
 
-    // 監聽地圖物件
+    // 監聽圖片物件
     const objectsRef = ref(db, 'map/objects');
     onChildAdded(objectsRef, (snapshot) => {
       const key = snapshot.key;
@@ -481,6 +273,48 @@
         worldElem.appendChild(elem);
       }
       elem.src = data["圖片網址"];
+      elem.style.left = data["XY座標"].x + "px";
+      elem.style.top = data["XY座標"].y + "px";
+      // 若物件處於 Select 狀態，則圖片變暗
+      if (data.select) {
+        elem.style.filter = "brightness(50%)";
+      } else {
+        elem.style.filter = "";
+      }
+    }
+
+    // 監聽文字物件
+    const textObjectsRef = ref(db, 'textObjects');
+    onChildAdded(textObjectsRef, (snapshot) => {
+      const key = snapshot.key;
+      const data = snapshot.val();
+      textObjectsData[key] = data;
+      createOrUpdateTextObjectElement(key, data);
+    });
+    onChildChanged(textObjectsRef, (snapshot) => {
+      const key = snapshot.key;
+      const data = snapshot.val();
+      textObjectsData[key] = data;
+      createOrUpdateTextObjectElement(key, data);
+    });
+    onChildRemoved(textObjectsRef, (snapshot) => {
+      const key = snapshot.key;
+      delete textObjectsData[key];
+      if (textObjectsDom[key]) {
+        textObjectsDom[key].remove();
+        delete textObjectsDom[key];
+      }
+    });
+
+    function createOrUpdateTextObjectElement(key, data) {
+      let elem = textObjectsDom[key];
+      if (!elem) {
+        elem = document.createElement("div");
+        elem.classList.add("text-object");
+        worldElem.appendChild(elem);
+        textObjectsDom[key] = elem;
+      }
+      elem.innerText = data["Text"] || "";
       elem.style.left = data["XY座標"].x + "px";
       elem.style.top = data["XY座標"].y + "px";
     }
@@ -637,7 +471,7 @@
       });
     });
 
-    // 更新物件圖片清單：若相同網址只顯示一張
+    // 更新圖片物件清單：若相同網址只顯示一張
     function updateObjectImageList() {
       objectImageList.innerHTML = "";
       const seenUrls = new Set();
@@ -689,7 +523,7 @@
       }
     });
 
-    // 動畫循環：移動玩家與斥力效果，同時利用 modulo 運算計算背景位置
+    // 動畫循環：玩家與物件斥力、背景位置更新
     function animate() {
       if (currentAccount) {
         if (isMouseDown) {
@@ -709,6 +543,9 @@
         }
         let repulsionRadius = 150;
         let repulsionForce = 10;
+        let selectThreshold = 100; // 物件 select 狀態的範圍
+
+        // 處理圖片物件的斥力與 Select 狀態
         for (let key in mapObjectsData) {
           let obj = mapObjectsData[key];
           let objX = obj["XY座標"].x;
@@ -716,13 +553,44 @@
           let dx = localX - objX;
           let dy = localY - objY;
           let dist = Math.sqrt(dx * dx + dy * dy);
+          // 斥力效果
           if (dist < repulsionRadius && dist > 0) {
             let force = repulsionForce * (repulsionRadius - dist) / repulsionRadius;
             localX += (dx / dist) * force;
             localY += (dy / dist) * force;
             updatePlayerData(localX, localY);
           }
+          // Select 狀態判斷與更新
+          if (dist < selectThreshold) {
+            if (!obj.select) {
+              obj.select = true;
+              obj.selectTimestamp = Date.now();
+              const objRef = ref(db, 'map/objects/' + key);
+              update(objRef, { select: true, selectTimestamp: obj.selectTimestamp });
+            } else {
+              let elapsed = Date.now() - obj.selectTimestamp;
+              if (elapsed > 3000) {
+                const objRef = ref(db, 'map/objects/' + key);
+                remove(objRef);
+                delete mapObjectsData[key];
+                if (mapObjectsDom[key]) {
+                  mapObjectsDom[key].remove();
+                  delete mapObjectsDom[key];
+                }
+                continue;
+              }
+            }
+          } else {
+            if (obj.select) {
+              const objRef = ref(db, 'map/objects/' + key);
+              update(objRef, { select: null, selectTimestamp: null });
+              delete obj.select;
+              delete obj.selectTimestamp;
+            }
+          }
         }
+
+        // 玩家間斥力效果
         for (let account in remotePlayersData) {
           if (account !== currentAccount) {
             let other = remotePlayersData[account];
