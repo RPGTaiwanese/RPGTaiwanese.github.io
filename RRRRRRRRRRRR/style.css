@@ -1,0 +1,251 @@
+/* 基本樣式 */
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+}
+body {
+  background: #fff;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  text-align: center;
+}
+header {
+  background: #34495e;
+  color: #ecf0f1;
+  padding: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+header h1 {
+  margin: 0;
+}
+/* 登入區 */
+#login-area {
+  margin: 20px auto;
+  padding: 20px;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  display: inline-block;
+  z-index: 60;
+  position: relative;
+}
+/* 在線玩家視窗 */
+#online-players {
+  position: fixed;
+  top: 100px;
+  left: 10px;
+  background: rgba(0,0,0,0.5);
+  color: #fff;
+  padding: 10px;
+  border-radius: 5px;
+  font-size: 14px;
+  z-index: 50;
+  max-height: 200px;
+  overflow-y: auto;
+}
+#online-players strong {
+  display: block;
+  margin-bottom: 5px;
+}
+#online-players ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+#online-players li {
+  margin: 2px 0;
+  pointer-events: none;
+}
+/* 遊戲區塊與世界容器 */
+#game-wrapper {
+  position: relative;
+  width: 100%;
+  height: calc(100vh - 80px);
+  overflow: hidden;
+  /* 預設背景圖片（若 Firebase 資料有誤則使用預設） */
+  background-image: url('https://via.placeholder.com/500x500/ffffff/cccccc?text=BG');
+  background-repeat: repeat;
+}
+#world {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 5000px;
+  height: 5000px;
+}
+/* 玩家（勇者）元素 */
+.player {
+  position: absolute;
+  width: 50px;
+  height: 75px;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+  pointer-events: none;
+}
+.player img {
+  width: 50px;
+  height: 75px;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+}
+.player .player-label {
+  position: absolute;
+  top: 75px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  color: #333;
+  white-space: nowrap;
+  pointer-events: none;
+}
+/* 玩家聊天訊息 */
+.chat-message {
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 24px;
+  color: #000;
+  z-index: 10;
+  pointer-events: none;
+  white-space: nowrap;
+}
+/* 地圖物件 */
+.map-object {
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  transform: translate(-50%, -50%);
+  z-index: 5;
+  pointer-events: none;
+  border: 2px solid #000;
+  border-radius: 10px;
+}
+/* 左下角座標顯示 */
+#coord-display {
+  position: fixed;
+  bottom: 10px;
+  left: 10px;
+  background: rgba(0,0,0,0.5);
+  color: #fff;
+  padding: 5px;
+  border-radius: 5px;
+  font-size: 14px;
+  z-index: 40;
+}
+/* 聊天面板 */
+#chat-panel {
+  position: fixed;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 300px;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  padding: 10px;
+  border-radius: 5px;
+  z-index: 55;
+  transition: width 0.3s ease;
+}
+/* 當折疊時隱藏內部內容 */
+#chat-panel.collapsed {
+  width: 90px;
+}
+#chat-panel.collapsed #chat-content {
+  display: none;
+}
+#toggle-chat-btn {
+  width: 100%;
+  padding: 10px 20px;
+  font-size: 16px;
+  background: rgba(0,0,0,0.5);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+/* 聊天內容區 */
+#chat-content {
+  display: flex;
+  flex-direction: column;
+}
+#chat-messages {
+  flex: 1;
+  max-height: 300px;
+  overflow-y: auto;
+  margin-bottom: 10px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+/* 限制輸入框寬度，避免展開後變形 */
+#chat-panel input {
+  width: 100%;
+  max-width: 100%;
+  padding: 5px;
+  font-size: 16px;
+  box-sizing: border-box;
+  margin-bottom: 5px;
+}
+/* 放置物件按鈕 (右側中間) */
+#toggle-object-btn {
+  position: fixed;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 10px 20px;
+  font-size: 16px;
+  background: rgba(0,0,0,0.5);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  z-index: 55;
+}
+/* 放置物件選單 (右側選單) */
+#object-menu {
+  position: fixed;
+  right: 0;
+  top: 0;
+  width: 300px;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  color: #fff;
+  padding: 20px;
+  display: none;
+  z-index: 54;
+  overflow-y: auto;
+}
+#object-menu h3 {
+  margin-top: 0;
+}
+#object-menu input[type="text"] {
+  width: 100%;
+  padding: 5px;
+  margin-bottom: 10px;
+  box-sizing: border-box;
+  font-size: 16px;
+}
+#object-menu button {
+  padding: 6px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  margin-right: 5px;
+  border: none;
+  border-radius: 4px;
+  background: rgba(0,0,0,0.5);
+  color: #fff;
+}
+#object-image-list img {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  margin: 2px;
+  cursor: pointer;
+  border: 1px solid #ccc;
+}

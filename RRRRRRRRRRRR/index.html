@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>讓我們一起召喚巴哈姆特</title>
+  <!-- Animate.css -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+</head>
+<body class="bg-gray-100">
+  <!-- 整個應用包在 Vue 的 #app 中 -->
+  <div id="app">
+    <!-- 頁首 -->
+    <header class="bg-blue-500 text-white p-4 text-center">
+      <h1 class="text-2xl font-bold">讓我們一起召喚巴哈姆特</h1>
+    </header>
+
+    <!-- 在線玩家視窗 -->
+    <div id="online-players" class="absolute top-4 left-4 bg-white p-2 rounded shadow">
+      <strong>在線玩家</strong>
+      <ul id="online-players-list" class="list-disc ml-4"></ul>
+    </div>
+
+    <!-- 登入區 -->
+    <div id="login-area" class="flex flex-col items-center justify-center h-screen">
+      <label for="bahamut-account" class="mb-2">輸入巴哈帳號：</label>
+      <input type="text" id="bahamut-account" placeholder="至少兩個字元" class="border p-1 mb-2" />
+      <div>
+        <button id="login-btn" class="bg-green-500 text-white px-4 py-2 rounded mr-2">登入</button>
+        <button id="guest-login-btn" class="bg-yellow-500 text-white px-4 py-2 rounded">遊客登入</button>
+      </div>
+    </div>
+
+    <!-- 遊戲區塊 -->
+    <div id="game-wrapper" class="relative w-full h-screen overflow-hidden">
+      <div id="world" class="absolute"></div>
+    </div>
+
+    <!-- 左下角座標顯示 -->
+    <div id="coord-display" class="fixed bottom-4 left-4 bg-white p-2 rounded shadow">X: 0, Y: 0</div>
+
+    <!-- 聊天面板 -->
+    <div id="chat-panel" class="fixed bottom-4 right-4 bg-white p-2 rounded shadow">
+      <button id="toggle-chat-btn" class="bg-blue-500 text-white px-2 py-1 rounded mb-2">聊天</button>
+      <div id="chat-content" class="hidden">
+        <div id="chat-messages" class="max-h-40 overflow-y-auto mb-2"></div>
+        <input type="text" id="chat-input" placeholder="輸入聊天內容" class="border p-1 w-full" />
+      </div>
+    </div>
+
+    <!-- 放置物件按鈕 (右側中間) -->
+    <button id="toggle-object-btn" class="fixed right-4 top-1/2 bg-purple-500 text-white px-4 py-2 rounded transform -translate-y-1/2">放置物件</button>
+
+    <!-- 放置物件選單 (右側選單) -->
+    <div id="object-menu" class="fixed right-4 top-1/2 transform -translate-y-1/2 bg-white p-4 rounded shadow hidden">
+      <h3 class="mb-2">放置物件</h3>
+      <input type="text" id="object-image-url" placeholder="輸入圖片網址或輸入文字" class="border p-1 mb-2" />
+      <div id="object-image-list" class="max-h-40 overflow-y-auto mb-2"></div>
+      <div>
+        <button id="submit-object-btn" class="bg-green-500 text-white px-4 py-2 rounded mr-2">放置</button>
+        <button id="cancel-object-btn" class="bg-red-500 text-white px-4 py-2 rounded">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Vue.js -->
+  <script src="https://cdn.jsdelivr.net/npm/vue@3"></script>
+  <!-- 載入遊戲邏輯 (app.js) -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>
