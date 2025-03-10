@@ -14,7 +14,7 @@
       height: 100%;
     }
     body {
-      background: #f0f0f0;
+      background: #fff;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       text-align: center;
     }
@@ -23,16 +23,11 @@
       color: #ecf0f1;
       padding: 20px;
       display: flex;
-      justify-content: space-between;
+      justify-content: center;
       align-items: center;
     }
     header h1 {
       margin: 0;
-    }
-    header button {
-      padding: 6px 12px;
-      font-size: 14px;
-      cursor: pointer;
     }
     /* 登入區 */
     #login-area {
@@ -78,7 +73,9 @@
       width: 100%;
       height: calc(100vh - 80px);
       overflow: hidden;
-      background: #000;
+      /* 預設背景圖片（若 Firebase 資料有誤則使用預設） */
+      background-image: url('https://via.placeholder.com/500x500/ffffff/cccccc?text=BG');
+      background-repeat: repeat;
     }
     #world {
       position: absolute;
@@ -86,15 +83,6 @@
       left: 0;
       width: 5000px;
       height: 5000px;
-    }
-    #map {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 5000px;
-      height: 5000px;
-      background-repeat: repeat;
-      z-index: 1;
     }
     /* 玩家（勇者）元素 */
     .player {
@@ -122,7 +110,7 @@
       white-space: nowrap;
       pointer-events: none;
     }
-    /* 玩家聊天訊息（附在玩家上） */
+    /* 玩家聊天訊息 */
     .chat-message {
       position: absolute;
       top: -40px;
@@ -142,6 +130,8 @@
       transform: translate(-50%, -50%);
       z-index: 5;
       pointer-events: none;
+      border: 2px solid #000;
+      border-radius: 10px;
     }
     /* 左下角座標顯示 */
     #coord-display {
@@ -157,7 +147,6 @@
     }
     /* 聊天面板 */
     #chat-panel {
-      display: block;
       position: fixed;
       left: 10px;
       top: 50%;
@@ -170,16 +159,18 @@
       z-index: 55;
       transition: width 0.3s ease;
     }
-    /* 收合狀態：縮小寬度 */
+    /* 當折疊時隱藏內部內容 */
     #chat-panel.collapsed {
       width: 90px;
     }
-    /* 聊天面板內的切換按鈕 - 改大按鈕尺寸 */
+    #chat-panel.collapsed #chat-content {
+      display: none;
+    }
     #toggle-chat-btn {
       width: 100%;
       padding: 10px 20px;
       font-size: 16px;
-      background: rgba(0, 0, 0, 0.5);
+      background: rgba(0,0,0,0.5);
       color: #fff;
       border: none;
       border-radius: 4px;
@@ -199,33 +190,63 @@
       font-size: 14px;
       line-height: 1.4;
     }
+    /* 限制輸入框寬度，避免展開後變形 */
     #chat-panel input {
       width: 100%;
+      max-width: 100%;
       padding: 5px;
       font-size: 16px;
       box-sizing: border-box;
       margin-bottom: 5px;
     }
-    /* 放置物件對話框 */
-    .modal {
-      display: none;
+    /* 放置物件按鈕 (右側中間) */
+    #toggle-object-btn {
       position: fixed;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      padding: 10px 20px;
+      font-size: 16px;
+      background: rgba(0,0,0,0.5);
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      z-index: 55;
+    }
+    /* 放置物件選單 (右側選單) */
+    #object-menu {
+      position: fixed;
+      right: 0;
       top: 0;
-      left: 0;
-      width: 100%;
+      width: 300px;
       height: 100%;
       background: rgba(0,0,0,0.5);
-      z-index: 100;
-      align-items: center;
-      justify-content: center;
-    }
-    .modal .modal-content {
-      background: #fff;
+      color: #fff;
       padding: 20px;
-      border-radius: 8px;
-      max-width: 400px;
-      width: 90%;
-      margin: auto;
+      display: none;
+      z-index: 54;
+      overflow-y: auto;
+    }
+    #object-menu h3 {
+      margin-top: 0;
+    }
+    #object-menu input[type="text"] {
+      width: 100%;
+      padding: 5px;
+      margin-bottom: 10px;
+      box-sizing: border-box;
+      font-size: 16px;
+    }
+    #object-menu button {
+      padding: 6px 12px;
+      font-size: 14px;
+      cursor: pointer;
+      margin-right: 5px;
+      border: none;
+      border-radius: 4px;
+      background: rgba(0,0,0,0.5);
+      color: #fff;
     }
     #object-image-list img {
       width: 50px;
@@ -240,10 +261,6 @@
 <body>
   <header>
     <h1>讓我們一起召喚巴哈姆特</h1>
-    <div>
-      <button id="place-object-btn">放置物件</button>
-      <!-- 原先聊天室的送出按鈕已移除 -->
-    </div>
   </header>
 
   <!-- 在線玩家視窗 -->
@@ -262,10 +279,7 @@
 
   <!-- 遊戲區塊 -->
   <div id="game-wrapper">
-    <div id="world">
-      <div id="map"></div>
-      <!-- 玩家與地圖物件將動態加入 -->
-    </div>
+    <div id="world"></div>
   </div>
 
   <!-- 左下角座標顯示 -->
@@ -275,27 +289,24 @@
   <div id="chat-panel">
     <button id="toggle-chat-btn">聊天</button>
     <div id="chat-content">
-      <div id="chat-messages">
-        <!-- 此處將顯示 Firebase chatHistory 內的聊天紀錄 -->
-      </div>
+      <div id="chat-messages"></div>
       <input type="text" id="chat-input" placeholder="輸入聊天內容">
     </div>
   </div>
 
-  <!-- 放置物件對話框 -->
-  <div id="place-object-modal" class="modal">
-    <div class="modal-content">
-      <h3>放置物件</h3>
-      <input type="text" id="object-image-url" placeholder="輸入圖片網址" style="width:100%; margin-bottom:10px;">
-      <div id="object-image-list" style="max-height: 150px; overflow-y: auto; margin-bottom:10px;"></div>
-      <button id="submit-object-btn">放置</button>
-      <button id="cancel-object-btn">取消</button>
-    </div>
+  <!-- 放置物件按鈕 (右側中間) -->
+  <button id="toggle-object-btn">放置物件</button>
+
+  <!-- 放置物件選單 (右側選單) -->
+  <div id="object-menu">
+    <h3>放置物件</h3>
+    <input type="text" id="object-image-url" placeholder="輸入圖片網址">
+    <div id="object-image-list" style="max-height: 150px; overflow-y: auto; margin-bottom:10px;"></div>
+    <button id="submit-object-btn">放置</button>
+    <button id="cancel-object-btn">取消</button>
   </div>
 
   <script type="module">
-    // 匯入聊天室模組（預設匯出）
-    import initChat from "./onlinePlayers.js";
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
     import { getDatabase, ref, set, push, onValue, onDisconnect, onChildAdded, onChildChanged, onChildRemoved } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
@@ -316,6 +327,8 @@
     let currentAccount = "";
     let currentHeroImageURL = "";
     let moveSpeed = 2.5;
+    // 預設 tile 大小，待背景圖片載入後更新
+    let tileWidth = 500, tileHeight = 500;
 
     // 遠端玩家資料儲存
     let remotePlayersData = {};
@@ -330,13 +343,21 @@
     const coordDisplay = document.getElementById("coord-display");
     const onlinePlayersListElem = document.getElementById("online-players-list");
 
-    // 放置物件對話框 DOM
-    const placeObjectModal = document.getElementById("place-object-modal");
+    // 聊天面板 DOM
+    const chatPanel = document.getElementById("chat-panel");
+    const chatInput = document.getElementById("chat-input");
+    const chatMessagesElem = document.getElementById("chat-messages");
+    const toggleChatBtn = document.getElementById("toggle-chat-btn");
+
+    // 放置物件選單 DOM
+    const objectMenu = document.getElementById("object-menu");
     const objectImageUrlInput = document.getElementById("object-image-url");
     const objectImageList = document.getElementById("object-image-list");
+    const submitObjectBtn = document.getElementById("submit-object-btn");
+    const cancelObjectBtn = document.getElementById("cancel-object-btn");
 
-    // 其他按鈕 DOM
-    const placeObjectBtn = document.getElementById("place-object-btn");
+    // 放置物件按鈕 (右側)
+    const toggleObjectBtn = document.getElementById("toggle-object-btn");
 
     // 滑鼠與觸控控制
     let isMouseDown = false;
@@ -364,16 +385,68 @@
     });
     document.addEventListener('touchend', () => { isMouseDown = false; });
 
-    // Firebase 讀取地圖背景
+    // 切換聊天室顯示與收合（透過切換 class 控制）
+    toggleChatBtn.addEventListener("click", () => {
+      chatPanel.classList.toggle("collapsed");
+    });
+
+    // 切換放置物件選單
+    toggleObjectBtn.addEventListener("click", () => {
+      objectMenu.style.display = (objectMenu.style.display === "block") ? "none" : "block";
+    });
+    // 點擊「取消」按鈕則收回選單
+    cancelObjectBtn.addEventListener("click", () => {
+      objectMenu.style.display = "none";
+    });
+    // 新增「放置」按鈕的事件監聽，參照原始檔案邏輯
+    submitObjectBtn.addEventListener("click", () => {
+      let imageUrl = objectImageUrlInput.value.trim();
+      if (!imageUrl) {
+        alert("請輸入圖片網址");
+        return;
+      }
+      // 以玩家目前座標對齊至最近100格
+      let gridX = Math.round(localX / 100) * 100;
+      let gridY = Math.round(localY / 100) * 100;
+      // 檢查該格子是否已有物件
+      for (let key in mapObjectsData) {
+        let objPos = mapObjectsData[key]["XY座標"];
+        if (Math.round(objPos.x) === gridX && Math.round(objPos.y) === gridY) {
+          alert("這裡不能放物件");
+          return;
+        }
+      }
+      // 將物件資訊 push 到 Firebase Realtime Database
+      push(ref(db, 'map/objects'), {
+        "圖片網址": imageUrl,
+        "XY座標": { x: gridX, y: gridY }
+      });
+      // 提交後隱藏選單
+      objectMenu.style.display = "none";
+    });
+
+    // 從 Firebase 讀取地圖背景，檢查資料有效性以避免錯誤
     const mapRef = ref(db, 'map');
     onValue(mapRef, (snapshot) => {
       const mapData = snapshot.val();
-      if (mapData && mapData.background) {
-        document.getElementById("map").style.backgroundImage = `url(${mapData.background})`;
+      if (mapData && mapData.background && mapData.background.indexOf("http") === 0) {
+        const bgImg = new Image();
+        bgImg.onload = function() {
+          tileWidth = bgImg.naturalWidth;
+          tileHeight = bgImg.naturalHeight;
+          gameWrapper.style.backgroundImage = `url(${mapData.background})`;
+          gameWrapper.style.backgroundRepeat = "repeat";
+          gameWrapper.style.backgroundSize = `${tileWidth}px ${tileHeight}px`;
+        };
+        bgImg.src = mapData.background;
+      } else {
+        gameWrapper.style.backgroundImage = "url('https://via.placeholder.com/500x500/ffffff/cccccc?text=BG')";
+        gameWrapper.style.backgroundRepeat = "repeat";
+        gameWrapper.style.backgroundSize = "500px 500px";
       }
     });
 
-    // 監聽地圖物件：放置的圖片
+    // 監聽地圖物件
     const objectsRef = ref(db, 'map/objects');
     onChildAdded(objectsRef, (snapshot) => {
       const key = snapshot.key;
@@ -412,7 +485,7 @@
       elem.style.top = data["XY座標"].y + "px";
     }
 
-    // 更新本地玩家的圖片與初始位置
+    // 更新本地玩家圖片與位置
     function updateHeroImage(account) {
       if (!account) return;
       currentAccount = account;
@@ -430,14 +503,14 @@
       img.src = potentialAvatar;
     }
 
-    // 將本地玩家的世界座標存入 Firebase
+    // 將本地玩家資料存入 Firebase
     function updatePlayerData(x, y) {
       if (!currentAccount) return;
       const playerRef = ref(db, 'players/' + currentAccount);
       set(playerRef, { x, y, account: currentAccount, image: currentHeroImageURL });
     }
 
-    // 登入與遊客登入：登入後隱藏登入區，同時顯示聊天室
+    // 登入與遊客登入
     function login() {
       const account = document.getElementById("bahamut-account").value.trim();
       if (account.length < 2) {
@@ -448,9 +521,6 @@
       const playerRef = ref(db, 'players/' + account);
       onDisconnect(playerRef).remove();
       document.getElementById("login-area").style.display = "none";
-      document.getElementById("chat-panel").style.display = "block";
-      // 初始化聊天室功能
-      initChat(db, currentAccount);
     }
     function guestLogin() {
       const randomGuest = "遊客" + (Math.floor(Math.random() * 90000) + 10000);
@@ -459,9 +529,6 @@
       const playerRef = ref(db, 'players/' + randomGuest);
       onDisconnect(playerRef).remove();
       document.getElementById("login-area").style.display = "none";
-      document.getElementById("chat-panel").style.display = "block";
-      // 初始化聊天室功能
-      initChat(db, currentAccount);
     }
     document.getElementById("login-btn").addEventListener("click", login);
     document.getElementById("guest-login-btn").addEventListener("click", guestLogin);
@@ -555,38 +622,31 @@
           return;
         }
       }
-      push(objectsRef, {
+      let gridX = Math.round(localX / 100) * 100;
+      let gridY = Math.round(localY / 100) * 100;
+      for (let key in mapObjectsData) {
+        let objPos = mapObjectsData[key]["XY座標"];
+        if (Math.round(objPos.x) === gridX && Math.round(objPos.y) === gridY) {
+          alert("這裡不能放物件");
+          return;
+        }
+      }
+      push(ref(db, 'map/objects'), {
         "圖片網址": imageUrl,
-        "XY座標": { x: localX, y: localY }
+        "XY座標": { x: gridX, y: gridY }
       });
     });
 
-    // 放置物件對話框處理
-    placeObjectBtn.addEventListener("click", () => {
-      updateObjectImageList();
-      objectImageUrlInput.value = "";
-      placeObjectModal.style.display = "flex";
-    });
-    document.getElementById("cancel-object-btn").addEventListener("click", () => {
-      placeObjectModal.style.display = "none";
-    });
-    document.getElementById("submit-object-btn").addEventListener("click", () => {
-      let imageUrl = objectImageUrlInput.value.trim();
-      if (!imageUrl) {
-        alert("請輸入圖片網址");
-        return;
-      }
-      push(objectsRef, {
-        "圖片網址": imageUrl,
-        "XY座標": { x: localX, y: localY }
-      });
-      placeObjectModal.style.display = "none";
-    });
+    // 更新物件圖片清單：若相同網址只顯示一張
     function updateObjectImageList() {
       objectImageList.innerHTML = "";
+      const seenUrls = new Set();
       for (let key in mapObjectsData) {
+        let url = mapObjectsData[key]["圖片網址"];
+        if (seenUrls.has(url)) continue;
+        seenUrls.add(url);
         let img = document.createElement("img");
-        img.src = mapObjectsData[key]["圖片網址"];
+        img.src = url;
         img.addEventListener("click", () => {
           objectImageUrlInput.value = img.src;
         });
@@ -594,7 +654,42 @@
       }
     }
 
-    // 遊戲動畫循環
+    // 聊天面板處理：監聽 chatHistory
+    function updateChatHistory() {
+      const chatHistoryRef = ref(db, 'chatHistory');
+      onValue(chatHistoryRef, (snapshot) => {
+        const data = snapshot.val();
+        chatMessagesElem.innerHTML = "";
+        if(data) {
+          let messages = Object.keys(data).map(key => data[key]);
+          messages.sort((a, b) => a.timestamp - b.timestamp);
+          messages.forEach(msg => {
+            let div = document.createElement("div");
+            div.innerText = `[${msg.account}] ${msg.message}`;
+            chatMessagesElem.appendChild(div);
+          });
+          chatMessagesElem.scrollTop = chatMessagesElem.scrollHeight;
+        }
+      });
+    }
+    updateChatHistory();
+
+    // 監聽聊天室輸入框：若尚未登入則不送出
+    chatInput.addEventListener("keydown", (e) => {
+      if(e.key === "Enter" || e.keyCode === 13) {
+        if(!currentAccount) return;
+        const message = chatInput.value.trim();
+        if(!message) return;
+        push(ref(db, 'chatHistory'), {
+          account: currentAccount,
+          message: message,
+          timestamp: Date.now()
+        });
+        chatInput.value = "";
+      }
+    });
+
+    // 動畫循環：移動玩家與斥力效果，同時利用 modulo 運算計算背景位置
     function animate() {
       if (currentAccount) {
         if (isMouseDown) {
@@ -613,7 +708,7 @@
           }
         }
         let repulsionRadius = 150;
-        let repulsionForce = 2;
+        let repulsionForce = 10;
         for (let key in mapObjectsData) {
           let obj = mapObjectsData[key];
           let objX = obj["XY座標"].x;
@@ -647,6 +742,11 @@
       let offsetY = gameWrapper.clientHeight / 2 - localY;
       worldElem.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
       coordDisplay.textContent = `X: ${Math.round(localX)}, Y: ${Math.round(localY)}`;
+      
+      let modX = ((localX % tileWidth) + tileWidth) % tileWidth;
+      let modY = ((localY % tileHeight) + tileHeight) % tileHeight;
+      gameWrapper.style.backgroundPosition = `-${modX}px -${modY}px`;
+      
       requestAnimationFrame(animate);
     }
     animate();
