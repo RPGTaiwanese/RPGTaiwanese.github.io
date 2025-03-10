@@ -172,7 +172,7 @@
 
       // 若輸入內容以 "http" 開頭，視為圖片物件
       if (inputValue.startsWith("http")) {
-        // 檢查該格子是否已有物件
+        // 檢查該格子是否已有圖片物件
         for (let key in mapObjectsData) {
           let objPos = mapObjectsData[key]["XY座標"];
           if (Math.round(objPos.x) === gridX && Math.round(objPos.y) === gridY) {
@@ -187,7 +187,7 @@
         });
       } else {
         // 否則視為文字物件
-        // 先檢查該格是否已存在文字物件
+        // 檢查該格是否已存在文字物件
         let existingKey = null;
         for (let key in textObjectsData) {
           let pos = textObjectsData[key]["XY座標"];
@@ -238,7 +238,7 @@
       }
     });
 
-    // 監聽圖片物件
+    // 監聽圖片物件 (map/objects)
     const objectsRef = ref(db, 'map/objects');
     onChildAdded(objectsRef, (snapshot) => {
       const key = snapshot.key;
@@ -283,7 +283,7 @@
       }
     }
 
-    // 監聽文字物件
+    // 監聽文字物件 (textObjects)
     const textObjectsRef = ref(db, 'textObjects');
     onChildAdded(textObjectsRef, (snapshot) => {
       const key = snapshot.key;
@@ -319,7 +319,7 @@
       elem.style.top = data["XY座標"].y + "px";
     }
 
-    // 更新本地玩家圖片與位置
+    // 更新本地玩家圖片與位置，同時更新 lastActive 欄位
     function updateHeroImage(account) {
       if (!account) return;
       currentAccount = account;
@@ -337,11 +337,17 @@
       img.src = potentialAvatar;
     }
 
-    // 將本地玩家資料存入 Firebase
+    // 將本地玩家資料存入 Firebase，加入 lastActive 欄位
     function updatePlayerData(x, y) {
       if (!currentAccount) return;
       const playerRef = ref(db, 'players/' + currentAccount);
-      set(playerRef, { x, y, account: currentAccount, image: currentHeroImageURL });
+      set(playerRef, { 
+        x, 
+        y, 
+        account: currentAccount, 
+        image: currentHeroImageURL,
+        lastActive: Date.now()
+      });
     }
 
     // 登入與遊客登入
@@ -523,7 +529,17 @@
       }
     });
 
-    // 動畫循環：玩家與物件斥力、背景位置更新
+    // 定時檢查遠端玩家是否活躍，不活躍者自動刪除（閾值 5000 毫秒）
+    setInterval(() => {
+      const now = Date.now();
+      for (let account in remotePlayersData) {
+        if (now - remotePlayersData[account].lastActive > 5000) {
+          remove(ref(db, 'players/' + account));
+        }
+      }
+    }, 3000);
+
+    // 動畫循環：更新背景位置、玩家移動與物件斥力/Select 狀態處理
     function animate() {
       if (currentAccount) {
         if (isMouseDown) {
@@ -543,7 +559,7 @@
         }
         let repulsionRadius = 150;
         let repulsionForce = 10;
-        let selectThreshold = 100; // 物件 select 狀態的範圍
+        let selectThreshold = 100; // 物件選取範圍
 
         // 處理圖片物件的斥力與 Select 狀態
         for (let key in mapObjectsData) {
@@ -553,8 +569,8 @@
           let dx = localX - objX;
           let dy = localY - objY;
           let dist = Math.sqrt(dx * dx + dy * dy);
-          // 斥力效果
-          if (dist < repulsionRadius && dist > 0) {
+          // 如果物件未被選取，套用斥力效果
+          if (!obj.select && dist < repulsionRadius && dist > 0) {
             let force = repulsionForce * (repulsionRadius - dist) / repulsionRadius;
             localX += (dx / dist) * force;
             localY += (dy / dist) * force;
