@@ -19,7 +19,7 @@
       left: 0;
       z-index: 1;
     }
-    /* 原有 UI 樣式，將提示文字位置下移 50px */
+    /* 原有 UI：提示文字位置下移 50px */
     #ui {
       position: absolute; 
       top: 60px; 
@@ -43,7 +43,7 @@
     #gameOverText {
       color: #fff; font-size: 32px; font-weight: bold; text-align: center;
     }
-    /* 房間選擇、房間列表、房間觀看區 UI */
+    /* 房間選擇、房間列表、房間觀看區 */
     #roomSelection {
       position: fixed;
       top: 50%;
@@ -55,7 +55,6 @@
       z-index: 30;
       text-align: center;
     }
-    /* 修改輸入框提示文字 */
     #roomSelection input {
       padding: 10px;
       font-size: 16px;
@@ -65,7 +64,6 @@
     #roomSelection input::-webkit-input-placeholder {
       color: #888;
     }
-    <!-- 輸入框內文字已直接設定 placeholder="輸入你的玩家名稱" -->
     #roomSelection button {
       padding: 10px 20px;
       font-size: 16px;
@@ -88,7 +86,6 @@
     #roomList li {
       cursor: pointer; margin: 5px 0; padding: 5px;
       background: rgba(255,255,255,0.1); border-radius: 3px;
-      /* 確保 li 可接收點擊 */
       pointer-events: auto;
     }
     /* 房間觀看區全螢幕、最高層級 */
@@ -194,12 +191,11 @@
       console.error("Firebase auth error:", error);
     });
     
-    // 全域變數：遊戲是否開始、目前房間名稱、更新間隔、升級狀態相關、觀看房間參考
+    // 全域變數
     let gameStarted = false;
     let currentRoom = "";
-    // 更新間隔 60 毫秒
     let updateInterval;
-    let currentUpgrade = null;  
+    let currentUpgrade = null;
     let currentRoomDisplayRef = null;
     
     const roomSelectionDiv = document.getElementById("roomSelection");
@@ -210,7 +206,7 @@
     const roomDisplayContent = document.getElementById("roomDisplayContent");
     const closeRoomDisplay = document.getElementById("closeRoomDisplay");
     
-    // 點選【開始遊戲】按鈕：開始遊戲並定時上傳畫面資料
+    // 開始遊戲：建立房間並啟動資料更新
     startButton.addEventListener("click", () => {
       const roomName = roomInput.value.trim();
       if (roomName === "") {
@@ -224,25 +220,26 @@
       updateInterval = setInterval(updateRoomData, 60);
     });
     
-    // 監聽 /rooms 節點變化，更新房間列表
+    // 監聽 rooms 節點，並移除超過 5 秒未更新的房間
     firebase.database().ref('rooms/').on('value', (snapshot) => {
       const rooms = snapshot.val();
       roomListItems.innerHTML = "";
+      const now = Date.now();
       for (let room in rooms) {
+        if (rooms[room].timestamp && (now - rooms[room].timestamp) > 5000) {
+          firebase.database().ref('rooms/' + room).remove();
+          continue;
+        }
         const li = document.createElement("li");
         li.textContent = room;
-        // 同時綁定 click 與 touchstart 事件
-        li.addEventListener("click", () => {
-          showRoom(room);
-        });
-        li.addEventListener("touchstart", () => {
+        li.addEventListener("pointerdown", () => {
           showRoom(room);
         });
         roomListItems.appendChild(li);
       }
     });
     
-    // 監聽 leaderboard 資料，顯示前 10 名存活時間（移除數字前綴）
+    // 監聽 leaderboard，顯示前 10 名存活時間（移除數字前綴）
     firebase.database().ref("leaderboard").orderByChild("gameTime").limitToLast(10).on("value", (snapshot) => {
       const leaderboardList = document.getElementById("leaderboardList");
       leaderboardList.innerHTML = "";
@@ -250,7 +247,6 @@
       snapshot.forEach((childSnapshot) => {
         scores.push(childSnapshot.val());
       });
-      // 依 gameTime 由大到小排序
       scores.sort((a, b) => b.gameTime - a.gameTime);
       scores.forEach((entry) => {
         const li = document.createElement("li");
@@ -259,20 +255,33 @@
       });
     });
     
-    // 房間觀看：持續監聽指定房間資料以即時更新畫面
+    // 修正後的房間觀看函式
     function showRoom(roomName) {
       if (currentRoomDisplayRef) {
         currentRoomDisplayRef.off();
       }
+      // 每次重設內容，至少顯示房間名稱
       roomDisplayContent.innerHTML = "<h3>" + roomName + "</h3>";
       currentRoomDisplayRef = firebase.database().ref("rooms/" + roomName);
       currentRoomDisplayRef.on("value", (snapshot) => {
         const data = snapshot.val();
         roomDisplayContent.innerHTML = "<h3>" + roomName + "</h3>";
-        if (data && data.screenshot) {
-          const img = document.createElement("img");
-          img.src = data.screenshot;
-          roomDisplayContent.appendChild(img);
+        if(data) {
+          // 如果有截圖則顯示
+          if (data.screenshot) {
+            const img = document.createElement("img");
+            img.src = data.screenshot;
+            roomDisplayContent.appendChild(img);
+          }
+          // 無論有無截圖，都嘗試顯示存活時間（若 gameTime 存在）
+          if (typeof data.gameTime === 'number') {
+            const timeP = document.createElement("p");
+            timeP.style.color = "#fff";
+            timeP.style.fontSize = "18px";
+            timeP.style.textAlign = "center";
+            timeP.textContent = "存活時間：" + data.gameTime.toFixed(1) + "秒";
+            roomDisplayContent.appendChild(timeP);
+          }
         } else {
           roomDisplayContent.innerHTML += "<p>無資料顯示</p>";
         }
@@ -309,7 +318,7 @@
       roomDisplay.style.display = "none";
     });
     
-    // 定期上傳畫面截圖、遊戲狀態與升級狀態（同步至 Firebase）
+    // 定期上傳資料至 Firebase
     function updateRoomData() {
       if (!gameStarted) return;
       const screenshot = canvas.toDataURL("image/png");
@@ -323,7 +332,7 @@
       firebase.database().ref("rooms/" + currentRoom).set(data);
     }
     
-    // 當玩家離開網頁或遊戲結束時，刪除該房間資料
+    // 玩家離開時刪除房間
     window.addEventListener("beforeunload", () => {
       if (currentRoom) {
         firebase.database().ref("rooms/" + currentRoom).remove();
@@ -331,7 +340,7 @@
     });
   </script>
   
-  <!-- 以下為原有遊戲程式碼 -->
+  <!-- 遊戲程式碼（以下不變） -->
   <script>
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -401,13 +410,11 @@
     const enemies = [];
     const enemyBullets = [];
     
-    // 當玩家進入升級狀態時顯示 overlay，同時將 currentUpgrade 設為 null
     function showUpgradeOptions() {
       isUpgrading = true;
       currentUpgrade = null;
       upgradeOverlay.style.display = 'flex';
     }
-    // 玩家選擇升級時，同時記錄選擇並隱藏 overlay
     function applyUpgrade(option) {
       if(option === 'attack'){
         player.damage += 1;
@@ -714,7 +721,6 @@
     
     let isMoving = false;
     let targetPos = { x: player.x, y: player.y };
-    // 處理滑鼠事件
     canvas.addEventListener('mousedown', (e) => {
       isMoving = true;
       const cam = getCameraOffset();
@@ -730,7 +736,6 @@
     });
     canvas.addEventListener('mouseup', () => { isMoving = false; });
     canvas.addEventListener('mouseleave', () => { isMoving = false; });
-    // 處理行動裝置觸控事件
     canvas.addEventListener('touchstart', (e) => {
       e.preventDefault();
       isMoving = true;
@@ -794,7 +799,6 @@
       });
     }
     
-    // 遊戲結束時，刪除該房間資料，並將存活時間寫入排行榜
     function triggerGameOver() {
       gameOver = true;
       gameOverText.innerText = `遊戲結束！你存活了 ${gameTime.toFixed(1)} 秒。`;
@@ -802,7 +806,6 @@
       if (currentRoom) {
         firebase.database().ref("rooms/" + currentRoom).remove();
       }
-      // 將存活時間寫入排行榜
       firebase.database().ref("leaderboard").push({
         room: currentRoom || "未知",
         gameTime: gameTime,
@@ -813,6 +816,10 @@
     function restartGame() {
       resetGame();
       gameOverOverlay.style.display = 'none';
+      if (currentRoom) {
+        updateRoomData();
+        updateInterval = setInterval(updateRoomData, 60);
+      }
       requestAnimationFrame(gameLoop);
     }
     window.restartGame = restartGame;
@@ -969,7 +976,6 @@
       ctx.textAlign = "left";
       ctx.fillText(`時間: ${gameTime.toFixed(1)}秒`, 10, 20);
       
-      // 尚未開始遊戲時，提示文字上移 200px（canvas.height/2 - 300）
       if(!gameStarted) {
         ctx.fillStyle = "rgba(0,0,0,0.5)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
