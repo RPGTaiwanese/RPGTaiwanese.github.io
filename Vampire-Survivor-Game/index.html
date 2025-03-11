@@ -4,11 +4,27 @@
   <meta charset="UTF-8">
   <title>血族倖存者：夜影城 - 無限地圖自動彈幕版</title>
   <style>
-    body { margin: 0; background: #111; overflow: hidden; font-family: sans-serif; }
-    canvas { display: block; }
-    /* 原有 UI 樣式：提示文字位置下移 50px */
+    html, body { 
+      margin: 0; 
+      padding: 0; 
+      background: #111; 
+      overflow: hidden; 
+      font-family: sans-serif; 
+      touch-action: none; /* 禁用默認觸控行為 */
+    }
+    canvas { 
+      display: block; 
+      position: absolute;
+      top: 0; 
+      left: 0;
+      z-index: 1;
+    }
+    /* 原有 UI 樣式，將提示文字位置下移 50px */
     #ui {
-      position: absolute; top: 60px; left: 10px; z-index: 10;
+      position: absolute; 
+      top: 60px; 
+      left: 10px; 
+      z-index: 10;
       pointer-events: none;
     }
     #ui p { margin: 5px; color: #fff; }
@@ -39,22 +55,17 @@
       z-index: 30;
       text-align: center;
     }
-    /* 輸入框提示文字調整 */
+    /* 修改輸入框提示文字 */
     #roomSelection input {
       padding: 10px;
       font-size: 16px;
       width: 200px;
     }
-    /* 修改 placeholder 文字 */
-    #roomSelection input::placeholder {
-      color: #888;
-    }
+    #roomSelection input::placeholder,
     #roomSelection input::-webkit-input-placeholder {
       color: #888;
     }
-    #roomSelection input {
-      /* 將原本 "房間名稱" 改為 "輸入你的玩家名稱" 在 HTML 直接修改 */
-    }
+    <!-- 輸入框內文字已直接設定 placeholder="輸入你的玩家名稱" -->
     #roomSelection button {
       padding: 10px 20px;
       font-size: 16px;
@@ -77,6 +88,8 @@
     #roomList li {
       cursor: pointer; margin: 5px 0; padding: 5px;
       background: rgba(255,255,255,0.1); border-radius: 3px;
+      /* 確保 li 可接收點擊 */
+      pointer-events: auto;
     }
     /* 房間觀看區全螢幕、最高層級 */
     #roomDisplay {
@@ -138,7 +151,6 @@
   <!-- 房間選擇 UI -->
   <div id="roomSelection">
     <h2>請輸入房間名稱</h2>
-    <!-- 修改 placeholder -->
     <input type="text" id="roomInput" placeholder="輸入你的玩家名稱">
     <br>
     <button id="startButton">開始遊戲</button>
@@ -187,7 +199,6 @@
     let currentRoom = "";
     // 更新間隔 60 毫秒
     let updateInterval;
-    // 用來記錄升級狀態：玩家所選升級（若有）
     let currentUpgrade = null;  
     let currentRoomDisplayRef = null;
     
@@ -220,14 +231,18 @@
       for (let room in rooms) {
         const li = document.createElement("li");
         li.textContent = room;
+        // 同時綁定 click 與 touchstart 事件
         li.addEventListener("click", () => {
+          showRoom(room);
+        });
+        li.addEventListener("touchstart", () => {
           showRoom(room);
         });
         roomListItems.appendChild(li);
       }
     });
     
-    // 監聽 leaderboard 資料，顯示前 10 名存活時間（移除前綴數字）
+    // 監聽 leaderboard 資料，顯示前 10 名存活時間（移除數字前綴）
     firebase.database().ref("leaderboard").orderByChild("gameTime").limitToLast(10).on("value", (snapshot) => {
       const leaderboardList = document.getElementById("leaderboardList");
       leaderboardList.innerHTML = "";
@@ -302,8 +317,8 @@
         screenshot: screenshot,
         gameTime: gameTime,
         timestamp: Date.now(),
-        upgradeActive: isUpgrading,         // 是否處於升級狀態
-        upgradeSelected: currentUpgrade     // 玩家選擇的升級
+        upgradeActive: isUpgrading,
+        upgradeSelected: currentUpgrade
       };
       firebase.database().ref("rooms/" + currentRoom).set(data);
     }
@@ -699,6 +714,7 @@
     
     let isMoving = false;
     let targetPos = { x: player.x, y: player.y };
+    // 處理滑鼠事件
     canvas.addEventListener('mousedown', (e) => {
       isMoving = true;
       const cam = getCameraOffset();
@@ -714,6 +730,30 @@
     });
     canvas.addEventListener('mouseup', () => { isMoving = false; });
     canvas.addEventListener('mouseleave', () => { isMoving = false; });
+    // 處理行動裝置觸控事件
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      isMoving = true;
+      const touch = e.touches[0];
+      const rect = canvas.getBoundingClientRect();
+      const cam = getCameraOffset();
+      targetPos.x = touch.clientX - rect.left + cam.x;
+      targetPos.y = touch.clientY - rect.top + cam.y;
+    }, false);
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      if(isMoving) {
+        const touch = e.touches[0];
+        const rect = canvas.getBoundingClientRect();
+        const cam = getCameraOffset();
+        targetPos.x = touch.clientX - rect.left + cam.x;
+        targetPos.y = touch.clientY - rect.top + cam.y;
+      }
+    }, false);
+    canvas.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      isMoving = false;
+    }, false);
     
     function renderSpiralEffect(cam) {
       const numOrbit = 8;
@@ -929,10 +969,10 @@
       ctx.textAlign = "left";
       ctx.fillText(`時間: ${gameTime.toFixed(1)}秒`, 10, 20);
       
-      // 尚未開始遊戲時，提示文字上移 200px（即 canvas.height/2 - 300）
+      // 尚未開始遊戲時，提示文字上移 200px（canvas.height/2 - 300）
       if(!gameStarted) {
         ctx.fillStyle = "rgba(0,0,0,0.5)";
-        ctx.fillRect(0,0,canvas.width,canvas.height);
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = "#fff";
         ctx.font = "24px sans-serif";
         ctx.textAlign = "center";
