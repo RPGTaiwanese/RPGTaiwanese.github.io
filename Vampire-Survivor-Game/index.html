@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>血族倖存者：夜影城 - 無限地圖自動彈幕版</title>
+  <style>
+    body { margin: 0; background: #111; overflow: hidden; font-family: sans-serif; }
+    canvas { display: block; }
+    /* 原有 UI 樣式：提示文字位置下移 50px */
+    #ui {
+      position: absolute; top: 60px; left: 10px; z-index: 10;
+      pointer-events: none;
+    }
+    #ui p { margin: 5px; color: #fff; }
+    #upgradeOverlay, #gameOverOverlay {
+      position: absolute; top: 0; left: 0; width: 100%;
+      height: 100%; background: rgba(0,0,0,0.8);
+      display: none; justify-content: center; align-items: center;
+      flex-direction: column; z-index: 20;
+    }
+    #upgradeOverlay button, #gameOverOverlay button {
+      margin: 10px; padding: 10px 20px; font-size: 16px;
+    }
+    #upgradeOverlay p {
+      color: white; font-size: 24px; font-weight: bold;
+    }
+    #gameOverText {
+      color: #fff; font-size: 32px; font-weight: bold; text-align: center;
+    }
+    /* 房間選擇、房間列表、房間觀看區 UI */
+    #roomSelection {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.8);
+      padding: 20px;
+      border-radius: 10px;
+      z-index: 30;
+      text-align: center;
+    }
+    /* 輸入框提示文字調整 */
+    #roomSelection input {
+      padding: 10px;
+      font-size: 16px;
+      width: 200px;
+    }
+    /* 修改 placeholder 文字 */
+    #roomSelection input::placeholder {
+      color: #888;
+    }
+    #roomSelection input::-webkit-input-placeholder {
+      color: #888;
+    }
+    #roomSelection input {
+      /* 將原本 "房間名稱" 改為 "輸入你的玩家名稱" 在 HTML 直接修改 */
+    }
+    #roomSelection button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin-top: 10px;
+    }
+    #roomList {
+      position: fixed;
+      bottom: 10px;
+      left: 10px;
+      background: rgba(0,0,0,0.6);
+      padding: 10px;
+      border-radius: 5px;
+      z-index: 30;
+      max-height: 150px;
+      overflow-y: auto;
+      color: #fff;
+    }
+    #roomList h3 { margin: 0 0 5px; font-size: 18px; }
+    #roomList ul { list-style: none; padding: 0; margin: 0; }
+    #roomList li {
+      cursor: pointer; margin: 5px 0; padding: 5px;
+      background: rgba(255,255,255,0.1); border-radius: 3px;
+    }
+    /* 房間觀看區全螢幕、最高層級 */
+    #roomDisplay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      z-index: 9999;
+      display: none;
+      overflow: auto;
+    }
+    /* 房間觀看內容：房間名稱以白色 */
+    #roomDisplay h3 { color: #fff; }
+    #roomDisplay img { max-width: 100%; max-height: 90vh; display: block; margin: 0 auto; }
+    #roomDisplay button { margin-top: 10px; padding: 5px 10px; }
+    /* 存活時間排行榜，右上角 */
+    #leaderboard {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(0,0,0,0.6);
+      padding: 10px;
+      border-radius: 5px;
+      z-index: 10000;
+      color: #fff;
+    }
+  </style>
+  <!-- Firebase SDK (使用 compat 版本) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics-compat.js"></script>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+  <div id="ui">
+    <p>提示：按住滑鼠左鍵拖動移動，系統自動發射彈幕攻擊最近的敵人。</p>
+  </div>
+  <div id="upgradeOverlay">
+    <p>升級選項！請選擇一項：</p>
+    <button onclick="applyUpgrade('attack')">攻擊力升級（+1）</button>
+    <button onclick="applyUpgrade('range')">距離升級（+0.2秒）</button>
+    <button onclick="applyUpgrade('bullet')">彈幕數量升級（+1）</button>
+    <button onclick="applyUpgrade('frequency')">發射頻率升級（-50ms）</button>
+    <button onclick="applyUpgrade('hp')">HP升級（+30最大HP）</button>
+    <button onclick="applyUpgrade('speed')">速度升級（+20移動速度）</button>
+    <button onclick="applyUpgrade('spiral')">使用技能 螺旋彈幕（持續10秒）</button>
+    <button onclick="applyUpgrade('nuclear')">使用技能 核彈彈幕</button>
+    <button onclick="applyUpgrade('siege')">使用技能 圍城彈幕（持續15秒）</button>
+    <button onclick="applyUpgrade('heal')">回復生命（回復當前生命值的一半）</button>
+  </div>
+  <div id="gameOverOverlay">
+    <p id="gameOverText"></p>
+    <button onclick="restartGame()">重新開始遊戲</button>
+  </div>
+  
+  <!-- 房間選擇 UI -->
+  <div id="roomSelection">
+    <h2>請輸入房間名稱</h2>
+    <!-- 修改 placeholder -->
+    <input type="text" id="roomInput" placeholder="輸入你的玩家名稱">
+    <br>
+    <button id="startButton">開始遊戲</button>
+  </div>
+  
+  <!-- 房間列表 -->
+  <div id="roomList">
+    <h3>房間列表</h3>
+    <ul id="roomListItems"></ul>
+  </div>
+  
+  <!-- 房間觀看區 -->
+  <div id="roomDisplay">
+    <div id="roomDisplayContent"></div>
+    <button id="closeRoomDisplay">關閉</button>
+  </div>
+  
+  <!-- 存活時間排行榜 -->
+  <div id="leaderboard">
+    <h3>存活時間排行榜</h3>
+    <ol id="leaderboardList"></ol>
+  </div>
+  
+  <script>
+    // Firebase 初始化
+    const firebaseConfig = {
+      apiKey: "AIzaSyCf18qyn_40HaRDGkLw5jtJHg3Va8UVfLI",
+      authDomain: "bahamut-building.firebaseapp.com",
+      databaseURL: "https://bahamut-building-default-rtdb.firebaseio.com",
+      projectId: "bahamut-building",
+      storageBucket: "bahamut-building.firebasestorage.app",
+      messagingSenderId: "323018662477",
+      appId: "1:323018662477:web:61c61ecc4f63996653b204",
+      measurementId: "G-VNL83B67VF"
+    };
+    firebase.initializeApp(firebaseConfig);
+    firebase.analytics();
+    
+    // 自動匿名登入
+    firebase.auth().signInAnonymously().catch((error) => {
+      console.error("Firebase auth error:", error);
+    });
+    
+    // 全域變數：遊戲是否開始、目前房間名稱、更新間隔、升級狀態相關、觀看房間參考
+    let gameStarted = false;
+    let currentRoom = "";
+    // 更新間隔 60 毫秒
+    let updateInterval;
+    // 用來記錄升級狀態：玩家所選升級（若有）
+    let currentUpgrade = null;  
+    let currentRoomDisplayRef = null;
+    
+    const roomSelectionDiv = document.getElementById("roomSelection");
+    const roomInput = document.getElementById("roomInput");
+    const startButton = document.getElementById("startButton");
+    const roomListItems = document.getElementById("roomListItems");
+    const roomDisplay = document.getElementById("roomDisplay");
+    const roomDisplayContent = document.getElementById("roomDisplayContent");
+    const closeRoomDisplay = document.getElementById("closeRoomDisplay");
+    
+    // 點選【開始遊戲】按鈕：開始遊戲並定時上傳畫面資料
+    startButton.addEventListener("click", () => {
+      const roomName = roomInput.value.trim();
+      if (roomName === "") {
+        alert("請輸入房間名稱！");
+        return;
+      }
+      currentRoom = roomName;
+      gameStarted = true;
+      roomSelectionDiv.style.display = "none";
+      updateRoomData();
+      updateInterval = setInterval(updateRoomData, 60);
+    });
+    
+    // 監聽 /rooms 節點變化，更新房間列表
+    firebase.database().ref('rooms/').on('value', (snapshot) => {
+      const rooms = snapshot.val();
+      roomListItems.innerHTML = "";
+      for (let room in rooms) {
+        const li = document.createElement("li");
+        li.textContent = room;
+        li.addEventListener("click", () => {
+          showRoom(room);
+        });
+        roomListItems.appendChild(li);
+      }
+    });
+    
+    // 監聽 leaderboard 資料，顯示前 10 名存活時間（移除前綴數字）
+    firebase.database().ref("leaderboard").orderByChild("gameTime").limitToLast(10).on("value", (snapshot) => {
+      const leaderboardList = document.getElementById("leaderboardList");
+      leaderboardList.innerHTML = "";
+      const scores = [];
+      snapshot.forEach((childSnapshot) => {
+        scores.push(childSnapshot.val());
+      });
+      // 依 gameTime 由大到小排序
+      scores.sort((a, b) => b.gameTime - a.gameTime);
+      scores.forEach((entry) => {
+        const li = document.createElement("li");
+        li.textContent = `${entry.room} - ${entry.gameTime.toFixed(1)}秒`;
+        leaderboardList.appendChild(li);
+      });
+    });
+    
+    // 房間觀看：持續監聽指定房間資料以即時更新畫面
+    function showRoom(roomName) {
+      if (currentRoomDisplayRef) {
+        currentRoomDisplayRef.off();
+      }
+      roomDisplayContent.innerHTML = "<h3>" + roomName + "</h3>";
+      currentRoomDisplayRef = firebase.database().ref("rooms/" + roomName);
+      currentRoomDisplayRef.on("value", (snapshot) => {
+        const data = snapshot.val();
+        roomDisplayContent.innerHTML = "<h3>" + roomName + "</h3>";
+        if (data && data.screenshot) {
+          const img = document.createElement("img");
+          img.src = data.screenshot;
+          roomDisplayContent.appendChild(img);
+        } else {
+          roomDisplayContent.innerHTML += "<p>無資料顯示</p>";
+        }
+        // 顯示升級 overlay（若處於升級狀態）
+        if (data && data.upgradeActive) {
+          const upgradeDiv = document.createElement("div");
+          upgradeDiv.style.position = "absolute";
+          upgradeDiv.style.top = "0";
+          upgradeDiv.style.left = "0";
+          upgradeDiv.style.width = "100%";
+          upgradeDiv.style.height = "100%";
+          upgradeDiv.style.background = "rgba(0,0,0,0.8)";
+          upgradeDiv.style.color = "#fff";
+          upgradeDiv.style.display = "flex";
+          upgradeDiv.style.flexDirection = "column";
+          upgradeDiv.style.justifyContent = "center";
+          upgradeDiv.style.alignItems = "center";
+          upgradeDiv.style.fontSize = "24px";
+          let html = "升級中...";
+          if (data.upgradeSelected) {
+            html += "<br>選擇升級: " + data.upgradeSelected;
+          }
+          upgradeDiv.innerHTML = html;
+          roomDisplayContent.appendChild(upgradeDiv);
+        }
+      });
+      roomDisplay.style.display = "block";
+    }
+    closeRoomDisplay.addEventListener("click", () => {
+      if (currentRoomDisplayRef) {
+        currentRoomDisplayRef.off();
+        currentRoomDisplayRef = null;
+      }
+      roomDisplay.style.display = "none";
+    });
+    
+    // 定期上傳畫面截圖、遊戲狀態與升級狀態（同步至 Firebase）
+    function updateRoomData() {
+      if (!gameStarted) return;
+      const screenshot = canvas.toDataURL("image/png");
+      const data = {
+        screenshot: screenshot,
+        gameTime: gameTime,
+        timestamp: Date.now(),
+        upgradeActive: isUpgrading,         // 是否處於升級狀態
+        upgradeSelected: currentUpgrade     // 玩家選擇的升級
+      };
+      firebase.database().ref("rooms/" + currentRoom).set(data);
+    }
+    
+    // 當玩家離開網頁或遊戲結束時，刪除該房間資料
+    window.addEventListener("beforeunload", () => {
+      if (currentRoom) {
+        firebase.database().ref("rooms/" + currentRoom).remove();
+      }
+    });
+  </script>
+  
+  <!-- 以下為原有遊戲程式碼 -->
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+    
+    const ui = document.getElementById('ui');
+    const upgradeOverlay = document.getElementById('upgradeOverlay');
+    const gameOverOverlay = document.getElementById('gameOverOverlay');
+    const gameOverText = document.getElementById('gameOverText');
+    
+    let lastTime = 0, deltaTime = 0;
+    let gameTime = 0;
+    let isUpgrading = false;
+    let gameOver = false;
+    const maxEnemies = 2000;
+    
+    let lastHugeGreenSpawn = 0;
+    let paused = false;
+    document.addEventListener("visibilitychange", function() {
+      if(document.hidden) {
+        paused = true;
+      } else {
+        paused = false;
+        lastTime = performance.now();
+      }
+    });
+    
+    const expItems = [];
+    function spawnExpBall(x, y) {
+      expItems.push({
+         x: x,
+         y: y,
+         value: 10,
+         radius: 5,
+         life: 30.0
+      });
+    }
+    
+    const player = {
+      x: 0,
+      y: 0,
+      radius: 15,
+      speed: 150,
+      hp: 100,
+      maxHp: 100,
+      damage: 5,
+      level: 1,
+      exp: 0,
+      expToLevel: 100,
+      upgradePoints: 0,
+      bulletInterval: 300,
+      lastBulletTime: 0,
+      color: '#f00',
+      bulletLife: 1.0,
+      weapon: "default",
+      orbitDuration: 0,
+      bulletCount: 1,
+      siegeDuration: 0
+    };
+    
+    const bullets = [];
+    const enemies = [];
+    const enemyBullets = [];
+    
+    // 當玩家進入升級狀態時顯示 overlay，同時將 currentUpgrade 設為 null
+    function showUpgradeOptions() {
+      isUpgrading = true;
+      currentUpgrade = null;
+      upgradeOverlay.style.display = 'flex';
+    }
+    // 玩家選擇升級時，同時記錄選擇並隱藏 overlay
+    function applyUpgrade(option) {
+      if(option === 'attack'){
+        player.damage += 1;
+      } else if(option === 'range'){
+        player.bulletLife += 0.2;
+      } else if(option === 'bullet'){
+        player.bulletCount++;
+      } else if(option === 'frequency'){
+        player.bulletInterval = Math.max(100, player.bulletInterval - 50);
+      } else if(option === 'hp'){
+        player.maxHp += 30;
+        player.hp = player.maxHp;
+      } else if(option === 'speed'){
+        player.speed += 20;
+      } else if(option === 'spiral'){
+        player.weapon = "spiral";
+        player.orbitDuration = 10.0;
+      } else if(option === 'nuclear'){
+        player.weapon = "nuclear";
+      } else if(option === 'siege'){
+        player.weapon = "siege";
+        player.siegeDuration = 15.0;
+      } else if(option === 'heal'){
+        player.hp = Math.min(player.maxHp, player.hp + player.hp / 2);
+      }
+      currentUpgrade = option;
+      hideUpgradeOptions();
+    }
+    window.applyUpgrade = applyUpgrade;
+    
+    function hideUpgradeOptions() {
+      isUpgrading = false;
+      upgradeOverlay.style.display = 'none';
+    }
+    
+    function checkLevelUp() {
+      if(player.exp >= player.expToLevel && !isUpgrading) {
+        player.exp -= player.expToLevel;
+        player.level++;
+        player.upgradePoints++;
+        player.expToLevel = Math.floor(player.expToLevel * 1.2);
+        showUpgradeOptions();
+      }
+    }
+    
+    function getCameraOffset() {
+      return {
+        x: player.x - canvas.width / 2,
+        y: player.y - canvas.height / 2
+      };
+    }
+    
+    function spawnExpItem() {
+      const x = player.x + (Math.random() - 0.5) * canvas.width;
+      const y = player.y + (Math.random() - 0.5) * canvas.height;
+      expItems.push({
+         x: x,
+         y: y,
+         value: 20,
+         radius: 8,
+         life: 30.0
+      });
+    }
+    
+    function spawnEnemy() {
+      if(enemies.length >= maxEnemies) return;
+      const spawnBuffer = 50;
+      const cam = getCameraOffset();
+      const spawnSide = Math.floor(Math.random() * 4);
+      let enemy = { 
+        radius: 10,
+        baseSpeed: 50,
+        baseHp: 5,
+        damage: 5,
+        color: '#0f0',
+        type: "normal"
+      };
+      const difficulty = 1 + gameTime / 120;
+      enemy.speed = enemy.baseSpeed * difficulty;
+      enemy.hp = enemy.baseHp * difficulty;
+      if(gameTime >= 90 && Math.random() < 0.2) {
+          enemy.type = "purple";
+          enemy.color = "purple";
+          enemy.speed = 60;
+          enemy.hp = 40;
+      } else if(gameTime >= 60 && Math.random() < 0.3) {
+          enemy.type = "blue";
+          enemy.color = "#00f";
+          enemy.speed *= 1.2;
+          enemy.hp *= 1.5;
+          enemy.shootTimer = 0;
+          enemy.shootInterval = 2.0;
+      }
+      switch(spawnSide) {
+        case 0:
+          enemy.x = cam.x - spawnBuffer;
+          enemy.y = cam.y + Math.random() * canvas.height;
+          break;
+        case 1:
+          enemy.x = cam.x + canvas.width + spawnBuffer;
+          enemy.y = cam.y + Math.random() * canvas.height;
+          break;
+        case 2:
+          enemy.x = cam.x + Math.random() * canvas.width;
+          enemy.y = cam.y - spawnBuffer;
+          break;
+        case 3:
+          enemy.x = cam.x + Math.random() * canvas.width;
+          enemy.y = cam.y + canvas.height + spawnBuffer;
+          break;
+      }
+      enemies.push(enemy);
+    }
+    
+    function spawnHugeGreenEnemy() {
+      const spawnBuffer = 50;
+      const cam = getCameraOffset();
+      const spawnSide = Math.floor(Math.random() * 4);
+      let enemy = {
+        radius: 100,
+        baseSpeed: 50,
+        baseHp: 5,
+        damage: 5,
+        color: '#0f0',
+        type: "hugeGreen"
+      };
+      const difficulty = 1 + gameTime / 120;
+      enemy.speed = enemy.baseSpeed * difficulty;
+      enemy.hp = enemy.baseHp * difficulty * 10;
+      enemy.damage = enemy.damage * 10;
+      switch(spawnSide) {
+        case 0:
+          enemy.x = cam.x - spawnBuffer;
+          enemy.y = cam.y + Math.random() * canvas.height;
+          break;
+        case 1:
+          enemy.x = cam.x + canvas.width + spawnBuffer;
+          enemy.y = cam.y + Math.random() * canvas.height;
+          break;
+        case 2:
+          enemy.x = cam.x + Math.random() * canvas.width;
+          enemy.y = cam.y - spawnBuffer;
+          break;
+        case 3:
+          enemy.x = cam.x + Math.random() * canvas.width;
+          enemy.y = cam.y + canvas.height + spawnBuffer;
+          break;
+      }
+      enemies.push(enemy);
+    }
+    
+    function collides(a, b) {
+      const dx = a.x - b.x, dy = a.y - b.y;
+      return Math.hypot(dx, dy) < (a.radius + b.radius);
+    }
+    
+    function autoFire(currentTime) {
+      if(isUpgrading || gameOver) return;
+      if(currentTime - player.lastBulletTime < player.bulletInterval) return;
+      player.lastBulletTime = currentTime;
+      
+      if(player.weapon === "nuclear") {
+        if(enemies.length === 0) return;
+        let nearest = enemies[0];
+        let minDist = Math.hypot(nearest.x - player.x, nearest.y - player.y);
+        enemies.forEach(enemy => {
+          const d = Math.hypot(enemy.x - player.x, enemy.y - player.y);
+          if(d < minDist){ minDist = d; nearest = enemy; }
+        });
+        const baseAngle = Math.atan2(nearest.y - player.y, nearest.x - player.x);
+        const speed = 600;
+        bullets.push({
+          x: player.x,
+          y: player.y,
+          vx: Math.cos(baseAngle) * speed,
+          vy: Math.sin(baseAngle) * speed,
+          damage: 9999,
+          radius: 50,
+          life: 1.5,
+          nuclear: true
+        });
+        player.weapon = "default";
+        return;
+      }
+      
+      if(player.weapon === "spiral") return;
+      
+      if(player.weapon === "siege") {
+        for(let i = 0; i < 5; i++){
+          bullets.push({
+            x: player.x,
+            y: player.y,
+            vx: 0,
+            vy: 0,
+            damage: player.damage,
+            radius: 4,
+            life: 15.0,
+            siege: true
+          });
+        }
+        return;
+      }
+      
+      if(enemies.length === 0) return;
+      let nearest = enemies[0];
+      let minDist = Math.hypot(nearest.x - player.x, nearest.y - player.y);
+      enemies.forEach(enemy => {
+        const d = Math.hypot(enemy.x - player.x, enemy.y - player.y);
+        if(d < minDist){ minDist = d; nearest = enemy; }
+      });
+      const baseAngle = Math.atan2(nearest.y - player.y, nearest.x - player.x);
+      const numBullets = player.bulletCount;
+      const spread = numBullets > 1 ? 15 * Math.PI / 180 : 0;
+      for(let i = 0; i < numBullets; i++){
+        const offset = numBullets > 1 ? spread * ((i / (numBullets - 1)) - 0.5) : 0;
+        const angle = baseAngle + offset;
+        const speed = 300;
+        bullets.push({
+          x: player.x,
+          y: player.y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          damage: player.damage,
+          radius: 4,
+          life: player.bulletLife
+        });
+      }
+    }
+    
+    function updateBullets(dt) {
+      for(let i = bullets.length - 1; i >= 0; i--){
+        let b = bullets[i];
+        if(!b.siege) {
+          b.x += b.vx * dt;
+          b.y += b.vy * dt;
+        }
+        b.life -= dt;
+        if(b.life <= 0) { bullets.splice(i, 1); continue; }
+        for(let j = enemies.length - 1; j >= 0; j--){
+          let enemy = enemies[j];
+          if(collides(b, enemy)){
+            if(b.nuclear) {
+              if(!b.hit) {
+                b.hit = true;
+                b.life = Math.max(b.life, 1.0);
+              }
+              spawnExpBall(enemy.x, enemy.y);
+              enemies.splice(j, 1);
+            } else if(b.siege) {
+              enemy.hp -= b.damage;
+              if(enemy.hp <= 0){
+                spawnExpBall(enemy.x, enemy.y);
+                enemies.splice(j, 1);
+              }
+            } else {
+              enemy.hp -= b.damage;
+              if(enemy.hp <= 0){
+                spawnExpBall(enemy.x, enemy.y);
+                enemies.splice(j, 1);
+              }
+              bullets.splice(i, 1);
+              break;
+            }
+          }
+        }
+      }
+    }
+    
+    function updateEnemyBullets(dt) {
+      for(let i = enemyBullets.length - 1; i >= 0; i--){
+        let b = enemyBullets[i];
+        b.x += b.vx * dt;
+        b.y += b.vy * dt;
+        b.life -= dt;
+        if(b.life <= 0) { enemyBullets.splice(i, 1); continue; }
+        if(collides(b, player)){
+          player.hp -= b.damage;
+          enemyBullets.splice(i, 1);
+          if(player.hp <= 0 && !gameOver){
+            triggerGameOver();
+          }
+        }
+      }
+    }
+    
+    function blueEnemyFire(enemy, dt) {
+      enemy.shootTimer += dt;
+      if(enemy.shootTimer >= enemy.shootInterval) {
+        enemy.shootTimer = 0;
+        const angle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+        const speed = 200;
+        enemyBullets.push({
+          x: enemy.x,
+          y: enemy.y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          damage: 3,
+          radius: 4,
+          life: 2.0,
+          color: '#0ff'
+        });
+      }
+    }
+    
+    let isMoving = false;
+    let targetPos = { x: player.x, y: player.y };
+    canvas.addEventListener('mousedown', (e) => {
+      isMoving = true;
+      const cam = getCameraOffset();
+      targetPos.x = e.offsetX + cam.x;
+      targetPos.y = e.offsetY + cam.y;
+    });
+    canvas.addEventListener('mousemove', (e) => {
+      if(isMoving){
+        const cam = getCameraOffset();
+        targetPos.x = e.offsetX + cam.x;
+        targetPos.y = e.offsetY + cam.y;
+      }
+    });
+    canvas.addEventListener('mouseup', () => { isMoving = false; });
+    canvas.addEventListener('mouseleave', () => { isMoving = false; });
+    
+    function renderSpiralEffect(cam) {
+      const numOrbit = 8;
+      const orbitRadius = player.radius + 50;
+      const angleOffset = Date.now() / 500;
+      for(let i = 0; i < numOrbit; i++){
+        const angle = angleOffset + (2 * Math.PI * i / numOrbit);
+        const bx = player.x + orbitRadius * Math.cos(angle);
+        const by = player.y + orbitRadius * Math.sin(angle);
+        ctx.fillStyle = "#ff0";
+        ctx.beginPath();
+        ctx.arc(bx - cam.x, by - cam.y, 6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    
+    function updateExpItems(dt) {
+      for(let i = expItems.length - 1; i >= 0; i--){
+        let expItem = expItems[i];
+        expItem.life -= dt;
+        if(expItem.life <= 0) {
+          expItems.splice(i, 1);
+          continue;
+        }
+        if(collides(player, expItem)){
+          player.exp += expItem.value;
+          expItems.splice(i, 1);
+        }
+      }
+    }
+    
+    function renderExpItems(cam) {
+      expItems.forEach(expItem => {
+        ctx.fillStyle = "#FFD700";
+        ctx.beginPath();
+        ctx.arc(expItem.x - cam.x, expItem.y - cam.y, expItem.radius, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+    
+    // 遊戲結束時，刪除該房間資料，並將存活時間寫入排行榜
+    function triggerGameOver() {
+      gameOver = true;
+      gameOverText.innerText = `遊戲結束！你存活了 ${gameTime.toFixed(1)} 秒。`;
+      gameOverOverlay.style.display = 'flex';
+      if (currentRoom) {
+        firebase.database().ref("rooms/" + currentRoom).remove();
+      }
+      // 將存活時間寫入排行榜
+      firebase.database().ref("leaderboard").push({
+        room: currentRoom || "未知",
+        gameTime: gameTime,
+        timestamp: Date.now()
+      });
+      clearInterval(updateInterval);
+    }
+    function restartGame() {
+      resetGame();
+      gameOverOverlay.style.display = 'none';
+      requestAnimationFrame(gameLoop);
+    }
+    window.restartGame = restartGame;
+    
+    function update(dt, currentTime) {
+      if(!gameStarted || isUpgrading || gameOver) return;
+      if(paused) return;
+      gameTime += dt;
+      
+      if(gameTime - lastHugeGreenSpawn >= 120) {
+        spawnHugeGreenEnemy();
+        lastHugeGreenSpawn = gameTime;
+      }
+      
+      player.hp = Math.min(player.maxHp, player.hp + 2 * dt);
+      
+      const spawnChance = 0.02 + gameTime * 0.0008;
+      if(Math.random() < spawnChance) spawnEnemy();
+      if(Math.random() < 0.005) spawnExpItem();
+      updateExpItems(dt);
+      
+      if(isMoving){
+        const dx = targetPos.x - player.x;
+        const dy = targetPos.y - player.y;
+        const dist = Math.hypot(dx, dy);
+        if(dist > 1){
+          player.x += (dx / dist) * player.speed * dt;
+          player.y += (dy / dist) * player.speed * dt;
+        }
+      }
+      
+      if(player.weapon === "spiral") {
+        player.orbitDuration -= dt;
+        if(player.orbitDuration <= 0) player.weapon = "default";
+      }
+      if(player.weapon === "siege") {
+        player.siegeDuration -= dt;
+        if(player.siegeDuration <= 0) player.weapon = "default";
+      }
+      
+      autoFire(currentTime);
+      updateBullets(dt);
+      
+      for(let i = enemies.length - 1; i >= 0; i--){
+        let enemy = enemies[i];
+        const dx = player.x - enemy.x;
+        const dy = player.y - enemy.y;
+        const dist = Math.hypot(dx, dy);
+        if(dist > 0){
+          enemy.x += (dx / dist) * enemy.speed * dt;
+          enemy.y += (dy / dist) * enemy.speed * dt;
+        }
+        if(enemy.type === "blue") {
+          blueEnemyFire(enemy, dt);
+        }
+        if(collides(player, enemy)){
+          player.hp -= enemy.damage;
+          spawnExpBall(enemy.x, enemy.y);
+          enemies.splice(i, 1);
+          if(player.hp <= 0 && !gameOver) triggerGameOver();
+        }
+      }
+      updateEnemyBullets(dt);
+      
+      if(player.weapon === "spiral" && player.orbitDuration > 0) {
+        const numOrbit = 8;
+        const orbitRadius = player.radius + 50;
+        const angleOffset = Date.now() / 500;
+        for(let i = enemies.length - 1; i >= 0; i--){
+          let enemy = enemies[i];
+          for(let j = 0; j < numOrbit; j++){
+            let angle = angleOffset + (2 * Math.PI * j / numOrbit);
+            let bx = player.x + orbitRadius * Math.cos(angle);
+            let by = player.y + orbitRadius * Math.sin(angle);
+            if(Math.hypot(enemy.x - bx, enemy.y - by) < (6 + enemy.radius)){
+              enemy.hp -= player.damage * 2;
+              break;
+            }
+          }
+          if(enemy.hp <= 0) {
+            spawnExpBall(enemy.x, enemy.y);
+            enemies.splice(i, 1);
+          }
+        }
+      }
+      
+      for(let i = enemies.length - 1; i >= 0; i--){
+        let enemy = enemies[i];
+        if(!enemy || enemy.type !== "purple") continue;
+        for(let j = enemies.length - 1; j >= 0; j--){
+          if(i === j) continue;
+          let other = enemies[j];
+          if(other && other.type && other.type !== "purple" && collides(enemy, other)){
+            enemy.hp += 10;
+            enemy.speed += 20;
+            let difficulty = 1 + gameTime / 120;
+            let blueEnemySpeed = 50 * difficulty * 1.2;
+            let maxPurpleSpeed = 3 * blueEnemySpeed;
+            enemy.speed = Math.min(enemy.speed, maxPurpleSpeed);
+            enemies.splice(j, 1);
+          }
+        }
+      }
+      
+      checkLevelUp();
+    }
+    
+    function render() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const cam = getCameraOffset();
+      ctx.fillStyle = player.color;
+      ctx.beginPath();
+      ctx.arc(player.x - cam.x, player.y - cam.y, player.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#fff";
+      ctx.font = "14px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(`HP: ${Math.floor(player.hp)}`, canvas.width / 2, canvas.height / 2 - player.radius - 10);
+      let expPercent = Math.floor((player.exp / player.expToLevel) * 100);
+      ctx.fillText(`EXP: ${expPercent}%`, canvas.width / 2, canvas.height / 2 + player.radius + 20);
+      
+      enemies.forEach(enemy => {
+        ctx.fillStyle = enemy.color;
+        ctx.beginPath();
+        ctx.arc(enemy.x - cam.x, enemy.y - cam.y, enemy.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#fff";
+        ctx.font = "12px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(`${Math.floor(enemy.hp)}`, enemy.x - cam.x, enemy.y - cam.y - enemy.radius - 15);
+      });
+      
+      bullets.forEach(b => {
+        ctx.fillStyle = b.siege ? "#f00" : "#ff0";
+        ctx.beginPath();
+        ctx.arc(b.x - cam.x, b.y - cam.y, b.radius, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      enemyBullets.forEach(b => {
+        ctx.fillStyle = b.color || "#0ff";
+        ctx.beginPath();
+        ctx.arc(b.x - cam.x, b.y - cam.y, b.radius, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      
+      renderExpItems(cam);
+      
+      if(player.weapon === "spiral" && player.orbitDuration > 0) {
+        renderSpiralEffect(cam);
+      }
+      
+      ctx.fillStyle = "#fff";
+      ctx.font = "16px sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText(`時間: ${gameTime.toFixed(1)}秒`, 10, 20);
+      
+      // 尚未開始遊戲時，提示文字上移 200px（即 canvas.height/2 - 300）
+      if(!gameStarted) {
+        ctx.fillStyle = "rgba(0,0,0,0.5)";
+        ctx.fillRect(0,0,canvas.width,canvas.height);
+        ctx.fillStyle = "#fff";
+        ctx.font = "24px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("請輸入房間名稱以開始遊戲", canvas.width/2, canvas.height/2 - 300);
+      }
+    }
+    
+    function gameLoop(timestamp) {
+      if(gameOver) return;
+      if(paused) { lastTime = timestamp; requestAnimationFrame(gameLoop); return; }
+      if(!lastTime) lastTime = timestamp;
+      deltaTime = (timestamp - lastTime) / 1000;
+      lastTime = timestamp;
+      if(gameStarted) {
+        update(deltaTime, timestamp);
+      }
+      render();
+      requestAnimationFrame(gameLoop);
+    }
+    
+    function resetGame() {
+      player.x = 0;
+      player.y = 0;
+      player.hp = player.maxHp;
+      player.level = 1;
+      player.exp = 0;
+      player.expToLevel = 100;
+      player.upgradePoints = 0;
+      player.damage = 5;
+      player.speed = 150;
+      player.bulletInterval = 300;
+      player.bulletLife = 1.0;
+      player.weapon = "default";
+      player.orbitDuration = 0;
+      player.bulletCount = 1;
+      player.siegeDuration = 0;
+      enemies.length = 0;
+      bullets.length = 0;
+      enemyBullets.length = 0;
+      expItems.length = 0;
+      gameTime = 0;
+      lastHugeGreenSpawn = 0;
+      isUpgrading = false;
+      gameOver = false;
+      hideUpgradeOptions();
+      gameOverOverlay.style.display = 'none';
+    }
+    
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>
