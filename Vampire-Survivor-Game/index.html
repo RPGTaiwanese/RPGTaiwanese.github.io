@@ -19,22 +19,12 @@
       left: 0;
       z-index: 1;
     }
-    /* 固定在左上角顯示角色資料 */
-    #playerInfo {
-      position: fixed;
-      top: 100px;
-      left: 10px;
-      z-index: 999;
-      color: #fff;
-      background: rgba(0, 0, 0, 0.5);
-      padding: 10px;
-      border-radius: 5px;
-      font-size: 14px;
-    }
+    /* 原先的角色資料 UI 已移除，以便在 canvas 上繪製新的 UI */
+    
     /* 原有 UI：提示文字位置下移50px */
     #ui {
       position: absolute; 
-      top: 60px; 
+      top: 40px; 
       left: 10px; 
       z-index: 10;
       pointer-events: none;
@@ -106,7 +96,6 @@
       max-height: 150px;
       overflow-y: auto;
       color: #fff;
-      /* 移除 transform 效果 */
     }
     #roomList h3 { margin: 0 0 5px; font-size: 18px; }
     #roomList ul { list-style: none; padding: 0; margin: 0; }
@@ -158,8 +147,7 @@
 <body>
   <canvas id="gameCanvas"></canvas>
   
-  <!-- 角色資料區 (開始遊戲後顯示) -->
-  <div id="playerInfo"></div>
+  <!-- 原本的玩家角色資料 UI 已移除 -->
   
   <div id="ui">
     <p>提示：按住滑鼠左鍵拖動移動，或使用鍵盤方向鍵移動，系統自動發射彈幕攻擊最近的敵人。</p>
@@ -174,7 +162,6 @@
     <button onclick="applyUpgrade('speed')">速度升級（+20移動速度）</button>
     <button onclick="applyUpgrade('spiral')">使用技能 螺旋彈幕（持續10秒）</button>
     <button onclick="applyUpgrade('nuclear')">使用技能 核彈彈幕</button>
-    <!-- 新增的彈射彈幕按鈕 -->
     <button onclick="applyUpgrade('bounce')">使用技能 彈射彈幕（持續10秒）</button>
     <button onclick="applyUpgrade('siege')">使用技能 圍城彈幕（持續15秒）</button>
     <button onclick="applyUpgrade('recycleExp')">回收經驗值（吸取座標附近的經驗球）</button>
@@ -244,7 +231,6 @@
     const roomDisplay = document.getElementById("roomDisplay");
     const roomDisplayContent = document.getElementById("roomDisplayContent");
     const closeRoomDisplay = document.getElementById("closeRoomDisplay");
-    const playerInfoDiv = document.getElementById("playerInfo");
     
     // 開始遊戲函式
     function startGame(roomName) {
@@ -273,23 +259,43 @@
       startGame(roomName);
     });
     
-    // 監聽 rooms 節點，超過30秒未更新自動刪除
+    // 定義集合相等比較函式
+    function setEquals(a, b) {
+      if (a.size !== b.size) return false;
+      for (let item of a) {
+        if (!b.has(item)) return false;
+      }
+      return true;
+    }
+    
+    // 儲存上一輪的房間名稱集合，避免無變化時重渲染
+    let previousRoomNames = new Set();
+    
+    // 監聽 rooms 節點，過濾重複名稱並只在資料有變化時更新 DOM
     firebase.database().ref('rooms/').on('value', (snapshot) => {
       const rooms = snapshot.val();
-      roomListItems.innerHTML = "";
       const now = Date.now();
+      const uniqueRooms = new Set();
       for (let room in rooms) {
         if (rooms[room].timestamp && (now - rooms[room].timestamp) > 30000) {
           firebase.database().ref('rooms/' + room).remove();
           continue;
         }
+        uniqueRooms.add(room);
+      }
+      if (setEquals(uniqueRooms, previousRoomNames)) {
+        return; // 若房間名稱無變化則不更新
+      }
+      previousRoomNames = uniqueRooms;
+      roomListItems.innerHTML = "";
+      uniqueRooms.forEach(roomName => {
         const li = document.createElement("li");
-        li.textContent = room;
+        li.textContent = roomName;
         li.addEventListener("pointerdown", () => {
-          showRoom(room);
+          showRoom(roomName);
         });
         roomListItems.appendChild(li);
-      }
+      });
     });
     
     // 監聽 leaderboard
@@ -1149,19 +1155,25 @@
       ctx.textAlign = "left";
       ctx.fillText(`時間: ${gameTime.toFixed(1)}秒`, 10, 20);
       
-      // 更新左上角角色資料
+      // 將玩家角色資料 UI 繪製在 canvas 上，原先起始位置 infoY 為40，現加上50px向下位移
       if(gameStarted) {
-        playerInfoDiv.innerHTML = `
-          <div>lv.: ${player.level}</div>
-          <div>攻擊力: ${player.damage}</div>
-          <div>距離: ${player.bulletLife.toFixed(1)}</div>
-          <div>彈幕數: ${player.bulletCount}</div>
-          <div>發射頻率: ${player.bulletInterval}ms</div>
-          <div>HP上限: ${player.maxHp}</div>
-          <div>速度: ${player.speed}</div>
-        `;
-      } else {
-        playerInfoDiv.innerHTML = "";
+         ctx.fillStyle = "#fff";
+         ctx.font = "14px sans-serif";
+         ctx.textAlign = "left";
+         let infoX = 10, infoY = 40 + 50; // 向下偏移50px
+         ctx.fillText(`lv.: ${player.level}`, infoX, infoY);
+         infoY += 20;
+         ctx.fillText(`攻擊力: ${player.damage}`, infoX, infoY);
+         infoY += 20;
+         ctx.fillText(`距離: ${player.bulletLife.toFixed(1)}`, infoX, infoY);
+         infoY += 20;
+         ctx.fillText(`彈幕數: ${player.bulletCount}`, infoX, infoY);
+         infoY += 20;
+         ctx.fillText(`發射頻率: ${player.bulletInterval}ms`, infoX, infoY);
+         infoY += 20;
+         ctx.fillText(`HP上限: ${player.maxHp}`, infoX, infoY);
+         infoY += 20;
+         ctx.fillText(`速度: ${player.speed}`, infoX, infoY);
       }
     }
     
