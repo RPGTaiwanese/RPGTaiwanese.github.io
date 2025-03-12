@@ -78,7 +78,7 @@
       font-size: 16px;
       margin-top: 10px;
     }
-    /* 將「快速開始」按鈕放在「開始遊戲」旁邊 */
+    /* 將「快速開始」按紐放在「開始遊戲」旁邊 */
     #roomSelection .btn-group {
       display: flex;
       gap: 10px;
@@ -118,7 +118,7 @@
     }
     #roomDisplay h3 { color: #fff; }
     #roomDisplay img { max-width: 100%; max-height: 90vh; display: block; margin: 0 auto; }
-    /* 將關閉按鈕放在房間觀看區上方中間 */
+    /* 將關閉按紐放在房間觀看區上方中間 */
     #closeRoomDisplay {
       position: absolute;
       top: 10px;
@@ -147,7 +147,7 @@
 <body>
   <canvas id="gameCanvas"></canvas>
   
-  <!-- 原本的玩家角色資料 UI 已移除 -->
+  <!-- 原先的玩家角色資料 UI 已移除 -->
   
   <div id="ui">
     <p>提示：按住滑鼠左鍵拖動移動，或使用鍵盤方向鍵移動，系統自動發射彈幕攻擊最近的敵人。</p>
@@ -157,7 +157,8 @@
     <button onclick="applyUpgrade('attack')">攻擊力升級（+1）</button>
     <button onclick="applyUpgrade('range')">距離升級（+0.2秒）</button>
     <button onclick="applyUpgrade('bullet')">彈幕數量升級（+1）</button>
-    <button onclick="applyUpgrade('frequency')">發射頻率升級（-50ms）</button>
+    <!-- 修改發射頻率按紐，加上 id 並調整最低值為50ms -->
+    <button id="btnFrequency" onclick="applyUpgrade('frequency')">發射頻率升級（-50ms）</button>
     <button onclick="applyUpgrade('hp')">HP升級（+30最大HP及回復HP）</button>
     <button onclick="applyUpgrade('speed')">速度升級（+20移動速度）</button>
     <button onclick="applyUpgrade('spiral')">使用技能 螺旋彈幕（持續10秒）</button>
@@ -241,7 +242,7 @@
       updateInterval = setInterval(updateRoomData, 60);
     }
     
-    // 開始遊戲按鈕
+    // 開始遊戲按紐
     startButton.addEventListener("click", () => {
       const roomName = roomInput.value.trim();
       if (roomName === "") {
@@ -251,7 +252,7 @@
       startGame(roomName);
     });
     
-    // 快速開始按鈕，產生隨機遊客名稱
+    // 快速開始按紐，產生隨機遊客名稱
     quickStartButton.addEventListener("click", () => {
       const randomNumber = Math.floor(Math.random() * 90000) + 10000;
       const roomName = "遊客" + randomNumber;
@@ -314,7 +315,7 @@
       });
     });
     
-    // 房間觀看：若資料存在則顯示截圖與存活時間，關閉按鈕位於上方中間
+    // 房間觀看：若資料存在則顯示截圖與存活時間，關閉按紐位於上方中間
     function showRoom(roomName) {
       if (currentRoomDisplayRef) {
         currentRoomDisplayRef.off();
@@ -489,9 +490,14 @@
     const enemies = [];
     const enemyBullets = [];
     
+    // 顯示升級選項，並根據發射頻率更新頻率按鈕 disabled 狀態
     function showUpgradeOptions() {
       isUpgrading = true;
       currentUpgrade = null;
+      var btnFrequency = document.getElementById("btnFrequency");
+      if(btnFrequency) {
+         btnFrequency.disabled = (player.bulletInterval <= 50);
+      }
       upgradeOverlay.style.display = 'flex';
     }
     function applyUpgrade(option) {
@@ -502,7 +508,10 @@
       } else if(option === 'bullet'){
         player.bulletCount++;
       } else if(option === 'frequency'){
-        player.bulletInterval = Math.max(100, player.bulletInterval - 50);
+        // 發射頻率最低為 50ms
+        if(player.bulletInterval > 50) {
+          player.bulletInterval = Math.max(50, player.bulletInterval - 50);
+        }
       } else if(option === 'hp'){
         player.maxHp += 30;
         player.hp = player.maxHp;
@@ -1198,6 +1207,7 @@
       requestAnimationFrame(gameLoop);
     }
     
+    // 當重新開始遊戲時，重置 (攻擊力、距離、彈幕數、發射頻率、HP上限、速度)
     function resetGame() {
       player.x = 0;
       player.y = 0;
@@ -1216,6 +1226,8 @@
       player.siegeDuration = 0;
       player.recycleExpTimer = 0;
       player.bounceDuration = 0;
+      // 重置 HP 上限為預設值
+      player.maxHp = 100;
       enemies.length = 0;
       bullets.length = 0;
       enemyBullets.length = 0;
