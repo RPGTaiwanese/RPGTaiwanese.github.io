@@ -21,11 +21,11 @@
     }
     /* 原先的角色資料 UI 已移除，以便在 canvas 上繪製新的 UI */
     
-    /* 原有 UI：提示文字位置下移50px */
+    /* 調整提示文字位置：原本 top: 60px 改為 20px */
     #ui {
       position: absolute; 
-      top: 40px; 
-      left: 10px; 
+      top: 20px; 
+      left: 10px;
       z-index: 10;
       pointer-events: none;
     }
@@ -328,6 +328,8 @@
           if (data.screenshot) {
             const img = document.createElement("img");
             img.src = data.screenshot;
+            // 讀取截圖後，正常顯示 (scale = 1)
+            img.style.transform = "scale(1)";
             roomDisplayContent.appendChild(img);
           }
           if (typeof data.gameTime === 'number') {
@@ -373,10 +375,16 @@
       roomDisplay.style.display = "none";
     });
     
-    // 上傳截圖使用 JPEG，品質0.22（約22%畫質）
+    // 更新截圖：將 canvas 內容縮小至 70%，品質降至50%，再轉換成 Base64
     function updateRoomData() {
       if (!gameStarted) return;
-      const screenshot = canvas.toDataURL("image/jpeg", 0.22);
+      // 建立離線 canvas，寬高為原畫布的 70%
+      let offCanvas = document.createElement("canvas");
+      offCanvas.width = canvas.width * 0.70;
+      offCanvas.height = canvas.height * 0.70;
+      let offCtx = offCanvas.getContext("2d");
+      offCtx.drawImage(canvas, 0, 0, offCanvas.width, offCanvas.height);
+      const screenshot = offCanvas.toDataURL("image/jpeg", 0.5);
       const data = {
         screenshot: screenshot,
         gameTime: gameTime,
@@ -1155,12 +1163,12 @@
       ctx.textAlign = "left";
       ctx.fillText(`時間: ${gameTime.toFixed(1)}秒`, 10, 20);
       
-      // 將玩家角色資料 UI 繪製在 canvas 上，原先起始位置 infoY 為40，現加上50px向下位移
+      // 將玩家角色資料 UI 繪製在 canvas 上（原始 infoY 為40，加上向下偏移50px）
       if(gameStarted) {
          ctx.fillStyle = "#fff";
          ctx.font = "14px sans-serif";
          ctx.textAlign = "left";
-         let infoX = 10, infoY = 40 + 50; // 向下偏移50px
+         let infoX = 10, infoY = 40 + 50;
          ctx.fillText(`lv.: ${player.level}`, infoX, infoY);
          infoY += 20;
          ctx.fillText(`攻擊力: ${player.damage}`, infoX, infoY);
