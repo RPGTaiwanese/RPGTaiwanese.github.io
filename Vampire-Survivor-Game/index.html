@@ -190,6 +190,7 @@
            <button onclick="applyUpgrade('range')">距離升級</button>
            <button id="btnFrequency" onclick="applyUpgrade('frequency')">發射頻率升級</button>
            <button onclick="applyUpgrade('hp')">HP升級</button>
+           <button onclick="applyUpgrade('speed')">速度上升</button>
         </div>
       </div>
       <div class="upgrade-group">
@@ -563,6 +564,8 @@
       } else if(option === 'hp'){
         player.maxHp += 30;
         player.hp = player.maxHp;
+      } else if(option === 'speed'){
+        player.speed += 50;
       } else if(option === 'spiral'){
         // 升級螺旋彈幕：攻擊力+1、持續時間+1、等級+1
         player.spiralSkillLevel++;
