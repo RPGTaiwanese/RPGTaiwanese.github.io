@@ -10,7 +10,7 @@
       background: #111; 
       overflow: hidden; 
       font-family: sans-serif; 
-      touch-action: none; /* 禁用默認觸控行為 */
+      touch-action: none;
     }
     canvas { 
       display: block; 
@@ -19,9 +19,6 @@
       left: 0;
       z-index: 1;
     }
-    /* 原先的角色資料 UI 已移除，以便在 canvas 上繪製新的 UI */
-    
-    /* 調整提示文字位置：原本 top: 60px 改為 20px */
     #ui {
       position: absolute; 
       top: 20px; 
@@ -58,7 +55,6 @@
       z-index: 30;
       text-align: center;
     }
-    /* 將標題改為"輸入名子開始遊戲"，文字顏色白色 */
     #roomSelection h2 {
       color: white;
       margin: 0 0 10px;
@@ -72,19 +68,17 @@
     #roomSelection input::-webkit-input-placeholder {
       color: #888;
     }
-    /* 輸入框內文字直接設定 placeholder 為 "輸入你的玩家名稱" */
     #roomSelection button {
       padding: 10px 20px;
       font-size: 16px;
       margin-top: 10px;
     }
-    /* 將「快速開始」按紐放在「開始遊戲」旁邊 */
     #roomSelection .btn-group {
       display: flex;
       gap: 10px;
       justify-content: center;
     }
-    /* 房間列表 (大小回復為1.0) */
+    /* 房間列表 */
     #roomList {
       position: fixed;
       bottom: 10px;
@@ -118,7 +112,6 @@
     }
     #roomDisplay h3 { color: #fff; }
     #roomDisplay img { max-width: 100%; max-height: 90vh; display: block; margin: 0 auto; }
-    /* 將關閉按紐放在房間觀看區上方中間 */
     #closeRoomDisplay {
       position: absolute;
       top: 10px;
@@ -147,8 +140,6 @@
 <body>
   <canvas id="gameCanvas"></canvas>
   
-  <!-- 原先的玩家角色資料 UI 已移除 -->
-  
   <div id="ui">
     <p>提示：按住滑鼠左鍵拖動移動，或使用鍵盤方向鍵移動，系統自動發射彈幕攻擊最近的敵人。</p>
   </div>
@@ -157,7 +148,6 @@
     <button onclick="applyUpgrade('attack')">攻擊力升級（+1）</button>
     <button onclick="applyUpgrade('range')">距離升級（+0.2秒）</button>
     <button onclick="applyUpgrade('bullet')">彈幕數量升級（+1）</button>
-    <!-- 修改發射頻率按紐，加上 id 並調整最低值為50ms -->
     <button id="btnFrequency" onclick="applyUpgrade('frequency')">發射頻率升級（-50ms）</button>
     <button onclick="applyUpgrade('hp')">HP升級（+30最大HP及回復HP）</button>
     <button onclick="applyUpgrade('speed')">速度升級（+20移動速度）</button>
@@ -285,7 +275,7 @@
         uniqueRooms.add(room);
       }
       if (setEquals(uniqueRooms, previousRoomNames)) {
-        return; // 若房間名稱無變化則不更新
+        return;
       }
       previousRoomNames = uniqueRooms;
       roomListItems.innerHTML = "";
@@ -315,12 +305,14 @@
       });
     });
     
-    // 房間觀看：若資料存在則顯示截圖與存活時間，關閉按紐位於上方中間
+    // 房間觀看：點選房間列表時，除了顯示資料外，同時在該房間加入 audience 狀態
     function showRoom(roomName) {
       if (currentRoomDisplayRef) {
         currentRoomDisplayRef.off();
       }
       roomDisplayContent.innerHTML = "<h3>" + roomName + "</h3>";
+      // 加入 audience 狀態
+      firebase.database().ref("rooms/" + roomName).update({audience: true});
       currentRoomDisplayRef = firebase.database().ref("rooms/" + roomName);
       currentRoomDisplayRef.on("value", (snapshot) => {
         const data = snapshot.val();
@@ -329,7 +321,6 @@
           if (data.screenshot) {
             const img = document.createElement("img");
             img.src = data.screenshot;
-            // 讀取截圖後，正常顯示 (scale = 1)
             img.style.transform = "scale(1)";
             roomDisplayContent.appendChild(img);
           }
@@ -376,24 +367,28 @@
       roomDisplay.style.display = "none";
     });
     
-    // 更新截圖：將 canvas 內容縮小至 70%，品質降至50%，再轉換成 Base64
+    // 更新截圖及其他資料：只有當房間已有 audience 狀態時，才更新 screenshot 資料
     function updateRoomData() {
       if (!gameStarted) return;
-      // 建立離線 canvas，寬高為原畫布的 70%
       let offCanvas = document.createElement("canvas");
       offCanvas.width = canvas.width * 0.70;
       offCanvas.height = canvas.height * 0.70;
       let offCtx = offCanvas.getContext("2d");
       offCtx.drawImage(canvas, 0, 0, offCanvas.width, offCanvas.height);
       const screenshot = offCanvas.toDataURL("image/jpeg", 0.5);
-      const data = {
-        screenshot: screenshot,
+      const newData = {
         gameTime: gameTime,
         timestamp: Date.now(),
         upgradeActive: isUpgrading,
         upgradeSelected: currentUpgrade
       };
-      firebase.database().ref("rooms/" + currentRoom).set(data);
+      firebase.database().ref("rooms/" + currentRoom).once("value").then((snapshot) => {
+        const roomData = snapshot.val() || {};
+        if(roomData.audience) {
+          newData.screenshot = screenshot;
+        }
+        firebase.database().ref("rooms/" + currentRoom).update(newData);
+      });
     }
     
     window.addEventListener("beforeunload", () => {
@@ -414,12 +409,6 @@
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
     
-    /* 調整顏色使之更柔和：
-       玩家：#ff9999
-       普通敵人：#ccffcc
-       藍色敵人：#99ccff
-       紫色敵人：#d1b3ff
-    */
     const ui = document.getElementById('ui');
     const upgradeOverlay = document.getElementById('upgradeOverlay');
     const gameOverOverlay = document.getElementById('gameOverOverlay');
@@ -442,7 +431,6 @@
       }
     });
     
-    // 鍵盤控制變數，重新命名為 activeKeys 避免衝突
     const activeKeys = {};
     window.addEventListener("keydown", (e) => {
       activeKeys[e.key] = true;
@@ -490,7 +478,6 @@
     const enemies = [];
     const enemyBullets = [];
     
-    // 顯示升級選項，並根據發射頻率更新頻率按鈕 disabled 狀態
     function showUpgradeOptions() {
       isUpgrading = true;
       currentUpgrade = null;
@@ -508,7 +495,6 @@
       } else if(option === 'bullet'){
         player.bulletCount++;
       } else if(option === 'frequency'){
-        // 發射頻率最低為 50ms
         if(player.bulletInterval > 50) {
           player.bulletInterval = Math.max(50, player.bulletInterval - 50);
         }
@@ -929,7 +915,6 @@
       }
     }
     
-    // 更新回收經驗效果：經驗球持續以300像素/秒向玩家移動，持續10秒
     function updateRecycleExp(dt) {
       if(player.recycleExpTimer > 0) {
         player.recycleExpTimer -= dt;
@@ -1018,7 +1003,6 @@
       updateExpItems(dt);
       updateRecycleExp(dt);
       
-      // 鍵盤移動優先於滑鼠移動
       let keyboardMoved = false;
       let dx = 0, dy = 0;
       if(activeKeys["ArrowUp"]) { dy -= 1; keyboardMoved = true; }
@@ -1172,12 +1156,11 @@
       ctx.textAlign = "left";
       ctx.fillText(`時間: ${gameTime.toFixed(1)}秒`, 10, 20);
       
-      // 將玩家角色資料 UI 繪製在 canvas 上（原始 infoY 為40，加上向下偏移50px）
       if(gameStarted) {
          ctx.fillStyle = "#fff";
          ctx.font = "14px sans-serif";
          ctx.textAlign = "left";
-         let infoX = 10, infoY = 40 + 50;
+         let infoX = 10, infoY = 90;
          ctx.fillText(`lv.: ${player.level}`, infoX, infoY);
          infoY += 20;
          ctx.fillText(`攻擊力: ${player.damage}`, infoX, infoY);
@@ -1207,7 +1190,6 @@
       requestAnimationFrame(gameLoop);
     }
     
-    // 當重新開始遊戲時，重置 (攻擊力、距離、彈幕數、發射頻率、HP上限、速度)
     function resetGame() {
       player.x = 0;
       player.y = 0;
@@ -1226,7 +1208,6 @@
       player.siegeDuration = 0;
       player.recycleExpTimer = 0;
       player.bounceDuration = 0;
-      // 重置 HP 上限為預設值
       player.maxHp = 100;
       enemies.length = 0;
       bullets.length = 0;
