@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
-  <title>血族倖存者：夜影城 - 無限地圖自動彈幕版</title>
+  <title>血族倖存者：場外城</title>
   <style>
     html, body { 
       margin: 0; 
@@ -27,18 +27,53 @@
       pointer-events: none;
     }
     #ui p { margin: 5px; color: #fff; }
-    #upgradeOverlay, #gameOverOverlay {
+    
+    /* 修改後的升級介面 CSS：垂直排列、2列，文字與按鈕尺寸較大 */
+    #upgradeOverlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%;
+      height: 100%; background: rgba(0,0,0,0.8);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 20;
+    }
+    .upgrade-container {
+      display: flex;
+      flex-direction: row;
+      gap: 50px;
+    }
+    .upgrade-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .upgrade-group h3 {
+      color: white;
+      font-size: 32px;
+      margin-bottom: 20px;
+    }
+    .upgrade-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    .upgrade-buttons button {
+      padding: 15px 30px;
+      font-size: 20px;
+      pointer-events: auto;
+    }
+    
+    /* 遊戲結束畫面 */
+    #gameOverOverlay {
       position: absolute; 
       top: 0; left: 0; width: 100%;
       height: 100%; background: rgba(0,0,0,0.8);
       display: none; justify-content: center; align-items: center;
       flex-direction: column; z-index: 20;
     }
-    #upgradeOverlay button, #gameOverOverlay button {
+    #gameOverOverlay button {
       margin: 10px; padding: 10px 20px; font-size: 16px;
-    }
-    #upgradeOverlay p {
-      color: white; font-size: 24px; font-weight: bold;
     }
     #gameOverText {
       color: #fff; font-size: 32px; font-weight: bold; text-align: center;
@@ -143,20 +178,33 @@
   <div id="ui">
     <p>提示：按住滑鼠左鍵拖動移動，或使用鍵盤方向鍵移動，系統自動發射彈幕攻擊最近的敵人。</p>
   </div>
+  
+  <!-- 修改後的升級介面：垂直排列、2列 -->
   <div id="upgradeOverlay">
-    <p>升級選項！請選擇一項：</p>
-    <button onclick="applyUpgrade('attack')">攻擊力升級（+1）</button>
-    <button onclick="applyUpgrade('range')">距離升級（+0.2秒）</button>
-    <button onclick="applyUpgrade('bullet')">彈幕數量升級（+1）</button>
-    <button id="btnFrequency" onclick="applyUpgrade('frequency')">發射頻率升級（-50ms）</button>
-    <button onclick="applyUpgrade('hp')">HP升級（+30最大HP及回復HP）</button>
-    <button onclick="applyUpgrade('speed')">速度升級（+20移動速度）</button>
-    <button onclick="applyUpgrade('spiral')">使用技能 螺旋彈幕（持續10秒）</button>
-    <button onclick="applyUpgrade('nuclear')">使用技能 核彈彈幕</button>
-    <button onclick="applyUpgrade('bounce')">使用技能 彈射彈幕（持續10秒）</button>
-    <button onclick="applyUpgrade('siege')">使用技能 圍城彈幕（持續15秒）</button>
-    <button onclick="applyUpgrade('recycleExp')">回收經驗值（吸取座標附近的經驗球）</button>
+    <div class="upgrade-container">
+      <div class="upgrade-group">
+        <h3>提升能力值</h3>
+        <div class="upgrade-buttons">
+           <button onclick="applyUpgrade('attack')">攻擊力升級</button>
+           <button onclick="applyUpgrade('bullet')">彈幕數量升級</button>
+           <button onclick="applyUpgrade('range')">距離升級</button>
+           <button id="btnFrequency" onclick="applyUpgrade('frequency')">發射頻率升級</button>
+           <button onclick="applyUpgrade('hp')">HP升級</button>
+        </div>
+      </div>
+      <div class="upgrade-group">
+        <h3>升級技能(使用)</h3>
+        <div class="upgrade-buttons">
+           <button onclick="applyUpgrade('spiral')">螺旋彈幕</button>
+           <button onclick="applyUpgrade('nuclear')">核彈彈幕</button>
+           <button onclick="applyUpgrade('bounce')">彈射彈幕</button>
+           <button onclick="applyUpgrade('siege')">圍城彈幕</button>
+           <button onclick="applyUpgrade('recycleExp')">收回經驗值</button>
+        </div>
+      </div>
+    </div>
   </div>
+  
   <div id="gameOverOverlay">
     <p id="gameOverText"></p>
     <button onclick="restartGame()">重新開始遊戲</button>
@@ -450,6 +498,7 @@
       });
     }
     
+    // 修改：新增技能屬性至 player 物件
     const player = {
       x: 0,
       y: 0,
@@ -471,7 +520,20 @@
       bulletCount: 1,
       siegeDuration: 0,
       recycleExpTimer: 0,
-      bounceDuration: 0
+      bounceDuration: 0,
+      // 新增技能資料（初始等級及數值）
+      bounceSkillLevel: 1,
+      bounceSkillAttack: 1,
+      bounceSkillDuration: 10,
+      spiralSkillLevel: 1,
+      spiralSkillAttack: 1,
+      spiralSkillDuration: 10,
+      nuclearSkillLevel: 1,
+      nuclearSkillAttack: 1,
+      nuclearSkillDuration: 1,
+      siegeSkillLevel: 1,
+      siegeSkillAttack: 1,
+      siegeSkillDuration: 15
     };
     
     const bullets = [];
@@ -501,19 +563,33 @@
       } else if(option === 'hp'){
         player.maxHp += 30;
         player.hp = player.maxHp;
-      } else if(option === 'speed'){
-        player.speed += 20;
       } else if(option === 'spiral'){
+        // 升級螺旋彈幕：攻擊力+1、持續時間+1、等級+1
+        player.spiralSkillLevel++;
+        player.spiralSkillAttack++;
+        player.spiralSkillDuration++;
         player.weapon = "spiral";
-        player.orbitDuration = 10.0;
+        player.orbitDuration = player.spiralSkillDuration;
       } else if(option === 'nuclear'){
+        // 升級核彈彈幕
+        player.nuclearSkillLevel++;
+        player.nuclearSkillAttack++;
+        player.nuclearSkillDuration++;
         player.weapon = "nuclear";
       } else if(option === 'siege'){
+        // 升級圍城彈幕
+        player.siegeSkillLevel++;
+        player.siegeSkillAttack++;
+        player.siegeSkillDuration++;
         player.weapon = "siege";
-        player.siegeDuration = 15.0;
+        player.siegeDuration = player.siegeSkillDuration;
       } else if(option === 'bounce'){
+        // 升級彈射彈幕
+        player.bounceSkillLevel++;
+        player.bounceSkillAttack++;
+        player.bounceSkillDuration++;
         player.weapon = "bounce";
-        player.bounceDuration = 10.0;
+        player.bounceDuration = player.bounceSkillDuration;
       } else if(option === 'recycleExp'){
         player.recycleExpTimer = 10;
       }
@@ -1174,6 +1250,16 @@
          ctx.fillText(`HP上限: ${player.maxHp}`, infoX, infoY);
          infoY += 20;
          ctx.fillText(`速度: ${player.speed}`, infoX, infoY);
+         infoY += 20;
+         // 顯示技能等級
+         ctx.fillText(`彈射彈幕 LV.: ${player.bounceSkillLevel}`, infoX, infoY);
+         infoY += 20;
+         ctx.fillText(`螺旋彈幕 LV.: ${player.spiralSkillLevel}`, infoX, infoY);
+         infoY += 20;
+         ctx.fillText(`核彈彈幕 LV.: ${player.nuclearSkillLevel}`, infoX, infoY);
+         infoY += 20;
+         ctx.fillText(`圍城彈幕 LV.: ${player.siegeSkillLevel}`, infoX, infoY);
+         infoY += 20;
       }
     }
     
@@ -1219,6 +1305,20 @@
       gameOver = false;
       hideUpgradeOptions();
       gameOverOverlay.style.display = 'none';
+      
+      // 重置技能數據
+      player.bounceSkillLevel = 1;
+      player.bounceSkillAttack = 1;
+      player.bounceSkillDuration = 10;
+      player.spiralSkillLevel = 1;
+      player.spiralSkillAttack = 1;
+      player.spiralSkillDuration = 10;
+      player.nuclearSkillLevel = 1;
+      player.nuclearSkillAttack = 1;
+      player.nuclearSkillDuration = 1;
+      player.siegeSkillLevel = 1;
+      player.siegeSkillAttack = 1;
+      player.siegeSkillDuration = 15;
     }
     
     requestAnimationFrame(gameLoop);
