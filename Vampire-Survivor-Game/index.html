@@ -460,6 +460,7 @@
     let updateInterval;
     let currentUpgrade = null;
     let currentRoomDisplayRef = null;
+    let dbState = null;  // 全域變數，用來存放從 Realtime Database 讀取的最新數值資料
     
     const roomSelectionDiv = document.getElementById("roomSelection");
     const roomInput = document.getElementById("roomInput");
@@ -476,6 +477,34 @@
       gameStarted = true;
       roomSelectionDiv.style.display = "none";
       document.getElementById("logoContainer").style.display = "none";
+      
+      // 初始化玩家數值（上傳到 Realtime Database 進行雲端計算）
+      firebase.database().ref("rooms/" + currentRoom + "/state").set({
+        gameTime: 0,
+        player: {
+          x: 0,
+          y: 0,
+          hp: player.hp,
+          maxHp: player.maxHp,
+          level: player.level,
+          exp: player.exp,
+          expToLevel: player.expToLevel,
+          damage: player.damage,
+          speed: player.speed,
+          bulletInterval: player.bulletInterval,
+          bulletLife: player.bulletLife,
+          bulletCount: player.bulletCount,
+          bounceSkillLevel: player.bounceSkillLevel,
+          spiralSkillLevel: player.spiralSkillLevel,
+          nuclearSkillLevel: player.nuclearSkillLevel,
+          siegeSkillLevel: player.siegeSkillLevel
+        }
+      });
+      // 監聽該房間內 state 資料，並更新全域變數 dbState（供遊戲畫面即時顯示）
+      firebase.database().ref("rooms/" + currentRoom + "/state").on("value", (snapshot) => {
+         dbState = snapshot.val();
+      });
+      
       updateRoomData();
       updateInterval = setInterval(updateRoomData, 60);
     }
@@ -608,6 +637,8 @@
       roomDisplay.style.display = "none";
     });
     
+    // 修改 updateRoomData()：
+    // 除了上傳畫面截圖、遊戲計時、玩家數值與升級狀態，亦將所有敵人資料（座標、HP、攻擊力、種類、速度、半徑、顏色）一併上傳
     function updateRoomData() {
       if (!gameStarted) return;
       let offCanvas = document.createElement("canvas");
@@ -616,18 +647,54 @@
       let offCtx = offCanvas.getContext("2d");
       offCtx.drawImage(canvas, 0, 0, offCanvas.width, offCanvas.height);
       const screenshot = offCanvas.toDataURL("image/jpeg", 0.5);
-      const newData = {
+      
+      // 敵人資料
+      const enemyData = enemies.map(enemy => ({
+          x: enemy.x,
+          y: enemy.y,
+          hp: enemy.hp,
+          damage: enemy.damage,
+          type: enemy.type,
+          speed: enemy.speed,
+          radius: enemy.radius,
+          color: enemy.color
+      }));
+      
+      const stateData = {
+        state: {
+          gameTime: gameTime,
+          player: {
+            x: player.x,
+            y: player.y,
+            hp: player.hp,
+            maxHp: player.maxHp,
+            level: player.level,
+            exp: player.exp,
+            expToLevel: player.expToLevel,
+            damage: player.damage,
+            speed: player.speed,
+            bulletInterval: player.bulletInterval,
+            bulletLife: player.bulletLife,
+            bulletCount: player.bulletCount,
+            bounceSkillLevel: player.bounceSkillLevel,
+            spiralSkillLevel: player.spiralSkillLevel,
+            nuclearSkillLevel: player.nuclearSkillLevel,
+            siegeSkillLevel: player.siegeSkillLevel
+          },
+          enemies: enemyData
+        },
         gameTime: gameTime,
         timestamp: Date.now(),
         upgradeActive: isUpgrading,
         upgradeSelected: currentUpgrade
       };
+      
       firebase.database().ref("rooms/" + currentRoom).once("value").then((snapshot) => {
         const roomData = snapshot.val() || {};
         if(roomData.audience) {
-          newData.screenshot = screenshot;
+          stateData.screenshot = screenshot;
         }
-        firebase.database().ref("rooms/" + currentRoom).update(newData);
+        firebase.database().ref("rooms/" + currentRoom).update(stateData);
       });
     }
     
@@ -638,7 +705,7 @@
     });
   </script>
   
-  <!-- 遊戲程式碼（保持原樣） -->
+  <!-- 遊戲程式碼（保持原樣，但部分數值顯示改為讀取 DB 中的 state 資料） -->
   <script>
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -1415,32 +1482,34 @@
       ctx.textAlign = "left";
       ctx.fillText(`時間: ${gameTime.toFixed(1)}秒`, 10, 20);
       
-      if(gameStarted) {
+      // 以 Realtime Database 中的數值（dbState）顯示玩家資訊
+      if(gameStarted && dbState && dbState.player) {
          ctx.fillStyle = "#fff";
          ctx.font = "14px sans-serif";
          ctx.textAlign = "left";
          let infoX = 10, infoY = 90;
-         ctx.fillText(`lv.: ${player.level}`, infoX, infoY);
+         let pState = dbState.player;
+         ctx.fillText(`lv.: ${pState.level}`, infoX, infoY);
          infoY += 20;
-         ctx.fillText(`攻擊力: ${player.damage}`, infoX, infoY);
+         ctx.fillText(`攻擊力: ${pState.damage}`, infoX, infoY);
          infoY += 20;
-         ctx.fillText(`距離: ${player.bulletLife.toFixed(1)}`, infoX, infoY);
+         ctx.fillText(`距離: ${pState.bulletLife.toFixed(1)}`, infoX, infoY);
          infoY += 20;
-         ctx.fillText(`彈幕數: ${player.bulletCount}`, infoX, infoY);
+         ctx.fillText(`彈幕數: ${pState.bulletCount}`, infoX, infoY);
          infoY += 20;
-         ctx.fillText(`發射頻率: ${player.bulletInterval}ms`, infoX, infoY);
+         ctx.fillText(`發射頻率: ${pState.bulletInterval}ms`, infoX, infoY);
          infoY += 20;
-         ctx.fillText(`HP上限: ${player.maxHp}`, infoX, infoY);
+         ctx.fillText(`HP上限: ${pState.maxHp}`, infoX, infoY);
          infoY += 20;
-         ctx.fillText(`速度: ${player.speed}`, infoX, infoY);
+         ctx.fillText(`速度: ${pState.speed}`, infoX, infoY);
          infoY += 20;
-         ctx.fillText(`彈射彈幕 LV.: ${player.bounceSkillLevel}`, infoX, infoY);
+         ctx.fillText(`彈射彈幕 LV.: ${pState.bounceSkillLevel}`, infoX, infoY);
          infoY += 20;
-         ctx.fillText(`螺旋彈幕 LV.: ${player.spiralSkillLevel}`, infoX, infoY);
+         ctx.fillText(`螺旋彈幕 LV.: ${pState.spiralSkillLevel}`, infoX, infoY);
          infoY += 20;
-         ctx.fillText(`核彈彈幕 LV.: ${player.nuclearSkillLevel}`, infoX, infoY);
+         ctx.fillText(`核彈彈幕 LV.: ${pState.nuclearSkillLevel}`, infoX, infoY);
          infoY += 20;
-         ctx.fillText(`圍城彈幕 LV.: ${player.siegeSkillLevel}`, infoX, infoY);
+         ctx.fillText(`圍城彈幕 LV.: ${pState.siegeSkillLevel}`, infoX, infoY);
          infoY += 20;
       }
     }
