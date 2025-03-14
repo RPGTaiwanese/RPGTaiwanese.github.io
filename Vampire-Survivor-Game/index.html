@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <title>血族倖存者：場外城</title>
+  <!-- 加入 favicon -->
+  <link rel="icon" href="icon.png">
   <style>
     html, body { 
       margin: 0; 
@@ -19,6 +21,17 @@
       left: 0;
       z-index: 1;
     }
+    /* LOGO 區：調整 LOGO 位置（下移約50px） */
+    #logoContainer {
+      position: fixed;
+      top: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 15000;
+    }
+    #logoContainer img {
+      max-width: 300px;
+    }
     #ui {
       position: absolute; 
       top: 20px; 
@@ -28,7 +41,7 @@
     }
     #ui p { margin: 5px; color: #fff; }
     
-    /* 修改後的升級介面 CSS：垂直排列、2列，文字與按鈕尺寸較大 */
+    /* 升級介面 CSS */
     #upgradeOverlay {
       position: absolute;
       top: 0; left: 0; width: 100%;
@@ -133,7 +146,7 @@
       background: rgba(255,255,255,0.1); border-radius: 3px;
       pointer-events: auto;
     }
-    /* 房間觀看區全螢幕 */
+    /* 房間觀看區 */
     #roomDisplay {
       position: fixed;
       top: 0;
@@ -147,14 +160,15 @@
     }
     #roomDisplay h3 { color: #fff; }
     #roomDisplay img { max-width: 100%; max-height: 90vh; display: block; margin: 0 auto; }
+    /* 提升關閉按鈕層級 */
     #closeRoomDisplay {
       position: absolute;
       top: 10px;
       left: 50%;
       transform: translateX(-50%);
-      z-index: 10000;
+      z-index: 11000;
     }
-    /* 存活時間排行榜 */
+    /* 存活時間排行榜 - 靜態區塊（點擊時開啟彈出視窗） */
     #leaderboard {
       position: fixed;
       top: 20px;
@@ -164,6 +178,147 @@
       border-radius: 5px;
       z-index: 10000;
       color: #fff;
+      cursor: pointer;
+    }
+    
+    /* 功能按鈕與功能選單 (改為原本的1.5倍) */
+    #functionButton {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      z-index: 12000;
+      padding: 15px 30px;
+      font-size: 24px;
+      background: rgba(0,0,0,0.5);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+    }
+    #functionMenu {
+      position: fixed;
+      bottom: 70px;
+      right: 10px;
+      z-index: 12000;
+      background: rgba(0,0,0,0.8);
+      border-radius: 5px;
+      padding: 10px;
+      display: none;
+    }
+    #functionMenu button {
+      display: block;
+      width: 100%;
+      margin: 7px 0;
+      padding: 10px;
+      font-size: 18px;
+      background: rgba(0,0,0,0.5);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+    }
+    
+    /* 功能內容模態框 */
+    #contentModal {
+      display: none;
+      position: fixed;
+      top: 20%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.8);
+      color: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      z-index: 13000;
+      max-width: 80%;
+      text-align: center;
+    }
+    #contentModal button {
+      margin-top: 20px;
+      padding: 5px 10px;
+    }
+    
+    /* 聊天室可移動小視窗 */
+    #chatroomWindow {
+      position: fixed;
+      top: 50px;
+      left: 50px;
+      width: 533px;
+      height: 500px;
+      background: rgba(0,0,0,0.9);
+      border: 2px solid #fff;
+      border-radius: 10px;
+      z-index: 15000;
+      display: none;
+    }
+    #chatroomHeader {
+      background: rgba(0,0,0,0.7);
+      color: #fff;
+      padding: 10px;
+      cursor: move;
+      font-size: 18px;
+      border-bottom: 1px solid #fff;
+      position: relative;
+      text-align: center;
+    }
+    /* X 按鈕在聊天室視窗中 */
+    #chatroomHeader .closeButton {
+      position: absolute;
+      right: 10px;
+      top: 10px;
+      font-size: 18px;
+      cursor: pointer;
+    }
+    #chatroomContent {
+      width: 100%;
+      height: calc(100% - 42px);
+    }
+    #chatroomContent iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    
+    /* 存活時間排行榜彈出小視窗：調整為半透明 */
+    #leaderboardWindow {
+      position: fixed;
+      top: 100px;
+      left: 100px;
+      width: 500px;
+      height: 600px;
+      background: rgba(0,0,0,0.5);
+      border: 2px solid #fff;
+      border-radius: 10px;
+      z-index: 15000;
+      display: none;
+    }
+    #leaderboardHeader {
+      background: rgba(0,0,0,0.7);
+      color: #fff;
+      padding: 10px;
+      cursor: move;
+      font-size: 18px;
+      border-bottom: 1px solid #fff;
+      position: relative;
+      text-align: center;
+    }
+    #leaderboardHeader .closeButton {
+      position: absolute;
+      right: 10px;
+      top: 10px;
+      cursor: pointer;
+      font-size: 18px;
+    }
+    #leaderboardContent {
+      padding: 10px;
+      height: calc(100% - 42px);
+      overflow-y: auto;
+      box-sizing: border-box;
+      padding-bottom: 10px;
+    }
+    #leaderboardContent input {
+      width: 100%;
+      padding: 5px;
+      margin-bottom: 5px;
+      box-sizing: border-box;
     }
   </style>
   <!-- Firebase SDK (compat 版本) -->
@@ -173,13 +328,57 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics-compat.js"></script>
 </head>
 <body>
+  <!-- LOGO 區 -->
+  <div id="logoContainer">
+    <img src="LOGO.png" alt="LOGO">
+  </div>
+  
   <canvas id="gameCanvas"></canvas>
+  
+  <!-- 功能按鈕 -->
+  <button id="functionButton">功能</button>
+  
+  <!-- 功能選單 (僅包含「遊戲公告」、「遊戲說明」、「聊天室」) -->
+  <div id="functionMenu">
+    <button onclick="showAnnouncement(); hideFunctionMenu();">遊戲公告</button>
+    <button onclick="showGameInstructions(); hideFunctionMenu();">遊戲說明</button>
+    <button onclick="showChatroom();">聊天室</button>
+  </div>
+  
+  <!-- 功能內容模態框 -->
+  <div id="contentModal">
+    <div id="contentModalBody"></div>
+    <button onclick="closeContentModal()">關閉</button>
+  </div>
+  
+  <!-- 聊天室可移動小視窗 -->
+  <div id="chatroomWindow">
+    <div id="chatroomHeader">
+      聊天室
+      <span class="closeButton" onclick="closeChatroomWindow()">X</span>
+    </div>
+    <div id="chatroomContent">
+      <iframe src="https://rpgtaiwanese.github.io/Off-site-chat-room/"></iframe>
+    </div>
+  </div>
+  
+  <!-- 存活時間排行榜彈出小視窗 -->
+  <div id="leaderboardWindow">
+    <div id="leaderboardHeader">
+      存活時間排行榜
+      <span class="closeButton" onclick="closeLeaderboardWindow()">X</span>
+    </div>
+    <div id="leaderboardContent">
+      <input type="text" id="leaderboardSearch" placeholder="搜尋名子">
+      <div id="leaderboardListFull"></div>
+    </div>
+  </div>
   
   <div id="ui">
     <p>提示：按住滑鼠左鍵拖動移動，或使用鍵盤方向鍵移動，系統自動發射彈幕攻擊最近的敵人。</p>
   </div>
   
-  <!-- 修改後的升級介面：垂直排列、2列 -->
+  <!-- 以下其他畫面內容保持原樣 -->
   <div id="upgradeOverlay">
     <div class="upgrade-container">
       <div class="upgrade-group">
@@ -208,10 +407,10 @@
   
   <div id="gameOverOverlay">
     <p id="gameOverText"></p>
-    <button onclick="restartGame()">重新開始遊戲</button>
+    <!-- 重新遊戲按鈕改為刷新頁面 -->
+    <button onclick="restartGame()">重新遊戲</button>
   </div>
   
-  <!-- 房間選擇 UI -->
   <div id="roomSelection">
     <h2>輸入名子開始遊戲</h2>
     <input type="text" id="roomInput" placeholder="輸入你的玩家名稱">
@@ -221,19 +420,16 @@
     </div>
   </div>
   
-  <!-- 房間列表 -->
   <div id="roomList">
     <h3>房間列表</h3>
     <ul id="roomListItems"></ul>
   </div>
   
-  <!-- 房間觀看區 -->
   <div id="roomDisplay">
     <div id="roomDisplayContent"></div>
     <button id="closeRoomDisplay">關閉</button>
   </div>
   
-  <!-- 存活時間排行榜 -->
   <div id="leaderboard">
     <h3>存活時間排行榜</h3>
     <ol id="leaderboardList"></ol>
@@ -253,6 +449,8 @@
     };
     firebase.initializeApp(firebaseConfig);
     firebase.analytics();
+    
+    // 使用匿名登入
     firebase.auth().signInAnonymously().catch((error) => {
       console.error("Firebase auth error:", error);
     });
@@ -272,34 +470,34 @@
     const roomDisplayContent = document.getElementById("roomDisplayContent");
     const closeRoomDisplay = document.getElementById("closeRoomDisplay");
     
-    // 開始遊戲函式
+    // 開始遊戲函式：同時隱藏 LOGO 區
     function startGame(roomName) {
       currentRoom = roomName;
       gameStarted = true;
       roomSelectionDiv.style.display = "none";
+      document.getElementById("logoContainer").style.display = "none";
       updateRoomData();
       updateInterval = setInterval(updateRoomData, 60);
     }
     
-    // 開始遊戲按紐
     startButton.addEventListener("click", () => {
       const roomName = roomInput.value.trim();
       if (roomName === "") {
         alert("請輸入房間名稱！");
         return;
       }
+      document.getElementById("functionButton").style.display = "none";
       startGame(roomName);
     });
     
-    // 快速開始按紐，產生隨機遊客名稱
     quickStartButton.addEventListener("click", () => {
       const randomNumber = Math.floor(Math.random() * 90000) + 10000;
       const roomName = "遊客" + randomNumber;
       roomInput.value = roomName;
+      document.getElementById("functionButton").style.display = "none";
       startGame(roomName);
     });
     
-    // 定義集合相等比較函式
     function setEquals(a, b) {
       if (a.size !== b.size) return false;
       for (let item of a) {
@@ -308,10 +506,7 @@
       return true;
     }
     
-    // 儲存上一輪的房間名稱集合，避免無變化時重渲染
     let previousRoomNames = new Set();
-    
-    // 監聽 rooms 節點，過濾重複名稱並只在資料有變化時更新 DOM
     firebase.database().ref('rooms/').on('value', (snapshot) => {
       const rooms = snapshot.val();
       const now = Date.now();
@@ -338,7 +533,6 @@
       });
     });
     
-    // 監聽 leaderboard
     firebase.database().ref("leaderboard").orderByChild("gameTime").limitToLast(10).on("value", (snapshot) => {
       const leaderboardList = document.getElementById("leaderboardList");
       leaderboardList.innerHTML = "";
@@ -354,13 +548,11 @@
       });
     });
     
-    // 房間觀看：點選房間列表時，除了顯示資料外，同時在該房間加入 audience 狀態
     function showRoom(roomName) {
       if (currentRoomDisplayRef) {
         currentRoomDisplayRef.off();
       }
       roomDisplayContent.innerHTML = "<h3>" + roomName + "</h3>";
-      // 加入 audience 狀態
       firebase.database().ref("rooms/" + roomName).update({audience: true});
       currentRoomDisplayRef = firebase.database().ref("rooms/" + roomName);
       currentRoomDisplayRef.on("value", (snapshot) => {
@@ -416,7 +608,6 @@
       roomDisplay.style.display = "none";
     });
     
-    // 更新截圖及其他資料：只有當房間已有 audience 狀態時，才更新 screenshot 資料
     function updateRoomData() {
       if (!gameStarted) return;
       let offCanvas = document.createElement("canvas");
@@ -447,7 +638,7 @@
     });
   </script>
   
-  <!-- 遊戲程式碼 -->
+  <!-- 遊戲程式碼（保持原樣） -->
   <script>
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -499,7 +690,6 @@
       });
     }
     
-    // 修改：新增技能屬性至 player 物件
     const player = {
       x: 0,
       y: 0,
@@ -522,7 +712,6 @@
       siegeDuration: 0,
       recycleExpTimer: 0,
       bounceDuration: 0,
-      // 新增技能資料（初始等級及數值）
       bounceSkillLevel: 1,
       bounceSkillAttack: 1,
       bounceSkillDuration: 10,
@@ -567,27 +756,23 @@
       } else if(option === 'speed'){
         player.speed += 50;
       } else if(option === 'spiral'){
-        // 升級螺旋彈幕：攻擊力+1、持續時間+1、等級+1
         player.spiralSkillLevel++;
         player.spiralSkillAttack++;
         player.spiralSkillDuration++;
         player.weapon = "spiral";
         player.orbitDuration = player.spiralSkillDuration;
       } else if(option === 'nuclear'){
-        // 升級核彈彈幕
         player.nuclearSkillLevel++;
         player.nuclearSkillAttack++;
         player.nuclearSkillDuration++;
         player.weapon = "nuclear";
       } else if(option === 'siege'){
-        // 升級圍城彈幕
         player.siegeSkillLevel++;
         player.siegeSkillAttack++;
         player.siegeSkillDuration++;
         player.weapon = "siege";
         player.siegeDuration = player.siegeSkillDuration;
       } else if(option === 'bounce'){
-        // 升級彈射彈幕
         player.bounceSkillLevel++;
         player.bounceSkillAttack++;
         player.bounceSkillDuration++;
@@ -1053,14 +1238,9 @@
       });
       clearInterval(updateInterval);
     }
+    // 修改：重新遊戲直接刷新頁面以重置所有資料
     function restartGame() {
-      resetGame();
-      gameOverOverlay.style.display = 'none';
-      if (currentRoom) {
-        updateRoomData();
-        updateInterval = setInterval(updateRoomData, 60);
-      }
-      requestAnimationFrame(gameLoop);
+      location.reload();
     }
     window.restartGame = restartGame;
     
@@ -1254,7 +1434,6 @@
          infoY += 20;
          ctx.fillText(`速度: ${player.speed}`, infoX, infoY);
          infoY += 20;
-         // 顯示技能等級
          ctx.fillText(`彈射彈幕 LV.: ${player.bounceSkillLevel}`, infoX, infoY);
          infoY += 20;
          ctx.fillText(`螺旋彈幕 LV.: ${player.spiralSkillLevel}`, infoX, infoY);
@@ -1309,7 +1488,6 @@
       hideUpgradeOptions();
       gameOverOverlay.style.display = 'none';
       
-      // 重置技能數據
       player.bounceSkillLevel = 1;
       player.bounceSkillAttack = 1;
       player.bounceSkillDuration = 10;
@@ -1325,6 +1503,173 @@
     }
     
     requestAnimationFrame(gameLoop);
+  </script>
+  
+  <!-- 功能選單邏輯與其他彈出視窗開關 -->
+  <script>
+    // 切換功能選單顯示
+    document.getElementById("functionButton").addEventListener("click", function() {
+      var menu = document.getElementById("functionMenu");
+      menu.style.display = (menu.style.display === "block") ? "none" : "block";
+    });
+    function hideFunctionMenu() {
+      document.getElementById("functionMenu").style.display = "none";
+    }
+    
+    // 遊戲公告
+    function showAnnouncement() {
+      firebase.database().ref("announcement").once("value").then(function(snapshot) {
+        var announcement = snapshot.val();
+        var transformed = announcement;
+        if(announcement.indexOf("<img>") !== -1) {
+          transformed = announcement.replace(/<img>(https?:\/\/[^<]+)<img>/ig, '<img src="$1" style="max-width:100%;"/>');
+        } else if(announcement.trim().match(/^(https?:\/\/[^\s<]+?\.(?:jpeg|jpg|gif|png)(\?[^\s<]+)?)$/i)) {
+          transformed = '<img src="' + announcement.trim() + '" style="max-width:100%;"/>';
+        } else {
+          transformed = announcement.replace(/(https?:\/\/[^\s<]+?\.(?:jpeg|jpg|gif|png)(\?[^\s<]+)?)/ig, '<img src="$1" style="max-width:100%;"/>');
+        }
+        showContentModal(transformed);
+      });
+    }
+    
+    // 遊戲說明
+    function showGameInstructions() {
+      firebase.database().ref("Game Instructions").once("value").then(function(snapshot) {
+        var instructions = snapshot.val();
+        var transformed = instructions.replace(/(https?:\/\/[^\s<]+?\.(?:jpeg|jpg|gif|png)(\?[^\s<]+)?)/ig, '<img src="$1" style="max-width:100%;"/>');
+        showContentModal(transformed);
+      });
+    }
+    
+    // 內容模態框
+    function showContentModal(content) {
+      var modal = document.getElementById("contentModal");
+      document.getElementById("contentModalBody").innerHTML = content;
+      modal.style.display = "block";
+    }
+    function closeContentModal() {
+      document.getElementById("contentModal").style.display = "none";
+    }
+    
+    // 聊天室視窗開關
+    function showChatroom() {
+      var chatroomWindow = document.getElementById("chatroomWindow");
+      if(chatroomWindow.style.display === "block") {
+        chatroomWindow.style.display = "none";
+      } else {
+        chatroomWindow.style.display = "block";
+      }
+      hideFunctionMenu();
+    }
+    function closeChatroomWindow() {
+      document.getElementById("chatroomWindow").style.display = "none";
+    }
+    
+    // 存活時間排行榜視窗
+    document.getElementById("leaderboard").addEventListener("click", function() {
+      openLeaderboardWindow();
+    });
+    function openLeaderboardWindow() {
+      var lbWindow = document.getElementById("leaderboardWindow");
+      lbWindow.style.display = "block";
+      loadLeaderboardData();
+    }
+    function closeLeaderboardWindow() {
+      document.getElementById("leaderboardWindow").style.display = "none";
+    }
+    
+    // 取得並顯示完整排行榜資料
+    let leaderboardDataFull = [];
+    function loadLeaderboardData() {
+      firebase.database().ref("leaderboard").once("value").then(function(snapshot) {
+        let data = [];
+        snapshot.forEach(function(childSnapshot) {
+          data.push(childSnapshot.val());
+        });
+        // 排序由大到小
+        data.sort((a, b) => b.gameTime - a.gameTime);
+        leaderboardDataFull = data;
+        updateLeaderboardDisplay();
+      });
+    }
+    function updateLeaderboardDisplay() {
+      var searchVal = document.getElementById("leaderboardSearch").value.trim().toLowerCase();
+      var listDiv = document.getElementById("leaderboardListFull");
+      listDiv.innerHTML = "";
+      leaderboardDataFull.forEach(function(item, index) {
+        if(searchVal === "" || item.room.toLowerCase().indexOf(searchVal) !== -1) {
+          var p = document.createElement("p");
+          p.style.margin = "5px 0";
+          p.style.fontSize = "16px";
+          p.style.color = "#fff";
+          p.textContent = `${index + 1}. ${item.room} - ${item.gameTime.toFixed(1)}秒`;
+          listDiv.appendChild(p);
+        }
+      });
+    }
+    document.getElementById("leaderboardSearch").addEventListener("input", updateLeaderboardDisplay);
+  </script>
+  
+  <!-- 聊天室視窗拖曳功能 -->
+  <script>
+    const chatroomWindow = document.getElementById("chatroomWindow");
+    const chatroomHeader = document.getElementById("chatroomHeader");
+    chatroomHeader.onmousedown = chatroomDragMouseDown;
+    
+    let cPos1 = 0, cPos2 = 0, cPos3 = 0, cPos4 = 0;
+    function chatroomDragMouseDown(e) {
+      e = e || window.event;
+      e.preventDefault();
+      cPos3 = e.clientX;
+      cPos4 = e.clientY;
+      document.onmouseup = closeChatroomDragElement;
+      document.onmousemove = chatroomElementDrag;
+    }
+    function chatroomElementDrag(e) {
+      e = e || window.event;
+      e.preventDefault();
+      cPos1 = cPos3 - e.clientX;
+      cPos2 = cPos4 - e.clientY;
+      cPos3 = e.clientX;
+      cPos4 = e.clientY;
+      chatroomWindow.style.top = (chatroomWindow.offsetTop - cPos2) + "px";
+      chatroomWindow.style.left = (chatroomWindow.offsetLeft - cPos1) + "px";
+    }
+    function closeChatroomDragElement() {
+      document.onmouseup = null;
+      document.onmousemove = null;
+    }
+  </script>
+  
+  <!-- 存活時間排行榜視窗拖曳功能 -->
+  <script>
+    const leaderboardWindow = document.getElementById("leaderboardWindow");
+    const leaderboardHeader = document.getElementById("leaderboardHeader");
+    leaderboardHeader.onmousedown = leaderboardDragMouseDown;
+    
+    let lbPos1 = 0, lbPos2 = 0, lbPos3 = 0, lbPos4 = 0;
+    function leaderboardDragMouseDown(e) {
+      e = e || window.event;
+      e.preventDefault();
+      lbPos3 = e.clientX;
+      lbPos4 = e.clientY;
+      document.onmouseup = closeLeaderboardDragElement;
+      document.onmousemove = leaderboardElementDrag;
+    }
+    function leaderboardElementDrag(e) {
+      e = e || window.event;
+      e.preventDefault();
+      lbPos1 = lbPos3 - e.clientX;
+      lbPos2 = lbPos4 - e.clientY;
+      lbPos3 = e.clientX;
+      lbPos4 = e.clientY;
+      leaderboardWindow.style.top = (leaderboardWindow.offsetTop - lbPos2) + "px";
+      leaderboardWindow.style.left = (leaderboardWindow.offsetLeft - lbPos1) + "px";
+    }
+    function closeLeaderboardDragElement() {
+      document.onmouseup = null;
+      document.onmousemove = null;
+    }
   </script>
 </body>
 </html>
