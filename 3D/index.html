@@ -1,31 +1,785 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-Hant">
 <head>
-    <meta charset="UTF-8">
-    <title>3D模型展示</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three/examples/js/loaders/GLTFLoader.js"></script>
+  <meta charset="UTF-8">
+  <title>3D 動作遊戲 - NPC 對話示範</title>
+  <!-- importmap 指定 three 模組來源 -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.128.0/build/three.module.js"
+    }
+  }
+  </script>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    #status {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      color: #fff;
+      font-size: 20px;
+      z-index: 10;
+    }
+    #gameOver {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: red;
+      font-size: 40px;
+      display: none;
+      z-index: 10;
+    }
+    #onlinePlayers {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      color: #fff;
+      font-size: 16px;
+      z-index: 10;
+      background: rgba(0,0,0,0.5);
+      padding: 5px;
+      border-radius: 5px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    #playerCoordinates {
+      position: absolute;
+      bottom: 220px;
+      left: 10px;
+      color: #fff;
+      font-size: 16px;
+      z-index: 10;
+      background: rgba(0,0,0,0.5);
+      padding: 5px;
+      border-radius: 5px;
+    }
+    #dialogueBox {
+      position: absolute;
+      bottom: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.7);
+      color: #fff;
+      font-size: 18px;
+      padding: 10px;
+      border-radius: 5px;
+      display: none;
+      z-index: 15;
+      max-width: 80%;
+      text-align: center;
+    }
+    #loginOverlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+    }
+    #loginOverlay div {
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+    }
+    #loginOverlay input {
+      font-size: 16px;
+      padding: 5px;
+      margin-top: 10px;
+    }
+    #loginOverlay button {
+      font-size: 16px;
+      padding: 5px 10px;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body>
-    <canvas id="canvas"></canvas>
-    <script>
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById("canvas") });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
-
-        const loader = new THREE.GLTFLoader();
-        loader.load('your_model.gltf', (gltf) => {
-            scene.add(gltf.scene);
+  <!-- 登入遮罩 -->
+  <div id="loginOverlay">
+    <div>
+      <label for="playerId">請輸入玩家 ID (非必要):</label><br>
+      <input type="text" id="playerId" placeholder="例如：Player001" /><br>
+      <button id="loginButton">登入</button>
+    </div>
+  </div>
+  <div id="status">HP: 100 | 得分: 0</div>
+  <div id="gameOver">遊戲結束<br>得分: 0<br>按 R 重新開始</div>
+  <!-- 在線玩家列表 -->
+  <div id="onlinePlayers"></div>
+  <!-- 玩家自己目前座標 -->
+  <div id="playerCoordinates"></div>
+  <!-- 對話視窗 -->
+  <div id="dialogueBox"></div>
+  
+  <script type="module">
+    // 匯入 Firebase 與 Three.js 模組
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+    import { getDatabase, ref, set, onDisconnect, onValue, push } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js";
+    import * as THREE from "three";
+    import { GLTFLoader } from "https://unpkg.com/three@0.128.0/examples/jsm/loaders/GLTFLoader.js";
+    import { SkeletonUtils } from "https://unpkg.com/three@0.128.0/examples/jsm/utils/SkeletonUtils.js";
+    
+    // 輔助函式：建立文字 Sprite
+    function createTextSprite(message, parameters) {
+      parameters = parameters || {};
+      const fontface = parameters.fontface || "Arial";
+      const fontsize = parameters.fontSize || 24;
+      const borderThickness = parameters.borderThickness || 4;
+      const backgroundColor = parameters.backgroundColor || "rgba(0, 0, 0, 0.5)";
+      const textColor = parameters.color || "#ffffff";
+      
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      context.font = fontsize + "px " + fontface;
+      const metrics = context.measureText(message);
+      const textWidth = metrics.width;
+      canvas.width = textWidth + borderThickness * 2;
+      canvas.height = fontsize * 1.4;
+      // 背景
+      context.fillStyle = backgroundColor;
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      // 外框
+      context.strokeStyle = "rgba(0, 0, 0, 1.0)";
+      context.lineWidth = borderThickness;
+      context.strokeRect(0, 0, canvas.width, canvas.height);
+      // 文字
+      context.fillStyle = textColor;
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillText(message, canvas.width / 2, canvas.height / 2);
+      
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.needsUpdate = true;
+      const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true });
+      const sprite = new THREE.Sprite(spriteMaterial);
+      // 依照 canvas 大小調整 sprite scale
+      sprite.scale.set(canvas.width / 50, canvas.height / 50, 1);
+      return sprite;
+    }
+    
+    // 取得 HTML 元素
+    const statusDiv = document.getElementById("status");
+    const gameOverDiv = document.getElementById("gameOver");
+    const dialogueBox = document.getElementById("dialogueBox");
+    
+    // 對話系統變數
+    let inConversation = false;
+    let dialogueIndex = 0;
+    const npcDialogues = [
+      "你好 冒險者",
+      "什麼? 你說你是場外人?",
+      "真奇怪的人",
+      "你小心一點 這附近很危險"
+    ];
+    
+    // 控制相機上下角度
+    let cameraPitch = 0;
+    
+    // Firebase 初始化設定
+    const firebaseConfig = {
+      apiKey: "AIzaSyBxReREYZMHWAykd9r1ng4VRSVDbiEf16U",
+      authDomain: "minigames-2e5a3.firebaseapp.com",
+      databaseURL: "https://minigames-2e5a3-default-rtdb.firebaseio.com",
+      projectId: "minigames-2e5a3",
+      storageBucket: "minigames-2e5a3.firebasestorage.app",
+      messagingSenderId: "165341467933",
+      appId: "1:165341467933:web:ee2d99d06ee47c6e8efdf4",
+      measurementId: "G-55LXSETV42"
+    };
+    const appFirebase = initializeApp(firebaseConfig);
+    const auth = getAuth(appFirebase);
+    const db = getDatabase(appFirebase);
+    
+    // 玩家登入與資料上傳
+    let myPlayerRef = null;
+    let playerCustomID = "";
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        console.log("以匿名帳號登入：", user.uid);
+      } else {
+        signInAnonymously(auth).catch((error) => {
+          console.error("匿名登入錯誤：", error);
         });
-
-        camera.position.z = 5;
-        function animate() {
-            requestAnimationFrame(animate);
-            renderer.render(scene, camera);
+      }
+    });
+    document.getElementById("loginButton").addEventListener("click", async () => {
+      const input = document.getElementById("playerId").value.trim();
+      if(input !== "") {
+        playerCustomID = input;
+      } else {
+        const randomNumber = Math.floor(Math.random() * 100000).toString().padStart(5, '0');
+        playerCustomID = "遊客" + randomNumber;
+      }
+      myPlayerRef = push(ref(db, 'players'));
+      set(myPlayerRef, {
+        customID: playerCustomID,
+        timestamp: Date.now()
+      });
+      onDisconnect(myPlayerRef).remove();
+      document.getElementById("loginOverlay").style.display = "none";
+      addPlayerIdSprite();
+    });
+    
+    // 儲存遠端玩家 3D 角色
+    const remotePlayers = {};
+    let localPlayerTemplate = null;
+    let localPlayerAnimations = [];
+    
+    function createRemotePlayer(customID) {
+      let remotePlayer;
+      if(localPlayerTemplate) {
+        remotePlayer = SkeletonUtils.clone(localPlayerTemplate);
+        remotePlayer.updateMatrixWorld(true);
+        remotePlayer.mixer = new THREE.AnimationMixer(remotePlayer);
+        remotePlayer.actions = {};
+        localPlayerAnimations.forEach(clip => {
+          const action = remotePlayer.mixer.clipAction(clip);
+          action.reset();
+          action.setLoop(THREE.LoopRepeat);
+          action.timeScale = 1;
+          remotePlayer.actions[clip.name] = action;
+        });
+        if(remotePlayer.actions["Idle"]) {
+          remotePlayer.actions["Idle"].play();
+          remotePlayer.currentAction = "Idle";
+        } else if(localPlayerAnimations.length > 0) {
+          const firstName = localPlayerAnimations[0].name;
+          if(remotePlayer.actions[firstName]) {
+            remotePlayer.actions[firstName].play();
+            remotePlayer.currentAction = firstName;
+          }
         }
-        animate();
-    </script>
+      } else {
+        const geometry = new THREE.SphereGeometry(1, 16, 16);
+        const material = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+        remotePlayer = new THREE.Mesh(geometry, material);
+      }
+      // 加入頭頂文字 Sprite
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      const fontSize = 48;
+      context.font = `Bold ${fontSize}px Arial`;
+      const textWidth = context.measureText(customID).width;
+      canvas.width = textWidth;
+      canvas.height = fontSize;
+      context.font = `Bold ${fontSize}px Arial`;
+      context.fillStyle = "white";
+      context.fillText(customID, 0, fontSize);
+      const texture = new THREE.CanvasTexture(canvas);
+      const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true });
+      const sprite = new THREE.Sprite(spriteMaterial);
+      sprite.scale.set(1, 0.5, 1);
+      sprite.position.set(0, 3, 0);
+      remotePlayer.add(sprite);
+      return remotePlayer;
+    }
+    
+    function updateOnlinePlayers() {
+      const onlinePlayersDiv = document.getElementById("onlinePlayers");
+      const playersRef = ref(db, 'players/');
+      onValue(playersRef, (snapshot) => {
+        const players = snapshot.val();
+        let html = "<strong>在線玩家:</strong><br>";
+        if (players) {
+          for (let key in players) {
+            html += players[key].customID;
+            if (players[key].coordinates) {
+              const c = players[key].coordinates;
+              html += ` (${c.x.toFixed(2)}, ${c.y.toFixed(2)}, ${c.z.toFixed(2)})`;
+            }
+            html += "<br>";
+            if (!(myPlayerRef && key === myPlayerRef.key)) {
+              if (!remotePlayers[key]) {
+                remotePlayers[key] = createRemotePlayer(players[key].customID);
+                scene.add(remotePlayers[key]);
+              }
+              if (players[key].coordinates) {
+                remotePlayers[key].position.set(
+                  players[key].coordinates.x,
+                  players[key].coordinates.y,
+                  players[key].coordinates.z
+                );
+              }
+              if (players[key].rotation !== undefined) {
+                remotePlayers[key].rotation.y = players[key].rotation;
+              }
+              if (players[key].action && remotePlayers[key].actions) {
+                if(remotePlayers[key].currentAction !== players[key].action) {
+                  if(remotePlayers[key].actions[remotePlayers[key].currentAction]) {
+                    remotePlayers[key].actions[remotePlayers[key].currentAction].fadeOut(0.2);
+                  }
+                  if(remotePlayers[key].actions[players[key].action]) {
+                    remotePlayers[key].actions[players[key].action].reset().fadeIn(0.2).play();
+                  }
+                  remotePlayers[key].currentAction = players[key].action;
+                }
+              }
+            }
+          }
+        } else {
+          html += "無";
+        }
+        onlinePlayersDiv.innerHTML = html;
+        for (let key in remotePlayers) {
+          if (!players || !players[key]) {
+            scene.remove(remotePlayers[key]);
+            delete remotePlayers[key];
+          }
+        }
+      });
+    }
+    updateOnlinePlayers();
+    
+    // 建立本地玩家頭頂的 ID Sprite
+    let playerIdSprite = null;
+    function addPlayerIdSprite() {
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      const fontSize = 48;
+      context.font = `Bold ${fontSize}px Arial`;
+      const textWidth = context.measureText(playerCustomID).width;
+      canvas.width = textWidth;
+      canvas.height = fontSize;
+      context.font = `Bold ${fontSize}px Arial`;
+      context.fillStyle = "white";
+      context.fillText(playerCustomID, 0, fontSize);
+      const texture = new THREE.CanvasTexture(canvas);
+      const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true });
+      playerIdSprite = new THREE.Sprite(spriteMaterial);
+      playerIdSprite.scale.set(1, 0.5, 1);
+      if(playerGroup) {
+        playerIdSprite.position.set(0, 3, 0);
+        playerGroup.add(playerIdSprite);
+      }
+    }
+    
+    // SHIFT 鍵偵測：按下時加速
+    document.addEventListener("keydown", (event) => {
+      if(event.keyCode === 16) { isRunning = true; }
+    });
+    document.addEventListener("keyup", (event) => {
+      if(event.keyCode === 16) { isRunning = false; }
+    });
+    
+    // ------------------------- 遊戲主要程式碼 -------------------------
+    let scene, camera, renderer;
+    let terrain;
+    let playerGroup = new THREE.Group();
+    let playerMixer = null;
+    let actions = {};
+    let currentAction = "Idle";
+    let isJumping = false;
+    let playerVelocityY = 0;
+    const jumpSpeed = 8;
+    const gravity = 20;
+    let playerHP = 100;
+    let score = 0;
+    let gameOver = false;
+    
+    let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+    let attackTriggered = false;
+    const baseMoveSpeed = 5;
+    const rotationSmoothness = 0.1;
+    let isRunning = false;
+    
+    const slashEffects = [];
+    
+    // 初始化場景與攝影機
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x87ceeb);
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+    
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    dirLight.position.set(10, 20, 10);
+    scene.add(dirLight);
+    
+    // 建立地形
+    const terrainGeo = new THREE.PlaneGeometry(100, 100, 50, 50);
+    terrainGeo.rotateX(-Math.PI/2);
+    const posAttr = terrainGeo.attributes.position;
+    for (let i = 0; i < posAttr.count; i++) {
+      let y = (Math.random() < 0.6) ? 0 : Math.random() * 2;
+      posAttr.setY(i, y);
+    }
+    terrainGeo.computeVertexNormals();
+    const terrainMat = new THREE.MeshPhongMaterial({ color: 0x556B2F, flatShading: true });
+    terrain = new THREE.Mesh(terrainGeo, terrainMat);
+    scene.add(terrain);
+    
+    // 加入本地玩家 3D 角色
+    scene.add(playerGroup);
+    const gltfLoader = new GLTFLoader();
+    gltfLoader.load('https://threejs.org/examples/models/gltf/Soldier.glb', (gltf) => {
+      const model = gltf.scene;
+      localPlayerTemplate = model;
+      localPlayerAnimations = gltf.animations;
+      model.rotation.y += Math.PI;
+      model.scale.set(1, 1, 1);
+      playerGroup.add(model);
+      if(playerIdSprite) {
+        playerIdSprite.position.set(0, 3, 0);
+        playerGroup.add(playerIdSprite);
+      }
+      playerMixer = new THREE.AnimationMixer(model);
+      gltf.animations.forEach(clip => {
+        const act = playerMixer.clipAction(clip);
+        actions[clip.name] = act;
+      });
+      if(actions["Idle"]) {
+        actions["Idle"].play();
+        currentAction = "Idle";
+      }
+      playerGroup.position.set(0, 0, 0);
+    }, undefined, (error) => {
+      console.error('載入 Soldier 模型錯誤:', error);
+    });
+    
+    // 新增 NPC：將原本的 Fox 模型換成本地檔案 robot.glb，並加入頭上「NPC」文字及對話提示「ENTER對話」
+    let npcGroup = new THREE.Group();
+    scene.add(npcGroup);
+    gltfLoader.load('robot.glb', (gltf) => {
+      const npcModel = gltf.scene;
+      // 如有需要可根據 robot 模型調整縮放與旋轉
+      // 例如：npcModel.rotation.y = Math.PI;
+      //       npcModel.scale.set(1, 1, 1);
+      npcGroup.add(npcModel);
+      // 將 NPC 放置在玩家起始座標附近，例如 (2,0,2)
+      npcGroup.position.set(2, 0, 2);
+      
+      // 在 NPC 頭上加入「NPC」文字 Sprite
+      const npcNameSprite = createTextSprite("NPC", { fontSize: 50, color: "#ffffff", backgroundColor: "rgba(0,0,0,0.5)" });
+      npcNameSprite.position.set(0, 1.5, 0);
+      npcGroup.add(npcNameSprite);
+      
+      // 加入對話提示文字 Sprite「ENTER對話」，預設隱藏
+      const enterSprite = createTextSprite("ENTER對話", { fontSize: 30, color: "#ffff00", backgroundColor: "rgba(0,0,0,0.5)" });
+      enterSprite.position.set(0, 0.8, 0);
+      enterSprite.visible = false;
+      npcGroup.add(enterSprite);
+      npcGroup.userData.enterSprite = enterSprite;
+    }, undefined, (error) => {
+      console.error('載入 NPC 模型錯誤:', error);
+    });
+    
+    // 定義 updateHeight 函式
+    function updateHeight(object, offset = 0.1) {
+      const origin = new THREE.Vector3(object.position.x, 50, object.position.z);
+      const raycaster = new THREE.Raycaster(origin, new THREE.Vector3(0, -1, 0));
+      const intersects = raycaster.intersectObject(terrain);
+      if(intersects.length > 0) {
+        object.position.y = intersects[0].point.y + offset;
+      }
+    }
+    
+    // 新增斬擊效果（原先邏輯）
+    function createSlashEffect() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 256;
+      canvas.height = 256;
+      const context = canvas.getContext('2d');
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      const gradient = context.createLinearGradient(0, 0, canvas.width, canvas.height);
+      gradient.addColorStop(0, 'rgba(255,255,255,1)');
+      gradient.addColorStop(1, 'rgba(255,255,255,0)');
+      context.strokeStyle = gradient;
+      context.lineWidth = 20;
+      context.beginPath();
+      context.moveTo(0, canvas.height);
+      context.lineTo(canvas.width, 0);
+      context.stroke();
+      
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.needsUpdate = true;
+      const spriteMaterial = new THREE.SpriteMaterial({
+        map: texture,
+        transparent: true,
+        opacity: 1,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending
+      });
+      const sprite = new THREE.Sprite(spriteMaterial);
+      sprite.scale.set(3, 3, 1);
+      
+      const offsetDistance = 2;
+      const playerPos = playerGroup.position.clone();
+      const playerRot = playerGroup.rotation.y;
+      const forward = new THREE.Vector3(Math.sin(playerRot), 0, Math.cos(playerRot));
+      sprite.position.copy(playerPos.clone().add(forward.multiplyScalar(offsetDistance)));
+      sprite.material.rotation = playerRot;
+      
+      scene.add(sprite);
+      const duration = 0.3;
+      let elapsed = 0;
+      function updateSlash(delta) {
+        elapsed += delta;
+        if(elapsed < duration) {
+          sprite.material.opacity = 1 - (elapsed / duration);
+        } else {
+          scene.remove(sprite);
+          slashEffects.splice(slashEffects.indexOf(updateSlash), 1);
+        }
+      }
+      slashEffects.push(updateSlash);
+    }
+    
+    function triggerAttack() {
+      if(actions["Attack"]) {
+        actions["Attack"].reset().play();
+      }
+      createSlashEffect();
+    }
+    
+    function triggerJump() {
+      if(actions["Jump"]) {
+        actions["Jump"].reset().play();
+      }
+    }
+    
+    const clock = new THREE.Clock();
+    let lastFirebaseUpdate = 0;
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+      const elapsed = clock.elapsedTime;
+      
+      if(gameOver) {
+        renderer.render(scene, camera);
+        return;
+      }
+      
+      // 更新斬擊效果
+      for (let i = slashEffects.length - 1; i >= 0; i--) {
+        slashEffects[i](delta);
+      }
+      
+      let inputVec = new THREE.Vector3();
+      if(moveForward) inputVec.z -= 1;
+      if(moveBackward) inputVec.z += 1;
+      if(moveLeft) inputVec.x += 1;
+      if(moveRight) inputVec.x -= 1;
+      
+      if(inputVec.length() > 0) {
+        inputVec.normalize();
+        const currentRot = playerGroup.rotation.y;
+        const forward = new THREE.Vector3(Math.sin(currentRot), 0, Math.cos(currentRot));
+        const right = new THREE.Vector3(Math.sin(currentRot + Math.PI/2), 0, Math.cos(currentRot + Math.PI/2));
+        let desiredDir = new THREE.Vector3();
+        desiredDir.add(forward.clone().multiplyScalar(inputVec.z * -1));
+        desiredDir.add(right.clone().multiplyScalar(inputVec.x));
+        desiredDir.normalize();
+        
+        let currentSpeed = baseMoveSpeed;
+        let targetAnim = "Walk";
+        if(isRunning && actions["Run"]) {
+          currentSpeed = baseMoveSpeed * 3;
+          targetAnim = "Run";
+        }
+        const targetAngle = Math.atan2(desiredDir.x, desiredDir.z);
+        playerGroup.rotation.y = lerpAngle(playerGroup.rotation.y, targetAngle, rotationSmoothness);
+        playerGroup.position.addScaledVector(desiredDir, currentSpeed * delta);
+        
+        if(currentAction !== targetAnim && !isJumping && actions[targetAnim]) {
+          if(actions["Idle"]) actions["Idle"].fadeOut(0.2);
+          if(targetAnim === "Run" && actions["Walk"]) {
+            actions["Walk"].fadeOut(0.2);
+          }
+          actions[targetAnim].reset().fadeIn(0.2).play();
+          currentAction = targetAnim;
+        }
+      } else {
+        if(currentAction !== "Idle" && !isJumping && actions["Idle"]) {
+          if(actions["Walk"]) actions["Walk"].fadeOut(0.2);
+          if(actions["Run"]) actions["Run"].fadeOut(0.2);
+          actions["Idle"].reset().fadeIn(0.2).play();
+          currentAction = "Idle";
+        }
+      }
+      
+      if(isJumping) {
+        playerGroup.position.y += playerVelocityY * delta;
+        playerVelocityY -= gravity * delta;
+        const rayOrigin = new THREE.Vector3(playerGroup.position.x, playerGroup.position.y + 1, playerGroup.position.z);
+        const raycaster = new THREE.Raycaster(rayOrigin, new THREE.Vector3(0,-1,0));
+        const intersects = raycaster.intersectObject(terrain);
+        if(intersects.length > 0) {
+          const groundY = intersects[0].point.y;
+          if(playerGroup.position.y <= groundY + 0.1) {
+            playerGroup.position.y = groundY + 0.1;
+            isJumping = false;
+            playerVelocityY = 0;
+          }
+        }
+      } else {
+        updateHeight(playerGroup, 0.1);
+      }
+      
+      if(playerMixer) playerMixer.update(delta);
+      for (let key in remotePlayers) {
+        if(remotePlayers[key].mixer) {
+          remotePlayers[key].mixer.update(delta);
+          remotePlayers[key].updateMatrixWorld(true);
+        }
+      }
+      
+      // 更新 NPC 對話提示：當玩家與 NPC 距離小於 3 時顯示 "ENTER對話"
+      if(npcGroup && npcGroup.userData.enterSprite) {
+        const distanceToNPC = playerGroup.position.distanceTo(npcGroup.position);
+        npcGroup.userData.enterSprite.visible = distanceToNPC < 3;
+      }
+      
+      statusDiv.innerHTML = `HP: ${playerHP} | 得分: ${score}`;
+      if(playerHP <= 0) {
+        gameOver = true;
+        gameOverDiv.innerHTML = `遊戲結束<br>得分: ${score}<br>按 R 重新開始`;
+        gameOverDiv.style.display = "block";
+      }
+      
+      const playerPos = playerGroup.position.clone();
+      const playerForward = new THREE.Vector3(Math.sin(playerGroup.rotation.y), 0, Math.cos(playerGroup.rotation.y)).normalize();
+      const camDistance = 6;
+      const camHeight = 2;
+      const camPos = playerPos.clone().sub(playerForward.clone().multiplyScalar(camDistance));
+      camPos.y += camHeight;
+      camera.position.copy(camPos);
+      const lookAtPos = playerPos.clone().add(playerForward.clone().multiplyScalar(10));
+      lookAtPos.y += cameraPitch;
+      camera.lookAt(lookAtPos);
+      
+      renderer.render(scene, camera);
+      
+      if(myPlayerRef && (elapsed - lastFirebaseUpdate) > 0.2) {
+        set(myPlayerRef, {
+          customID: playerCustomID,
+          coordinates: {
+            x: playerGroup.position.x,
+            y: playerGroup.position.y,
+            z: playerGroup.position.z
+          },
+          action: currentAction,
+          rotation: playerGroup.rotation.y,
+          timestamp: Date.now()
+        });
+        lastFirebaseUpdate = elapsed;
+      }
+      
+      const coordDiv = document.getElementById("playerCoordinates");
+      coordDiv.innerHTML = `<strong>我的座標:</strong><br>(${playerGroup.position.x.toFixed(2)}, ${playerGroup.position.y.toFixed(2)}, ${playerGroup.position.z.toFixed(2)})`;
+    }
+    animate();
+    
+    // 玩家控制（keydown）
+    document.addEventListener("keydown", (event) => {
+      if(gameOver) {
+        if(event.keyCode === 82) location.reload();
+        return;
+      }
+      switch(event.keyCode) {
+        case 87: // W / 上
+        case 38:
+          moveForward = true; break;
+        case 83: // S / 下
+        case 40:
+          moveBackward = true; break;
+        case 65: // A / 左
+        case 37:
+          moveLeft = true; break;
+        case 68: // D / 右
+        case 39:
+          moveRight = true; break;
+        case 70: // F 鍵攻擊
+          if(!attackTriggered) {
+            attackTriggered = true;
+            triggerAttack();
+          }
+          break;
+        case 32: // 空白鍵跳躍
+          if(!isJumping) {
+            isJumping = true;
+            playerVelocityY = jumpSpeed;
+            triggerJump();
+          }
+          break;
+      }
+    });
+    
+    // 玩家控制（keyup）
+    document.addEventListener("keyup", (event) => {
+      switch(event.keyCode) {
+        case 87:
+        case 38:
+          moveForward = false; break;
+        case 83:
+        case 40:
+          moveBackward = false; break;
+        case 65:
+        case 37:
+          moveLeft = false; break;
+        case 68:
+        case 39:
+          moveRight = false; break;
+        case 70:
+          attackTriggered = false;
+          break;
+      }
+    });
+    
+    // ENTER 鍵對話功能：當玩家與 NPC 距離小於 3 時，按 ENTER 依序顯示對話內容
+    document.addEventListener("keydown", (event) => {
+      if(event.keyCode === 13) { // ENTER
+        if(npcGroup) {
+          const distance = playerGroup.position.distanceTo(npcGroup.position);
+          if(distance < 3) {
+            if(!inConversation) {
+              inConversation = true;
+              dialogueIndex = 0;
+              dialogueBox.style.display = "block";
+              dialogueBox.innerHTML = npcDialogues[dialogueIndex];
+            } else {
+              dialogueIndex++;
+              if(dialogueIndex < npcDialogues.length) {
+                dialogueBox.innerHTML = npcDialogues[dialogueIndex];
+              } else {
+                dialogueBox.style.display = "none";
+                inConversation = false;
+              }
+            }
+          }
+        }
+      }
+    });
+    
+    // 鎖定滑鼠控制
+    renderer.domElement.addEventListener('click', () => {
+      renderer.domElement.requestPointerLock();
+    });
+    document.addEventListener('mousemove', (event) => {
+      if(document.pointerLockElement === renderer.domElement) {
+        playerGroup.rotation.y -= event.movementX * 0.002;
+        cameraPitch -= event.movementY * 0.002;
+        cameraPitch = Math.max(-Math.PI/4, Math.min(Math.PI/4, cameraPitch));
+      }
+    });
+    
+    function lerpAngle(a, b, t) {
+      let diff = b - a;
+      while(diff < -Math.PI) diff += Math.PI * 2;
+      while(diff > Math.PI) diff -= Math.PI * 2;
+      return a + diff * t;
+    }
+    // ------------------------- 結束遊戲程式碼 -------------------------
+  </script>
 </body>
 </html>

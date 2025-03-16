@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>3D 動作遊戲 - Firebase 在線玩家 (女性角色)</title>
+  <!-- Import map 將 "three" 模組映射到正確 URL -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.128.0/build/three.module.js"
+    }
+  }
+  </script>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    #status {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      color: #fff;
+      font-size: 20px;
+      z-index: 10;
+    }
+    #gameOver {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: red;
+      font-size: 40px;
+      display: none;
+      z-index: 10;
+    }
+    /* 在線玩家列表：顯示於左下角 */
+    #onlinePlayers {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      color: #fff;
+      font-size: 16px;
+      z-index: 10;
+      background: rgba(0,0,0,0.5);
+      padding: 5px;
+      border-radius: 5px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    /* 玩家自己目前座標：顯示在線玩家列表上方 */
+    #playerCoordinates {
+      position: absolute;
+      bottom: 220px;
+      left: 10px;
+      color: #fff;
+      font-size: 16px;
+      z-index: 10;
+      background: rgba(0,0,0,0.5);
+      padding: 5px;
+      border-radius: 5px;
+    }
+    /* 登入遮罩 */
+    #loginOverlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+    }
+    #loginOverlay div {
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+    }
+    #loginOverlay input {
+      font-size: 16px;
+      padding: 5px;
+      margin-top: 10px;
+    }
+    #loginOverlay button {
+      font-size: 16px;
+      padding: 5px 10px;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <!-- 登入遮罩 -->
+  <div id="loginOverlay">
+    <div>
+      <label for="playerId">請輸入玩家 ID:</label><br>
+      <input type="text" id="playerId" placeholder="例如：Player001" required /><br>
+      <button id="loginButton">登入</button>
+    </div>
+  </div>
+  <div id="status">HP: 100 | 得分: 0</div>
+  <div id="gameOver">遊戲結束<br>得分: 0<br>按 R 重新開始</div>
+  <!-- 在線玩家列表 -->
+  <div id="onlinePlayers"></div>
+  <!-- 玩家自己目前座標 -->
+  <div id="playerCoordinates"></div>
+  
+  <script type="module">
+    // 匯入 Firebase 與 Three.js 模組
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+    import { getDatabase, ref, set, onDisconnect, onValue, push } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js";
+    import * as THREE from "three";
+    import { GLTFLoader } from "https://unpkg.com/three@0.128.0/examples/jsm/loaders/GLTFLoader.js";
+    
+    // Firebase 初始化設定
+    const firebaseConfig = {
+      apiKey: "AIzaSyBxReREYZMHWAykd9r1ng4VRSVDbiEf16U",
+      authDomain: "minigames-2e5a3.firebaseapp.com",
+      databaseURL: "https://minigames-2e5a3-default-rtdb.firebaseio.com",
+      projectId: "minigames-2e5a3",
+      storageBucket: "minigames-2e5a3.firebasestorage.app",
+      messagingSenderId: "165341467933",
+      appId: "1:165341467933:web:ee2d99d06ee47c6e8efdf4",
+      measurementId: "G-55LXSETV42"
+    };
+    const appFirebase = initializeApp(firebaseConfig);
+    const auth = getAuth(appFirebase);
+    const db = getDatabase(appFirebase);
+    
+    // 使用 push() 產生自己的玩家資料
+    let myPlayerRef = null;
+    let playerCustomID = "";
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        console.log("以匿名帳號登入：", user.uid);
+      } else {
+        signInAnonymously(auth).catch((error) => {
+          console.error("匿名登入錯誤：", error);
+        });
+      }
+    });
+    document.getElementById("loginButton").addEventListener("click", async () => {
+      const input = document.getElementById("playerId");
+      if(input.value.trim() === "") return;
+      playerCustomID = input.value.trim();
+      myPlayerRef = push(ref(db, 'players'));
+      set(myPlayerRef, {
+        customID: playerCustomID,
+        timestamp: Date.now()
+      });
+      onDisconnect(myPlayerRef).remove();
+      document.getElementById("loginOverlay").style.display = "none";
+      addPlayerIdSprite();
+    });
+    
+    // 用來儲存遠端玩家 3D 角色（key 為 Firebase push key）
+    const remotePlayers = {};
+    
+    // 取得遠端玩家模板：這裡改用 CesiumGirl 女性角色模型
+    let remoteTemplate = null;
+    const remoteLoader = new GLTFLoader();
+    remoteLoader.load(
+      'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/CesiumGirl/glTF-Binary/CesiumGirl.glb',
+      (gltf) => {
+        remoteTemplate = gltf.scene;
+        remoteTemplate.scale.set(1, 1, 1);
+      },
+      undefined,
+      (error) => { console.error("載入 CesiumGirl 模型錯誤：", error); }
+    );
+    
+    // 建立遠端玩家 3D 角色：若 remoteTemplate 可用則複製，否則以球體替代
+    function createRemotePlayer(customID) {
+      let remotePlayer;
+      if(remoteTemplate) {
+        remotePlayer = remoteTemplate.clone(true);
+      } else {
+        const geometry = new THREE.SphereGeometry(1, 16, 16);
+        const material = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+        remotePlayer = new THREE.Mesh(geometry, material);
+      }
+      // 加入頭頂文字 Sprite
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      const fontSize = 48;
+      context.font = `Bold ${fontSize}px Arial`;
+      const textWidth = context.measureText(customID).width;
+      canvas.width = textWidth;
+      canvas.height = fontSize;
+      context.font = `Bold ${fontSize}px Arial`;
+      context.fillStyle = "white";
+      context.fillText(customID, 0, fontSize);
+      const texture = new THREE.CanvasTexture(canvas);
+      const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true });
+      const sprite = new THREE.Sprite(spriteMaterial);
+      sprite.scale.set(1, 0.5, 1);
+      sprite.position.set(0, 3, 0);
+      remotePlayer.add(sprite);
+      return remotePlayer;
+    }
+    
+    // 更新在線玩家 HTML 列表與遠端玩家 3D 角色位置
+    function updateOnlinePlayers() {
+      const onlinePlayersDiv = document.getElementById("onlinePlayers");
+      const playersRef = ref(db, 'players/');
+      onValue(playersRef, (snapshot) => {
+        const players = snapshot.val();
+        let html = "<strong>在線玩家:</strong><br>";
+        if (players) {
+          for (let key in players) {
+            html += players[key].customID;
+            if (players[key].coordinates) {
+              const c = players[key].coordinates;
+              html += ` (${c.x.toFixed(2)}, ${c.y.toFixed(2)}, ${c.z.toFixed(2)})`;
+            }
+            html += "<br>";
+            // 如果該玩家不是自己，建立或更新遠端玩家 3D 物件
+            if (!(myPlayerRef && key === myPlayerRef.key)) {
+              if (!remotePlayers[key]) {
+                remotePlayers[key] = createRemotePlayer(players[key].customID);
+                scene.add(remotePlayers[key]);
+              }
+              if (players[key].coordinates) {
+                remotePlayers[key].position.set(
+                  players[key].coordinates.x,
+                  players[key].coordinates.y,
+                  players[key].coordinates.z
+                );
+              }
+            }
+          }
+        } else {
+          html += "無";
+        }
+        onlinePlayersDiv.innerHTML = html;
+        // 移除已消失的遠端玩家
+        for (let key in remotePlayers) {
+          if (!players || !players[key]) {
+            scene.remove(remotePlayers[key]);
+            delete remotePlayers[key];
+          }
+        }
+      });
+    }
+    updateOnlinePlayers();
+    
+    // 建立本地玩家頭頂的 ID Sprite（縮小至約原來的 1/5 大小）
+    let playerIdSprite = null;
+    function addPlayerIdSprite() {
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      const fontSize = 48;
+      context.font = `Bold ${fontSize}px Arial`;
+      const textWidth = context.measureText(playerCustomID).width;
+      canvas.width = textWidth;
+      canvas.height = fontSize;
+      context.font = `Bold ${fontSize}px Arial`;
+      context.fillStyle = "white";
+      context.fillText(playerCustomID, 0, fontSize);
+      const texture = new THREE.CanvasTexture(canvas);
+      const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true });
+      playerIdSprite = new THREE.Sprite(spriteMaterial);
+      playerIdSprite.scale.set(1, 0.5, 1);
+      if(playerGroup) {
+        playerIdSprite.position.set(0, 3, 0);
+        playerGroup.add(playerIdSprite);
+      }
+    }
+    
+    // SHIFT 鍵偵測：按下時加速
+    let isRunning = false;
+    document.addEventListener("keydown", (event) => {
+      if(event.keyCode === 16) { // SHIFT
+        isRunning = true;
+      }
+    });
+    document.addEventListener("keyup", (event) => {
+      if(event.keyCode === 16) { // SHIFT
+        isRunning = false;
+      }
+    });
+    
+    // ------------------------- 遊戲主要程式碼 -------------------------
+    let scene, camera, renderer;
+    let terrain;
+    let playerGroup = new THREE.Group();
+    let playerMixer = null;
+    let actions = {};
+    let currentAction = "Idle";
+    let isJumping = false;
+    let playerVelocityY = 0;
+    const jumpSpeed = 8;
+    const gravity = 20;
+    let playerHP = 100;
+    let score = 0;
+    let gameOver = false;
+    let enemies = [];
+    let projectiles = [];
+    const enemyAttackCooldown = 1.5;
+    const enemyDamage = 10;
+    const statusDiv = document.getElementById("status");
+    const gameOverDiv = document.getElementById("gameOver");
+    let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+    let attackTriggered = false;
+    const baseMoveSpeed = 5;
+    const rotationSmoothness = 0.1;
+    
+    // 初始化場景與攝影機
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x87ceeb);
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+    
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    dirLight.position.set(10, 20, 10);
+    scene.add(dirLight);
+    
+    // 建立地形
+    const terrainGeo = new THREE.PlaneGeometry(100, 100, 50, 50);
+    terrainGeo.rotateX(-Math.PI/2);
+    const posAttr = terrainGeo.attributes.position;
+    for (let i = 0; i < posAttr.count; i++) {
+      let y = (Math.random() < 0.6) ? 0 : Math.random() * 2;
+      posAttr.setY(i, y);
+    }
+    terrainGeo.computeVertexNormals();
+    const terrainMat = new THREE.MeshPhongMaterial({ color: 0x556B2F, flatShading: true });
+    terrain = new THREE.Mesh(terrainGeo, terrainMat);
+    scene.add(terrain);
+    
+    // 將本地玩家 3D 角色加入場景
+    scene.add(playerGroup);
+    const gltfLoader = new GLTFLoader();
+    // 載入 Soldier 模型（本地玩家），並加入頭頂 ID Sprite
+    gltfLoader.load('https://threejs.org/examples/models/gltf/Soldier.glb', (gltf) => {
+      const model = gltf.scene;
+      model.rotation.y += Math.PI;
+      model.scale.set(1, 1, 1);
+      playerGroup.add(model);
+      if(playerIdSprite) {
+        playerIdSprite.position.set(0, 3, 0);
+        playerGroup.add(playerIdSprite);
+      }
+      playerMixer = new THREE.AnimationMixer(model);
+      gltf.animations.forEach(clip => {
+        const act = playerMixer.clipAction(clip);
+        actions[clip.name] = act;
+      });
+      if(actions["Idle"]) {
+        actions["Idle"].play();
+        currentAction = "Idle";
+      }
+      playerGroup.position.set(0, 0, 0);
+    }, undefined, (error) => {
+      console.error('載入 Soldier 模型錯誤:', error);
+    });
+    
+    // 定義 updateHeight 函式
+    function updateHeight(object, offset = 0.1) {
+      const origin = new THREE.Vector3(object.position.x, 50, object.position.z);
+      const raycaster = new THREE.Raycaster(origin, new THREE.Vector3(0, -1, 0));
+      const intersects = raycaster.intersectObject(terrain);
+      if(intersects.length > 0) {
+        object.position.y = intersects[0].point.y + offset;
+      }
+    }
+    
+    // 子彈生成函式
+    function spawnProjectile(origin, target) {
+      const geometry = new THREE.SphereGeometry(0.2, 8, 8);
+      const material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.copy(origin);
+      scene.add(mesh);
+      let direction = new THREE.Vector3().subVectors(target, origin).normalize();
+      let velocity = direction.multiplyScalar(10);
+      projectiles.push({ mesh, velocity });
+    }
+    
+    // 敵人生成函式（使用 RobotExpressive 模型）
+    const enemyModelURL = "https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/models/gltf/RobotExpressive/RobotExpressive.glb";
+    function spawnEnemy() {
+      let random = Math.random();
+      if(random < 0.5) {
+        const enemyLoader = new GLTFLoader();
+        const spawnX = (Math.random()-0.5)*100;
+        const spawnZ = (Math.random()-0.5)*100;
+        enemyLoader.load(enemyModelURL, (gltf) => {
+          const enemy = gltf.scene;
+          enemy.scale.set(0.4, 0.4, 0.4);
+          enemy.position.set(spawnX, 0, spawnZ);
+          scene.add(enemy);
+          const mixer = new THREE.AnimationMixer(enemy);
+          if(gltf.animations.length > 0) {
+            const act = mixer.clipAction(gltf.animations[0]);
+            act.play();
+          }
+          enemies.push({ object: enemy, mixer: mixer, lastAttackTime: 0, type: "ground" });
+        }, undefined, (error) => {
+          console.error('載入 RobotExpressive 模型錯誤:', error);
+          const geometry = new THREE.BoxGeometry(1, 1, 1);
+          const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+          const enemy = new THREE.Mesh(geometry, material);
+          enemy.position.set(spawnX, 0.5, spawnZ);
+          scene.add(enemy);
+          enemies.push({ object: enemy, lastAttackTime: 0, type: "ground" });
+        });
+      } else if(random < 0.8) {
+        const geometry = new THREE.BoxGeometry(1, 1, 1);
+        const material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        const enemy = new THREE.Mesh(geometry, material);
+        const spawnX = (Math.random()-0.5)*100;
+        const spawnZ = (Math.random()-0.5)*100;
+        enemy.position.set(spawnX, 0.5, spawnZ);
+        scene.add(enemy);
+        enemies.push({ object: enemy, lastAttackTime: 0, type: "bullet" });
+      } else {
+        const geometry = new THREE.SphereGeometry(0.8, 16, 16);
+        const material = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+        const enemy = new THREE.Mesh(geometry, material);
+        const spawnX = (Math.random()-0.5)*100;
+        const spawnZ = (Math.random()-0.5)*100;
+        enemy.position.set(spawnX, 10 + Math.random()*5, spawnZ);
+        scene.add(enemy);
+        enemies.push({ object: enemy, lastAttackTime: 0, type: "aerial" });
+      }
+    }
+    setInterval(() => {
+      if(!gameOver) spawnEnemy();
+    }, 5000);
+    
+    renderer.domElement.addEventListener('click', () => {
+      renderer.domElement.requestPointerLock();
+    });
+    let cameraPitch = 0;
+    document.addEventListener('mousemove', (event) => {
+      if(document.pointerLockElement === renderer.domElement) {
+        playerGroup.rotation.y -= event.movementX * 0.002;
+        cameraPitch -= event.movementY * 0.002;
+        cameraPitch = Math.max(-Math.PI/4, Math.min(Math.PI/4, cameraPitch));
+      }
+    });
+    
+    document.addEventListener("keydown", (event) => {
+      if(gameOver) {
+        if(event.keyCode === 82) location.reload();
+        return;
+      }
+      switch(event.keyCode) {
+        case 87: moveForward = true; break;
+        case 83: moveBackward = true; break;
+        case 65: moveLeft = true; break;
+        case 68: moveRight = true; break;
+        case 70:
+          if(!attackTriggered) {
+            attackTriggered = true;
+            triggerAttack();
+          }
+          break;
+        case 32:
+          if(!isJumping) {
+            isJumping = true;
+            playerVelocityY = jumpSpeed;
+            triggerJump();
+          }
+          break;
+      }
+    });
+    document.addEventListener("keyup", (event) => {
+      switch(event.keyCode) {
+        case 87: moveForward = false; break;
+        case 83: moveBackward = false; break;
+        case 65: moveLeft = false; break;
+        case 68: moveRight = false; break;
+        case 70: attackTriggered = false; break;
+      }
+    });
+    
+    function triggerAttack() {
+      if(actions["Attack"]) {
+        actions["Attack"].reset().play();
+      } else {
+        const originalScale = playerGroup.scale.clone();
+        playerGroup.scale.set(1.2, 1.2, 1.2);
+        setTimeout(() => {
+          playerGroup.scale.copy(originalScale);
+        }, 200);
+      }
+      const attackRange = 3;
+      const dir = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0,1,0), playerGroup.rotation.y);
+      const raycaster = new THREE.Raycaster(playerGroup.position, dir, 0, attackRange);
+      const enemyObjs = enemies.map(e => e.object);
+      const intersects = raycaster.intersectObjects(enemyObjs, true);
+      if(intersects.length > 0) {
+        const hit = intersects[0].object;
+        let enemyToRemove = null;
+        for(let e of enemies) {
+          if(e.object === hit || e.object.children.includes(hit)) {
+            enemyToRemove = e;
+            break;
+          }
+        }
+        if(enemyToRemove) {
+          scene.remove(enemyToRemove.object);
+          enemies = enemies.filter(e => e !== enemyToRemove);
+          score += 10;
+        }
+      }
+    }
+    
+    function triggerJump() {
+      if(actions["Jump"]) {
+        actions["Jump"].reset().play();
+      }
+    }
+    
+    function updateProjectiles(delta) {
+      for(let i = projectiles.length - 1; i >= 0; i--){
+        let proj = projectiles[i];
+        proj.mesh.position.addScaledVector(proj.velocity, delta);
+        const dist = proj.mesh.position.distanceTo(playerGroup.position);
+        if(dist < 1) {
+          playerHP -= 5;
+          scene.remove(proj.mesh);
+          projectiles.splice(i, 1);
+        } else if(dist > 200) {
+          scene.remove(proj.mesh);
+          projectiles.splice(i, 1);
+        }
+      }
+    }
+    
+    function updateEnemies(delta, time) {
+      enemies.forEach(e => {
+        if(e.type === "ground") {
+          updateHeight(e.object, 0.1);
+          const enemyPos = e.object.position;
+          const playerPos = playerGroup.position;
+          let dir = new THREE.Vector3().subVectors(playerPos, enemyPos);
+          const distance = dir.length();
+          if(distance > 0.1) {
+            dir.normalize();
+            e.object.position.addScaledVector(dir, delta * 2);
+          }
+          if(distance < 2 && (time - e.lastAttackTime) > enemyAttackCooldown) {
+            playerHP -= enemyDamage;
+            e.lastAttackTime = time;
+          }
+        } else if(e.type === "bullet") {
+          if(!e.lastShotTime) e.lastShotTime = 0;
+          if(time - e.lastShotTime > 2) {
+            spawnProjectile(e.object.position.clone(), playerGroup.position.clone());
+            e.lastShotTime = time;
+          }
+          updateHeight(e.object, 0.5);
+          const enemyPos = e.object.position;
+          const playerPos = playerGroup.position;
+          let dir = new THREE.Vector3().subVectors(playerPos, enemyPos);
+          const distance = dir.length();
+          if(distance > 5) {
+            dir.normalize();
+            e.object.position.addScaledVector(dir, delta * 1);
+          }
+        } else if(e.type === "aerial") {
+          if(!e.lastShotTime) e.lastShotTime = 0;
+          if(time - e.lastShotTime > 2.5) {
+            spawnProjectile(e.object.position.clone(), playerGroup.position.clone());
+            e.lastShotTime = time;
+          }
+          e.object.position.x += Math.sin(time) * delta;
+          e.object.position.z += Math.cos(time) * delta;
+        }
+        if(e.mixer) e.mixer.update(delta);
+      });
+    }
+    
+    const clock = new THREE.Clock();
+    let lastFirebaseUpdate = 0;
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+      const elapsed = clock.elapsedTime;
+      
+      if(gameOver) {
+        renderer.render(scene, camera);
+        return;
+      }
+      
+      let inputVec = new THREE.Vector3();
+      if(moveForward) inputVec.z -= 1;
+      if(moveBackward) inputVec.z += 1;
+      if(moveLeft) inputVec.x += 1;
+      if(moveRight) inputVec.x -= 1;
+      
+      if(inputVec.length() > 0) {
+        inputVec.normalize();
+        const currentRot = playerGroup.rotation.y;
+        const forward = new THREE.Vector3(Math.sin(currentRot), 0, Math.cos(currentRot));
+        const right = new THREE.Vector3(Math.sin(currentRot + Math.PI/2), 0, Math.cos(currentRot + Math.PI/2));
+        let desiredDir = new THREE.Vector3();
+        desiredDir.add(forward.clone().multiplyScalar(inputVec.z * -1));
+        desiredDir.add(right.clone().multiplyScalar(inputVec.x));
+        desiredDir.normalize();
+        
+        let currentSpeed = baseMoveSpeed;
+        let targetAnim = "Walk";
+        if(isRunning && actions["Run"]) {
+          currentSpeed = baseMoveSpeed * 3;
+          targetAnim = "Run";
+        }
+        const targetAngle = Math.atan2(desiredDir.x, desiredDir.z);
+        playerGroup.rotation.y = lerpAngle(playerGroup.rotation.y, targetAngle, rotationSmoothness);
+        playerGroup.position.addScaledVector(desiredDir, currentSpeed * delta);
+        
+        if(currentAction !== targetAnim && !isJumping && actions[targetAnim]) {
+          if(actions["Idle"]) actions["Idle"].fadeOut(0.2);
+          if(targetAnim === "Run" && actions["Walk"]) {
+            actions["Walk"].fadeOut(0.2);
+          }
+          actions[targetAnim].reset().fadeIn(0.2).play();
+          currentAction = targetAnim;
+        }
+      } else {
+        if(currentAction !== "Idle" && !isJumping && actions["Idle"]) {
+          if(actions["Walk"]) actions["Walk"].fadeOut(0.2);
+          if(actions["Run"]) actions["Run"].fadeOut(0.2);
+          actions["Idle"].reset().fadeIn(0.2).play();
+          currentAction = "Idle";
+        }
+      }
+      
+      if(isJumping) {
+        playerGroup.position.y += playerVelocityY * delta;
+        playerVelocityY -= gravity * delta;
+        const rayOrigin = new THREE.Vector3(playerGroup.position.x, playerGroup.position.y + 1, playerGroup.position.z);
+        const raycaster = new THREE.Raycaster(rayOrigin, new THREE.Vector3(0,-1,0));
+        const intersects = raycaster.intersectObject(terrain);
+        if(intersects.length > 0) {
+          const groundY = intersects[0].point.y;
+          if(playerGroup.position.y <= groundY + 0.1) {
+            playerGroup.position.y = groundY + 0.1;
+            isJumping = false;
+            playerVelocityY = 0;
+          }
+        }
+      } else {
+        updateHeight(playerGroup, 0.1);
+      }
+      
+      if(playerMixer) playerMixer.update(delta);
+      updateEnemies(delta, elapsed);
+      updateProjectiles(delta);
+      
+      statusDiv.innerHTML = `HP: ${playerHP} | 得分: ${score}`;
+      if(playerHP <= 0) {
+        gameOver = true;
+        gameOverDiv.innerHTML = `遊戲結束<br>得分: ${score}<br>按 R 重新開始`;
+        gameOverDiv.style.display = "block";
+      }
+      
+      const playerPos = playerGroup.position.clone();
+      const playerForward = new THREE.Vector3(Math.sin(playerGroup.rotation.y), 0, Math.cos(playerGroup.rotation.y)).normalize();
+      const camDistance = 6;
+      const camHeight = 2;
+      const camPos = playerPos.clone().sub(playerForward.clone().multiplyScalar(camDistance));
+      camPos.y += camHeight;
+      camera.position.copy(camPos);
+      const lookAtPos = playerPos.clone().add(playerForward.clone().multiplyScalar(10));
+      lookAtPos.y += cameraPitch;
+      camera.lookAt(lookAtPos);
+      
+      renderer.render(scene, camera);
+      
+      if(myPlayerRef && (elapsed - lastFirebaseUpdate) > 0.2) {
+        set(myPlayerRef, {
+          customID: playerCustomID,
+          coordinates: {
+            x: playerGroup.position.x,
+            y: playerGroup.position.y,
+            z: playerGroup.position.z
+          },
+          timestamp: Date.now()
+        });
+        lastFirebaseUpdate = elapsed;
+      }
+      
+      const coordDiv = document.getElementById("playerCoordinates");
+      coordDiv.innerHTML = `<strong>我的座標:</strong><br>(${playerGroup.position.x.toFixed(2)}, ${playerGroup.position.y.toFixed(2)}, ${playerGroup.position.z.toFixed(2)})`;
+    }
+    animate();
+    
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth/window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+    
+    function lerpAngle(a, b, t) {
+      let diff = b - a;
+      while(diff < -Math.PI) diff += Math.PI * 2;
+      while(diff > Math.PI) diff -= Math.PI * 2;
+      return a + diff * t;
+    }
+    // ------------------------- 結束遊戲程式碼 -------------------------
+  </script>
+</body>
+</html>
