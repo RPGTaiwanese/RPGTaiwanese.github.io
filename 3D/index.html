@@ -447,17 +447,19 @@
       console.error('載入 Soldier 模型錯誤:', error);
     });
     
-    // 新增 NPC：將原本的 Fox 模型換成本地檔案 robot.glb，並加入頭上「NPC」文字及對話提示「ENTER對話」
+    // 新增 NPC：將原本的 Fox 模型換成本地檔案 robot.glb
+    // 並放大 3 倍、調整位置確保不穿過地圖
     let npcGroup = new THREE.Group();
     scene.add(npcGroup);
     gltfLoader.load('robot.glb', (gltf) => {
       const npcModel = gltf.scene;
-      // 如有需要可根據 robot 模型調整縮放與旋轉
-      // 例如：npcModel.rotation.y = Math.PI;
-      //       npcModel.scale.set(1, 1, 1);
+      // 放大 3 倍
+      npcModel.scale.set(3, 3, 3);
       npcGroup.add(npcModel);
-      // 將 NPC 放置在玩家起始座標附近，例如 (2,0,2)
+      // 將 NPC 放置在玩家起始座標附近，例如 (2, 0, 2)
       npcGroup.position.set(2, 0, 2);
+      // 更新 NPC 高度，確保 NPC 顯示在地圖上方（可根據需要調整 offset 值）
+      updateHeight(npcGroup, 0.1);
       
       // 在 NPC 頭上加入「NPC」文字 Sprite
       const npcNameSprite = createTextSprite("NPC", { fontSize: 50, color: "#ffffff", backgroundColor: "rgba(0,0,0,0.5)" });
