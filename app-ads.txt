@@ -1,5 +1,1 @@
-# IAB Tech Lab app-ads.txt 規格範例
-# 此文件用於宣告授權銷售您應用程式廣告庫存的賣方資訊
-# 詳細說明請參考 IAB Tech Lab 官方文件：https://iabtechlab.com/app-ads-txt/
-
 google.com, pub-1928880731403231, DIRECT, f08c47fec0942fa0
