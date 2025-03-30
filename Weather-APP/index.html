@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>天氣管家AI</title>
+  <style>
+    /* 調整整體網頁背景為淡灰白，有質感 */
+    body {
+      background-color: #f5f5f5;
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: #333;
+    }
+    .container {
+      max-width: 480px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #ffffff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      border-radius: 8px;
+      min-height: 90vh;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .header h1 {
+      font-size: 2em;
+      margin: 0;
+      color: #007bff;
+      animation: fadeIn 2s ease-in-out;
+      text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    /* AI 按鈕樣式，放在最上面 */
+    #aiButton {
+      display: block;
+      margin: 10px auto 20px;
+      padding: 12px 20px;
+      background: linear-gradient(45deg, #007bff, #0056b3);
+      border: none;
+      border-radius: 25px;
+      color: #fff;
+      font-size: 1em;
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    #aiButton:hover {
+      opacity: 0.9;
+    }
+    /* 顯示地區文字改為白色，背景採淺黑色 */
+    #locationName {
+      text-align: center;
+      font-size: 1.2em;
+      margin-bottom: 10px;
+      color: #fff;
+      background-color: #444;
+      padding: 5px 10px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+    /* 天氣資訊區 */
+    #weatherDisplay {
+      padding: 10px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .current-weather {
+      background: #007bff;
+      color: #fff;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      margin-bottom: 15px;
+    }
+    .current-weather div {
+      margin: 5px 0;
+    }
+    .section {
+      margin-bottom: 20px;
+      text-align: left;
+    }
+    .section h2 {
+      font-size: 1.1em;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 5px;
+      margin-bottom: 10px;
+    }
+    .section ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .section li {
+      padding: 8px 0;
+      border-bottom: 1px solid #eee;
+      font-size: 0.95em;
+      line-height: 1.5;
+    }
+    /* 手動輸入位置 */
+    #locationInput {
+      text-align: center;
+      margin-top: 20px;
+    }
+    input[type="text"] {
+      width: 80%;
+      padding: 10px;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 1em;
+    }
+    button {
+      padding: 10px 20px;
+      background: #007bff;
+      border: none;
+      border-radius: 4px;
+      color: #fff;
+      font-size: 1em;
+      cursor: pointer;
+    }
+    button:active {
+      background: #0056b3;
+    }
+    /* 全畫面聊天介面 */
+    #chatModal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    #chatContainer {
+      background: #fff;
+      width: 90%;
+      max-width: 480px;
+      max-height: 90%;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #chatHeader {
+      background: #007bff;
+      color: #fff;
+      padding: 10px;
+      text-align: center;
+      font-weight: bold;
+    }
+    #chatMessages {
+      flex: 1;
+      padding: 10px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: #f9f9f9;
+    }
+    /* 用戶泡泡：右側 */
+    .chat-message.user {
+      align-self: flex-end;
+      background: #DCF8C6;
+      padding: 10px;
+      border-radius: 12px;
+      max-width: 70%;
+      word-break: break-word;
+    }
+    /* AI 泡泡：左側 */
+    .chat-message.ai {
+      align-self: flex-start;
+      background: #FFFFFF;
+      padding: 10px;
+      border-radius: 12px;
+      max-width: 70%;
+      word-break: break-word;
+      border: 1px solid #ddd;
+    }
+    #chatInputContainer {
+      display: flex;
+      border-top: 1px solid #ccc;
+    }
+    #chatInputContainer input {
+      flex: 1;
+      border: none;
+      padding: 10px;
+      font-size: 1em;
+    }
+    #chatInputContainer button {
+      border: none;
+      background: #007bff;
+      color: #fff;
+      padding: 10px 20px;
+      cursor: pointer;
+    }
+    #closeChat {
+      background: #dc3545;
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      border: none;
+      padding: 5px 10px;
+      color: #fff;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    /* 響應式設定：手機螢幕 */
+    @media (max-width: 600px) {
+      #chatContainer {
+        width: 100%;
+        height: 100%;
+        border-radius: 0;
+        max-width: none;
+        max-height: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- 將 AI 按鈕移至最上方 -->
+    <button id="aiButton">AI今天適合做什麼事</button>
+    <div class="header">
+      <h1>天氣管家AI</h1>
+    </div>
+    <!-- 顯示自動取得的地區名稱 -->
+    <div id="locationName">獲取地區中...</div>
+    <!-- 天氣資訊區，初始僅提示 -->
+    <div id="weatherDisplay">請輸入位置以取得最新天氣資訊...</div>
+    <!-- 手動位置輸入介面 -->
+    <div id="locationInput" style="display: none;">
+      <input type="text" id="location" placeholder="請輸入您的位置 (例如：台北)" />
+      <br />
+      <button id="submitLocation">查詢</button>
+    </div>
+  </div>
+
+  <!-- 全畫面聊天介面 -->
+  <div id="chatModal">
+    <div id="chatContainer">
+      <div id="chatHeader">天氣管家AI</div>
+      <div id="chatMessages"></div>
+      <div id="chatInputContainer">
+        <input type="text" id="chatInput" placeholder="輸入訊息…" />
+        <button id="sendChat">送出</button>
+      </div>
+      <button id="closeChat">關閉</button>
+    </div>
+  </div>
+
+  <script>
+    // 天氣相關功能
+    function mapPrecip(prob) {
+      if (prob <= 10) return "大晴天 ☀️";
+      else if (prob <= 30) return "晴天 ☀️";
+      else if (prob <= 50) return "少雲 🌤️";
+      else if (prob <= 70) return "多雲 ☁️";
+      else if (prob <= 80) return "局部降雨 🌦️";
+      else if (prob <= 90) return "陣雨 🌧️";
+      else return "雨 🌧️";
+    }
+    function formatHourly(ts) {
+      const parts = ts.split("T");
+      const dateParts = parts[0].split("-");
+      const formattedDate = `${dateParts[0]}年${dateParts[1]}月${dateParts[2]}號`;
+      const timePart = parts[1];
+      return { formattedDate, timePart };
+    }
+    function formatDate(ts) {
+      const dateParts = ts.split("-");
+      return `${dateParts[0]}年${dateParts[1]}月${dateParts[2]}號`;
+    }
+    function getLocationDetails(lat, lon) {
+      const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`;
+      fetch(url)
+        .then(response => response.json())
+        .then(data => {
+          if (data && data.address) {
+            const address = data.address;
+            let locationInfo = "";
+            if (address.road) locationInfo += address.road + ", ";
+            if (address.suburb) locationInfo += address.suburb + ", ";
+            if (address.city) locationInfo += address.city;
+            else if (address.town) locationInfo += address.town;
+            else if (address.village) locationInfo += address.village;
+            if (address.state) locationInfo += ", " + address.state;
+            if (address.country) locationInfo += ", " + address.country;
+            document.getElementById("locationName").innerText = locationInfo;
+          } else {
+            document.getElementById("locationName").innerText = "未知地區";
+          }
+        })
+        .catch(error => {
+          console.error("查詢地址失敗：", error);
+          document.getElementById("locationName").innerText = "未知地區";
+        });
+    }
+    function fetchWeather(lat, lon) {
+      const apiUrl =
+        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+        `&hourly=temperature_2m,precipitation,precipitation_probability` +
+        `&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max` +
+        `&current_weather=true&forecast_days=7&timezone=auto`;
+      fetch(apiUrl)
+        .then(response => response.json())
+        .then(data => displayWeather(data))
+        .catch(error => {
+          document.getElementById("weatherDisplay").innerHTML =
+            "<p>取得天氣資料時發生錯誤。</p>";
+          console.error(error);
+        });
+    }
+    // 根據 API 資料動態組出天氣資訊內容
+    function displayWeather(data) {
+      let html = "";
+      const now = new Date();
+      // 使用每小時天氣中與目前時間最接近的資料作為目前天氣
+      let currentIndex = 0;
+      if (data.hourly && data.hourly.time) {
+        for (let i = 0; i < data.hourly.time.length; i++) {
+          const forecastTime = new Date(data.hourly.time[i]);
+          if (forecastTime >= now) {
+            currentIndex = i;
+            break;
+          }
+        }
+      }
+      const { formattedDate, timePart } = formatHourly(data.hourly.time[currentIndex]);
+      const currentTemp = data.hourly.temperature_2m ? data.hourly.temperature_2m[currentIndex] : "N/A";
+      const currentPrecipitation = data.hourly.precipitation ? data.hourly.precipitation[currentIndex] : "N/A";
+      const currentPrecipProb = data.hourly.precipitation_probability ? data.hourly.precipitation_probability[currentIndex] : "N/A";
+      const currentCondition = mapPrecip(currentPrecipProb);
+      // 目前天氣區塊，排版美化
+      html += `<div class="current-weather">
+                <div style="font-size:1.3em; font-weight:bold;">目前天氣</div>
+                <div style="margin-top:5px;">${formattedDate} ${timePart}</div>
+                <div style="margin-top:10px;">狀態：${currentCondition}</div>
+                <div>溫度：${currentTemp} °C</div>
+                <div>降雨量：${currentPrecipitation} mm</div>
+                <div>降雨機率：${currentPrecipProb}%</div>
+              </div>`;
+      // 今天每小時天氣
+      if (data.hourly && data.hourly.time && data.hourly.temperature_2m && data.hourly.precipitation && data.hourly.precipitation_probability) {
+        html += `<div class="section">
+                  <h2>今天的每小時天氣</h2>
+                  <ul id="hourlyList">`;
+        const todayStr = now.toISOString().split("T")[0];
+        let count = 0;
+        for (let i = 0; i < data.hourly.time.length && count < 24; i++) {
+          if (!data.hourly.time[i].startsWith(todayStr)) continue;
+          let forecastTime = new Date(data.hourly.time[i]);
+          if (forecastTime < now) continue;
+          const { formattedDate, timePart } = formatHourly(data.hourly.time[i]);
+          const condition = mapPrecip(data.hourly.precipitation_probability[i]);
+          html += `<li>${formattedDate} (${condition})<br>
+                   時間：${timePart}，溫度：${data.hourly.temperature_2m[i]} °C<br>
+                   降雨量：${data.hourly.precipitation[i]} mm，降雨機率：${data.hourly.precipitation_probability[i]}%</li>`;
+          count++;
+        }
+        html += `</ul></div>`;
+      }
+      // 每日預報（7天）
+      if (data.daily && data.daily.time && data.daily.temperature_2m_max && data.daily.temperature_2m_min && data.daily.sunrise && data.daily.sunset && data.daily.precipitation_probability_max) {
+        html += `<div class="section">
+                  <h2>每日預報 (7天)</h2>
+                  <ul>`;
+        for (let i = 0; i < data.daily.time.length; i++) {
+          const conditionDaily = mapPrecip(data.daily.precipitation_probability_max[i]);
+          const sunriseTime = data.daily.sunrise[i].split("T")[1];
+          const sunsetTime = data.daily.sunset[i].split("T")[1];
+          html += `<li>${formatDate(data.daily.time[i])} (${conditionDaily})<br>
+                   溫度最高：${data.daily.temperature_2m_max[i]} °C，溫度最低：${data.daily.temperature_2m_min[i]} °C<br>
+                   日出：${sunriseTime}，日落：${sunsetTime}，降雨機率：${data.daily.precipitation_probability_max[i]}%</li>`;
+        }
+        html += `</ul></div>`;
+      }
+      document.getElementById("weatherDisplay").innerHTML = html;
+    }
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          getLocationDetails(lat, lon);
+          fetchWeather(lat, lon);
+        },
+        (error) => {
+          document.getElementById("weatherDisplay").innerHTML =
+            "<p>無法自動取得您的位置，請手動輸入。</p>";
+          document.getElementById("locationInput").style.display = "block";
+          console.error(error);
+        }
+      );
+    } else {
+      document.getElementById("weatherDisplay").innerHTML =
+        "<p>您的瀏覽器不支援自動定位，請手動輸入。</p>";
+      document.getElementById("locationInput").style.display = "block";
+    }
+    document.getElementById("submitLocation").addEventListener("click", () => {
+      const location = document.getElementById("location").value;
+      if (!location) {
+        alert("請輸入位置！");
+        return;
+      }
+      fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.results && data.results.length > 0) {
+            const lat = data.results[0].latitude;
+            const lon = data.results[0].longitude;
+            const locationName = (data.results[0].admin1 ? data.results[0].admin1 : data.results[0].name) + (data.results[0].admin2 ? " " + data.results[0].admin2 : "");
+            document.getElementById("locationName").innerText = locationName;
+            fetchWeather(lat, lon);
+          } else {
+            document.getElementById("weatherDisplay").innerHTML =
+              "<p>找不到該位置，請嘗試其他位置。</p>";
+          }
+        })
+        .catch(error => {
+          document.getElementById("weatherDisplay").innerHTML =
+            "<p>轉換位置時發生錯誤。</p>";
+          console.error(error);
+        });
+    });
+
+    // 聊天功能（與先前版本類似）
+    let chatHistory = [];
+    document.getElementById("aiButton").addEventListener("click", () => {
+      const weatherContext = document.getElementById("weatherDisplay").innerText || "無天氣資訊";
+      chatHistory = [{
+        role: "system",
+        content: "你是一個天氣管家AI 你現在要幫客戶回答它的問題 這是天氣資訊\n" + weatherContext
+      }];
+      document.getElementById("chatMessages").innerHTML = "";
+      document.getElementById("chatModal").style.display = "flex";
+    });
+    document.getElementById("sendChat").addEventListener("click", async () => {
+      const sendButton = document.getElementById("sendChat");
+      sendButton.disabled = true;
+      const input = document.getElementById("chatInput");
+      const userMessage = input.value.trim();
+      if (!userMessage) {
+        sendButton.disabled = false;
+        return;
+      }
+      // 顯示用戶訊息（右側）
+      appendMessage("user", userMessage);
+      chatHistory.push({ role: "user", content: userMessage });
+      // 加入暫時 AI 泡泡，顯示「(思考中)」
+      const aiBubble = document.createElement("div");
+      aiBubble.className = "chat-message ai";
+      aiBubble.innerText = "(思考中)";
+      aiBubble.id = "aiTemp";
+      document.getElementById("chatMessages").appendChild(aiBubble);
+      input.value = "";
+      try {
+        const response = await fetch("https://api.suanli.cn/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": "Bearer sk-W0rpStc95T7JVYVwDYc29IyirjtpPPby6SozFMQr17m8KWeo",
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            model: "free:QwQ-32B",
+            messages: chatHistory
+          })
+        });
+        if (!response.ok) {
+          throw new Error("Network response was not ok");
+        }
+        const data = await response.json();
+        const aiReply = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content 
+          ? data.choices[0].message.content 
+          : "抱歉，無法取得回覆。";
+        chatHistory.push({ role: "assistant", content: aiReply });
+        document.getElementById("aiTemp").innerText = aiReply;
+      } catch (error) {
+        console.error("AI 回覆錯誤：", error);
+        document.getElementById("aiTemp").innerText = "取得回覆時發生錯誤。";
+      } finally {
+        sendButton.disabled = false;
+      }
+    });
+    function appendMessage(role, text) {
+      const messageDiv = document.createElement("div");
+      messageDiv.className = "chat-message " + role;
+      messageDiv.innerText = text;
+      document.getElementById("chatMessages").appendChild(messageDiv);
+      document.getElementById("chatMessages").scrollTop = document.getElementById("chatMessages").scrollHeight;
+    }
+    document.getElementById("closeChat").addEventListener("click", () => {
+      document.getElementById("chatModal").style.display = "none";
+      document.getElementById("chatMessages").innerHTML = "";
+      document.getElementById("chatInput").value = "";
+      chatHistory = [];
+    });
+  </script>
+</body>
+</html>
