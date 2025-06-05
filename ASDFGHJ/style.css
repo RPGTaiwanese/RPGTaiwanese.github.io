@@ -1,0 +1,17 @@
+/* ... existing CSS ... */
+#worldCanvas {
+    border: 1px solid #555;
+    background-color: #a0d8a0; /* Light green for default grass */
+    cursor: grab;
+}
+#worldCanvas:active {
+    cursor: grabbing;
+}
+#coordsDisplay {
+    margin-top: 10px;
+    font-size: 0.9em;
+    background-color: rgba(255,255,255,0.7);
+    padding: 5px;
+    border-radius: 3px;
+    display: inline-block;
+}
