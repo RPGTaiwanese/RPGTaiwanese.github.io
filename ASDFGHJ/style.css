@@ -1,0 +1,91 @@
+body {
+    font-family: sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f0f0f0;
+    display: flex;
+    color: #333;
+}
+
+#leaderboard {
+    width: 200px;
+    background-color: #e0e0e0;
+    padding: 15px;
+    height: 100vh;
+    box-sizing: border-box;
+    overflow-y: auto;
+}
+
+#leaderboard h2 {
+    margin-top: 0;
+    font-size: 1.2em;
+}
+
+#leaderboard-list li {
+    margin-bottom: 5px;
+    font-size: 0.9em;
+}
+
+#game-container {
+    flex-grow: 1;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+#auth-section, #user-info, #sprite-editor, #monster-status, #game-log {
+    background-color: #fff;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+h1, h2 {
+    color: #333;
+}
+
+button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-right: 10px;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+#pixelCanvas {
+    border: 1px solid #ccc;
+    cursor: crosshair;
+    width: 200px; /* Display size */
+    height: 200px;/* Display size */
+    image-rendering: pixelated; /* Keeps pixels sharp */
+}
+
+#colorPicker {
+    margin-left: 10px;
+    vertical-align: middle;
+}
+
+#logEntries {
+    list-style-type: none;
+    padding: 0;
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #eee;
+    padding: 10px;
+}
+
+#logEntries li {
+    padding: 5px 0;
+    border-bottom: 1px dashed #eee;
+    font-size: 0.9em;
+}
+#logEntries li:last-child {
+    border-bottom: none;
+}

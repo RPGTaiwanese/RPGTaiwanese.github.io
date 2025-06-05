@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>像素怪獸世界</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="leaderboard">
+        <h2>排行榜 (Top 10)</h2>
+        <ol id="leaderboard-list"></ol>
+    </div>
+
+    <div id="game-container">
+        <h1>像素怪獸世界</h1>
+
+        <div id="auth-section">
+            <button id="guestLoginBtn">遊客登入 (開始遊戲)</button>
+        </div>
+
+        <div id="user-info" style="display:none;">
+            <p>玩家ID: <span id="userIdDisplay"></span></p>
+            <p>等級: <span id="levelDisplay">1</span> | XP: <span id="xpDisplay">0</span>/<span id="xpToNextLevelDisplay">100</span></p>
+            <p>可用方塊數: <span id="maxBlocksDisplay">5</span></p>
+        </div>
+
+        <div id="sprite-editor" style="display:none;">
+            <h2>繪製你的精靈</h2>
+            <canvas id="pixelCanvas" width="100" height="100"></canvas>
+            <div>
+                顏色: <input type="color" id="colorPicker" value="#FF0000">
+                <button id="saveSpriteBtn">儲存精靈</button>
+                <span id="blocksUsedDisplay">已用方塊: 0</span>
+            </div>
+        </div>
+        
+        <div id="monster-status" style="display:none;">
+            <h2>我的怪獸</h2>
+            <p>HP: <span id="monsterHpDisplay">100</span>/<span id="monsterMaxHpDisplay">100</span></p>
+            <p>攻擊力 (ATK): <span id="monsterAtkDisplay">10</span></p>
+            <p>狀態: <span id="monsterStateDisplay">閒置</span></p>
+            <p>休息時間減少: <span id="monsterCooldownReductionDisplay">0</span>%</p>
+            <button id="manualRestBtn">手動休息 (恢復少量HP)</button>
+            <button id="manualExploreBtn">手動探索</button>
+        </div>
+
+        <div id="game-log" style="display:none;">
+            <h2>遊戲日誌</h2>
+            <ul id="logEntries"></ul>
+        </div>
+
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module" src="app.js"></script>
+</body>
+</html>
