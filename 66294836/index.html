@@ -3,19 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PeerJS 畫面分享</title>
+    <title>PeerJS 畫面分享 - 穩定版</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { font-family: sans-serif; text-align: center; background-color: #f0f0f0; padding: 20px; }
-        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        img { width: 150px; margin-bottom: 20px; }
-        video { width: 100%; border: 2px solid #333; border-radius: 5px; margin-top: 20px; display: none; }
-        .controls { margin-top: 20px; }
-        button { padding: 10px 20px; font-size: 16px; cursor: pointer; border: none; border-radius: 5px; background-color: #007bff; color: white; transition: 0.3s; }
-        button:hover { background-color: #0056b3; }
-        input { padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 5px; width: 200px; }
-        .status { margin: 15px 0; font-weight: bold; color: #d9534f; }
+        body { font-family: "Microsoft JhengHei", sans-serif; text-align: center; background-color: #f4f7f6; padding: 20px; }
+        .container { max-width: 700px; margin: 0 auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        img { width: 120px; margin-bottom: 10px; }
+        h2 { color: #333; }
+        video { width: 100%; border: 3px solid #333; border-radius: 8px; margin-top: 20px; background: #000; display: none; }
+        .controls { margin: 20px 0; padding: 15px; border: 1px dashed #ccc; border-radius: 10px; }
+        button { padding: 12px 24px; font-size: 16px; cursor: pointer; border: none; border-radius: 8px; background-color: #007bff; color: white; transition: 0.3s; margin: 5px; }
+        button:hover { background-color: #0056b3; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+        input { padding: 12px; font-size: 16px; border: 2px solid #ddd; border-radius: 8px; width: 220px; outline: none; }
+        input:focus { border-color: #007bff; }
+        .status-box { margin: 15px 0; font-weight: bold; padding: 10px; background: #e9ecef; border-radius: 5px; cursor: pointer; }
+        .status-box:hover { background: #dee2e6; }
         .hidden { display: none; }
+        .hint { font-size: 12px; color: #666; margin-top: 5px; }
     </style>
 </head>
 <body>
@@ -27,19 +31,20 @@
         <h2>螢幕分享系統</h2>
         <div class="controls">
             <button id="start-share-btn">分享我的網頁畫面</button>
+            <div class="hint">點擊後選擇要分享的視窗</div>
         </div>
-        <p>或</p>
+        <p>或是</p>
         <div class="controls">
-            <input type="text" id="peer-id-input" placeholder="輸入連線代碼">
-            <button id="join-btn">加入觀看</button>
+            <input type="text" id="peer-id-input" placeholder="請貼上連線代碼">
+            <button id="join-btn" style="background-color: #28a745;">加入觀看</button>
         </div>
     </div>
 
     <div id="active-area" class="hidden">
-        <div class="status" id="display-id">你的連線代碼: ---</div>
+        <div class="status-box" id="display-id" title="點擊可複製代碼">正在取得連線代碼...</div>
         <video id="remote-video" autoplay playsinline></video>
         <br>
-        <button id="stop-btn" style="background-color: #dc3545;">退出並返回</button>
+        <button id="stop-btn" style="background-color: #dc3545;">退出並返回主畫面</button>
     </div>
 </div>
 
@@ -53,89 +58,125 @@
     const remoteVideo = document.getElementById('remote-video');
     const displayId = document.getElementById('display-id');
 
-    // 初始化 Peer
-    function initPeer() {
+    // 1. 初始化 Peer 的核心函式 (加入 Callback 確保 ID 產生後才執行動作)
+    function initPeer(callback) {
+        if (peer && !peer.destroyed) {
+            if (callback) callback();
+            return;
+        }
+
         peer = new Peer();
         
         peer.on('open', (id) => {
-            displayId.innerText = `你的連線代碼: ${id}`;
+            console.log('Peer 連線成功，我的 ID:', id);
+            displayId.innerText = `連線代碼: ${id} (點擊複製)`;
+            if (callback) callback();
         });
 
-        // 當有人撥打進來時 (分享者端)
+        // 當有人連進來時 (作為分享者)
         peer.on('call', (call) => {
-            if (localStream) {
-                call.answer(localStream);
-                currentCall = call;
-            }
+            console.log('接收到來自對方的連線請求...');
+            call.answer(localStream); // 回應自己的螢幕串流
+            handleCall(call);
         });
 
         peer.on('error', (err) => {
-            alert('連線錯誤: ' + err.type);
+            console.error('Peer 發生錯誤:', err.type);
+            alert('連線失敗: ' + err.type);
             resetUI();
         });
     }
 
-    // 分享畫面 (Host)
+    // 2. 處理通話串流的通用邏輯
+    function handleCall(call) {
+        currentCall = call;
+        call.on('stream', (stream) => {
+            console.log('收到畫面串流');
+            activeArea.classList.remove('hidden');
+            setupArea.classList.add('hidden');
+            remoteVideo.style.display = "block";
+            remoteVideo.srcObject = stream;
+        });
+        
+        call.on('close', resetUI);
+    }
+
+    // 3. 按鈕事件：開始分享 (Host)
     document.getElementById('start-share-btn').addEventListener('click', async () => {
         try {
-            localStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-            initPeer();
-            
-            setupArea.classList.add('hidden');
-            activeArea.classList.remove('hidden');
-            remoteVideo.style.display = "block";
-            remoteVideo.srcObject = localStream;
-            remoteVideo.muted = true; // 自己看自己的靜音避免回授
+            // 取得螢幕畫面
+            localStream = await navigator.mediaDevices.getDisplayMedia({ 
+                video: { cursor: "always" }, 
+                audio: false 
+            });
 
-            // 監聽停止分享 (瀏覽器內建按鈕)
+            // 初始化 Peer 並顯示 UI
+            initPeer(() => {
+                activeArea.classList.remove('hidden');
+                setupArea.classList.add('hidden');
+                remoteVideo.style.display = "block";
+                remoteVideo.srcObject = localStream;
+                remoteVideo.muted = true; // 分享者自己看不需要聲音
+            });
+
+            // 如果使用者點擊瀏覽器上方的「停止分享」按鈕
             localStream.getVideoTracks()[0].onended = () => resetUI();
-            
+
         } catch (err) {
-            console.error("無法取得畫面: ", err);
-            alert("請授權螢幕分享權限");
+            console.error('取得畫面失敗:', err);
+            alert("請同意分享螢幕畫面才能啟動功能");
         }
     });
 
-    // 加入觀看 (Viewer)
+    // 4. 按鈕事件：加入觀看 (Viewer)
     document.getElementById('join-btn').addEventListener('click', () => {
-        const targetId = document.getElementById('peer-id-input').value;
-        if (!targetId) return alert("請輸入代碼");
+        const targetId = document.getElementById('peer-id-input').value.trim();
+        if (!targetId) return alert("請輸入對方的連線代碼");
 
-        initPeer();
-        
-        // 延遲一下確保 Peer 已 open
-        setTimeout(() => {
-            const call = peer.call(targetId, null); // 觀看者不發送流
+        initPeer(() => {
+            console.log('正在嘗試連線至:', targetId);
+            // 撥號給分享者
+            const call = peer.call(targetId, null);
             
-            call.on('stream', (stream) => {
-                setupArea.classList.add('hidden');
-                activeArea.classList.remove('hidden');
-                remoteVideo.style.display = "block";
-                remoteVideo.srcObject = stream;
+            if (call) {
+                handleCall(call);
                 displayId.innerText = `正在觀看: ${targetId}`;
-            });
-
-            currentCall = call;
-        }, 1000);
+            } else {
+                alert("無法建立通訊路徑");
+            }
+        });
     });
 
-    // 退出按鈕
-    document.getElementById('stop-btn').addEventListener('click', () => {
-        resetUI();
+    // 5. 點擊代碼文字自動複製
+    displayId.addEventListener('click', () => {
+        const text = displayId.innerText.split(': ')[1]?.split(' ')[0];
+        if (text && text !== "---") {
+            navigator.clipboard.writeText(text);
+            alert("代碼已複製到剪貼簿: " + text);
+        }
     });
 
+    // 6. 退出按鈕
+    document.getElementById('stop-btn').addEventListener('click', resetUI);
+
+    // 7. 重置介面與清理資源
     function resetUI() {
+        console.log('重置 UI...');
         if (localStream) {
             localStream.getTracks().forEach(track => track.stop());
             localStream = null;
         }
         if (currentCall) currentCall.close();
-        if (peer) peer.destroy();
+        if (peer) {
+            peer.destroy();
+            peer = null;
+        }
         
         setupArea.classList.remove('hidden');
         activeArea.classList.add('hidden');
         remoteVideo.style.display = "none";
         remoteVideo.srcObject = null;
+        displayId.innerText = "正在取得連線代碼...";
         document.getElementById('peer-id-input').value = "";
     }
 </script>
