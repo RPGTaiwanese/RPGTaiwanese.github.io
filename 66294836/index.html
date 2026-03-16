@@ -1,62 +1,219 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<title>Screen Share</title>
+<meta charset="utf-8" />
+<title>Simple Screen Share (single file)</title>
+<style>
+  body{font-family:system-ui,Segoe UI,Roboto,Arial;background:#f7f7f8;color:#111;padding:18px}
+  input,button{font-size:14px;padding:8px;margin:6px 0}
+  #video{width:90%;max-width:900px;border:1px solid #ccc;border-radius:6px;background:#000}
+  .row{margin:8px 0}
+  #status{font-size:13px;color:#555}
+  .small{font-size:13px;color:#666}
+</style>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 </head>
-
 <body>
+  <h2>單檔 WebRTC 螢幕分享（Peer ID 當分享碼）</h2>
 
-<h2>螢幕分享測試</h2>
+  <div class="row">
+    <label class="small">我的 Peer ID（開啟頁面後會自動產生）</label><br>
+    <input id="myId" readonly style="width:320px">
+    <button id="copyId">複製</button>
+  </div>
 
-<button onclick="startShare()">開始分享畫面</button>
+  <div class="row">
+    <label class="small">分享連結（直接給別人）：</label><br>
+    <input id="shareLink" readonly style="width:420px">
+    <button id="copyLink">複製連結</button>
+  </div>
 
-<p>分享連結：</p>
-<input id="shareLink" style="width:400px">
+  <div class="row">
+    <input id="targetId" placeholder="輸入要觀賞的 Peer ID（或用 ?share=peerId 自動填）" style="width:300px">
+    <button id="watchBtn">觀看</button>
+    <button id="stopWatch">停止觀看</button>
+  </div>
 
-<h3>觀看畫面</h3>
-<video id="video" autoplay playsinline style="width:600px;border:1px solid black"></video>
+  <div class="row">
+    <button id="startShare">開始分享（選擇螢幕／視窗／分頁）</button>
+    <button id="stopShare">停止分享</button>
+  </div>
+
+  <p id="status">狀態：尚未連線</p>
+
+  <h3>查看畫面</h3>
+  <video id="video" autoplay playsinline></video>
 
 <script>
+(async ()=>{
 
-const params = new URLSearchParams(location.search)
-const room = params.get("room")
+  // 參數
+  const video = document.getElementById('video');
+  const myIdInput = document.getElementById('myId');
+  const shareLinkInput = document.getElementById('shareLink');
+  const targetIdInput = document.getElementById('targetId');
+  const status = document.getElementById('status');
 
-const peer = new Peer()
+  const copyIdBtn = document.getElementById('copyId');
+  const copyLinkBtn = document.getElementById('copyLink');
+  const startShareBtn = document.getElementById('startShare');
+  const stopShareBtn = document.getElementById('stopShare');
+  const watchBtn = document.getElementById('watchBtn');
+  const stopWatchBtn = document.getElementById('stopWatch');
 
-peer.on("open", id => {
+  let peer;                // 本頁的 Peer 物件
+  let myId = null;         // 本頁 Peer ID
+  let localStream = null;  // 分享端的 MediaStream
+  let currentCall = null;  // 目前的 MediaConnection (觀眾端用來接 stream)
+  let sharing = false;
+  let watching = false;
 
-if(!room){
+  // 解析 URL ?share=peerId（若有就自動填入）
+  const params = new URLSearchParams(location.search);
+  const autoShareId = params.get('share');
+  if(autoShareId) targetIdInput.value = autoShareId;
 
-const link = location.origin + location.pathname + "?room=" + id
-document.getElementById("shareLink").value = link
+  // 初始化 Peer（只做一次）
+  function initPeer(){
+    if(peer) return;
+    peer = new Peer(); // 使用 PeerJS 官方 cloud
+    peer.on('open', id => {
+      myId = id;
+      myIdInput.value = id;
+      shareLinkInput.value = location.origin + location.pathname + '?share=' + id;
+      setStatus('Peer ready. ID=' + id);
+    });
 
-}else{
+    peer.on('error', err=>{
+      console.error('Peer error', err);
+      setStatus('Peer error: ' + (err && err.type ? err.type : err));
+    });
 
-peer.on("call", call => {
-call.answer()
-call.on("stream", stream => {
-video.srcObject = stream
-})
-})
+    // 當別人呼叫（觀眾呼叫分享者） → 如果我們有 localStream（代表我們是分享端），就回答 stream
+    peer.on('call', call => {
+      console.log('Incoming call from', call.peer);
+      if(sharing && localStream){
+        try{
+          call.answer(localStream); // 回答並把分享的 stream 傳給呼叫者
+          console.log('Answered with localStream');
+        }catch(e){
+          console.error('Answer failed', e);
+        }
+      } else {
+        // 如果不是分享端或沒 stream，直接拒絕（或可回答空）
+        try{ call.close(); }catch(e){}
+        console.log('Rejected call (not sharing)');
+      }
+    });
+  }
 
-}
+  function setStatus(t){
+    status.textContent = '狀態：' + t;
+  }
 
-})
+  // 複製按鈕
+  copyIdBtn.onclick = ()=>{ navigator.clipboard?.writeText(myIdInput.value).then(()=>alert('已複製 Peer ID')); }
+  copyLinkBtn.onclick = ()=>{ navigator.clipboard?.writeText(shareLinkInput.value).then(()=>alert('已複製連結')); }
 
-async function startShare(){
+  // 開始分享（分享端）
+  startShareBtn.onclick = async ()=>{
+    if(sharing) return alert('已在分享中');
+    initPeer();
+    setStatus('請選擇要分享的畫面（瀏覽器會跳出選擇視窗）');
+    try{
+      localStream = await navigator.mediaDevices.getDisplayMedia({video:true,audio:false});
+    }catch(e){
+      console.error('getDisplayMedia failed', e);
+      setStatus('無法取得畫面：' + (e && e.message ? e.message : e));
+      return;
+    }
+    sharing = true;
+    setStatus('分享中，等待觀眾連線。你的 Peer ID: ' + (myId || '...'));
+    // 如果有使用者直接在 URL 上 ?share=peerId 並用另一個分頁呼叫，peer.on('call') 會處理回答。
+    // 若想主動呼叫某些已知觀眾，可使用 peer.call(viewerId, localStream)
+    // 當 localStream 停止（使用者按停止分享或關閉分頁），停止分享。
+    localStream.getVideoTracks()[0].addEventListener('ended', ()=> {
+      // 使用者在 Chrome 的「停止分享」按鈕會觸發 track ended
+      stopSharing();
+    });
+  };
 
-const stream = await navigator.mediaDevices.getDisplayMedia({
-video:true,
-audio:false
-})
+  // 停止分享
+  function stopSharing(){
+    if(!sharing) return;
+    sharing = false;
+    if(localStream){
+      localStream.getTracks().forEach(t => t.stop());
+      localStream = null;
+    }
+    setStatus('已停止分享。');
+  }
+  stopShareBtn.onclick = stopSharing;
 
-const call = peer.call(room || peer.id, stream)
+  // 觀看端：呼叫分享者的 Peer ID，並接收 stream
+  watchBtn.onclick = async ()=>{
+    if(watching) return alert('已在觀看中');
+    const target = targetIdInput.value.trim();
+    if(!target) return alert('請輸入或在 URL 帶入 ?share=peerId');
 
-}
+    initPeer();
+    setStatus('正在呼叫 ' + target + ' ...');
 
+    try{
+      // 呼叫目標 Peer（傳 null 表示我們不傳任何 stream）
+      const call = peer.call(target, null);
+      if(!call){
+        setStatus('call 回傳 undefined（目標可能不存在或尚未 open）');
+        return;
+      }
+      currentCall = call;
+
+      // 當接收到遠端 MediaStream
+      call.on('stream', stream => {
+        console.log('收到 stream from', target);
+        video.srcObject = stream;
+        watching = true;
+        setStatus('正在觀看：' + target);
+      });
+
+      call.on('close', ()=> {
+        console.log('call closed');
+        watching = false;
+        setStatus('對方中斷連線');
+      });
+
+      call.on('error', err => {
+        console.error('call error', err);
+        setStatus('呼叫錯誤：' + (err && err.message ? err.message : err));
+      });
+
+    }catch(err){
+      console.error('watch failed', err);
+      setStatus('呼叫失敗：' + (err && err.message ? err.message : err));
+    }
+  };
+
+  // 停止觀看
+  stopWatchBtn.onclick = ()=>{
+    if(currentCall){
+      try{ currentCall.close(); }catch(e){}
+      currentCall = null;
+    }
+    video.srcObject = null;
+    watching = false;
+    setStatus('停止觀看');
+  };
+
+  // 初始化（延後建立 Peer，等使用需求才建立）
+  // 但為了讓 ID 早點產生，我們這邊呼叫一次
+  initPeer();
+
+  // 若 URL 帶 ?share=peerId，提示使用者可直接按「觀看」
+  if(autoShareId){
+    setStatus('URL 含 share=，已將觀看目標填入欄位，請按「觀看」');
+  }
+
+})();
 </script>
-
 </body>
 </html>
