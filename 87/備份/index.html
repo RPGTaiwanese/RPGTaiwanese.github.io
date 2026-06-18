@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>天使鵝鵝嘴砲聊天室</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         body {
             margin: 0;
@@ -147,7 +146,6 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            overflow-y: auto;
         }
         
         #startScreenWrapper {
@@ -155,7 +153,6 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 20px;
         }
 
         #startScreen h1 {
@@ -350,7 +347,7 @@
             border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 10px;
             padding: 15px;
-            z-index: 45; 
+            z-index: 60; 
             color: #fff;
             width: 220px;
             cursor: pointer;
@@ -398,126 +395,6 @@
         .close-btn { margin-top: 20px; padding: 12px; background: #e74c3c; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 18px; font-weight: bold; text-align: center; transition: 0.2s; }
         .close-btn:hover { background: #c0392b; transform: scale(1.02); }
 
-        /* ================== 遊戲實況 UI 樣式 ================== */
-        #liveStreamArea {
-            margin-top: 30px;
-            width: 100%;
-            max-width: 650px;
-            background: rgba(0, 0, 0, 0.6);
-            border: 2px solid #34495e;
-            border-radius: 12px;
-            padding: 15px;
-            box-sizing: border-box;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-        }
-        #liveStreamArea h3 {
-            margin: 0 0 15px 0;
-            color: #e74c3c;
-            text-align: center;
-            font-size: 22px;
-            text-shadow: 1px 1px 2px #000;
-        }
-        #liveContainer {
-            display: flex;
-            gap: 15px;
-            overflow-x: auto;
-            padding-bottom: 10px;
-            min-height: 120px;
-            align-items: center;
-            justify-content: flex-start;
-        }
-        #liveContainer::-webkit-scrollbar {
-            height: 8px;
-        }
-        #liveContainer::-webkit-scrollbar-track {
-            background: rgba(0,0,0,0.2);
-            border-radius: 10px;
-        }
-        #liveContainer::-webkit-scrollbar-thumb {
-            background: #34495e;
-            border-radius: 10px;
-        }
-        .live-card {
-            background: #2c3e50;
-            border: 2px solid #34495e;
-            border-radius: 8px;
-            padding: 6px;
-            min-width: 160px;
-            max-width: 160px;
-            cursor: pointer;
-            transition: transform 0.2s, border-color 0.2s;
-            flex-shrink: 0;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-        }
-        .live-card:hover {
-            transform: scale(1.03);
-            border-color: #e74c3c;
-        }
-        .live-card img {
-            width: 100%;
-            height: 90px;
-            object-fit: cover;
-            border-radius: 4px;
-            background: #111;
-        }
-        .live-info {
-            display: flex;
-            flex-direction: column;
-            margin-top: 5px;
-            font-size: 13px;
-        }
-        .live-name {
-            font-weight: bold;
-            color: #fff;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        .live-time {
-            color: #2ecc71;
-            margin-top: 2px;
-        }
-
-        /* 放大圖片彈窗 (燈箱) */
-        #imageZoomModal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0;
-            width: 100vw; height: 100vh;
-            background: rgba(0, 0, 0, 0.85);
-            z-index: 110;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-        #zoomedImage {
-            max-width: 90%;
-            max-height: 75vh;
-            border: 3px solid #f1c40f;
-            border-radius: 10px;
-            box-shadow: 0 0 25px rgba(0,0,0,0.9);
-        }
-        #zoomTitle {
-            color: #fff;
-            margin-bottom: 15px;
-            font-size: 22px;
-            font-weight: bold;
-            text-shadow: 2px 2px #000;
-        }
-        .zoom-close-btn {
-            margin-top: 15px;
-            padding: 10px 25px;
-            background: #e74c3c;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: bold;
-            transition: 0.2s;
-        }
-        .zoom-close-btn:hover { background: #c0392b; transform: scale(1.05); }
-
         /* ================== 手機等比例縮小選單設定 ================== */
         @media screen and (max-width: 768px) {
             #ui { transform: scale(0.75); transform-origin: top left; }
@@ -549,20 +426,16 @@
 
         <div id="fullLeaderboardModal">
             <div id="fullLeaderboardContent">
+                <!-- 這裡修改了標題 -->
                 <h2>🏆 鵝鵝高手排行榜</h2>
                 <input type="text" id="lbSearch" placeholder="輸入玩家名稱搜尋..." onkeyup="window.filterLeaderboard()">
                 <div id="lbList"></div>
                 <button class="close-btn" onclick="window.closeFullLeaderboard()">關閉排行榜</button>
             </div>
         </div>
-
-        <div id="imageZoomModal" onclick="window.closeZoomModal()">
-            <div id="zoomTitle">實況畫面</div>
-            <img id="zoomedImage" src="" alt="放大實況" onclick="event.stopPropagation()">
-            <button class="zoom-close-btn" onclick="window.closeZoomModal()">關閉觀看</button>
-        </div>
         
         <div id="startScreen">
+            <!-- 加入一層 wrapper 以便手機端整體等比例縮小 -->
             <div id="startScreenWrapper">
                 <h1>開始嘴砲時間</h1>
                 <div class="input-group">
@@ -574,11 +447,6 @@
                         <img src="https://truth.bahamut.com.tw/s01/202606/43564bf4cf60b9503351e352c70275c1.GIF" alt="天使鵝鵝">
                         <h3>角色1<br>天使鵝鵝</h3>
                     </div>
-                </div>
-
-                <div id="liveStreamArea">
-                    <h3>📺 遊戲即時實況 (0.5秒同步)</h3>
-                    <div id="liveContainer">讀取線上實況中...</div>
                 </div>
             </div>
         </div>
@@ -628,7 +496,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { getDatabase, ref, push, onValue, query as dbQuery, orderByChild, set, remove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+        import { getDatabase, ref, push, onValue, query as dbQuery, orderByChild } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
         // Firebase 設定
         const firebaseConfig = {
@@ -645,15 +513,17 @@
         const auth = getAuth(app);
         const db = getDatabase(app);
 
+        // 匿名登入
         signInAnonymously(auth).then(() => {
             console.log("Firebase 遊客登入成功！");
         }).catch((error) => {
             console.error("Firebase 登入失敗:", error);
         });
 
+        // 全局全域變數，供舊版 script 呼叫
         window.allScores = [];
-        window.livePlayersData = {}; 
 
+        // 上傳分數
         window.saveToLeaderboard = function(playerName, surviveTime) {
             const leaderboardRef = ref(db, 'leaderboard');
             push(leaderboardRef, {
@@ -663,20 +533,7 @@
             });
         };
 
-        window.createLiveSession = function() {
-            const liveRef = ref(db, 'live_players');
-            const newRef = push(liveRef);
-            return newRef.key;
-        };
-
-        window.updateLiveSession = function(key, data) {
-            set(ref(db, 'live_players/' + key), data);
-        };
-
-        window.removeLiveSession = function(key) {
-            remove(ref(db, 'live_players/' + key));
-        };
-
+        // 監聽排行榜資料
         const leaderboardRef = ref(db, 'leaderboard');
         const topScoresQuery = dbQuery(leaderboardRef, orderByChild('time'));
         
@@ -685,14 +542,13 @@
             snapshot.forEach((childSnapshot) => {
                 scores.push(childSnapshot.val());
             });
+            
+            // Firebase orderByChild 是升序(從小到大)，所以我們反轉成降序(時間最長在前面)
             scores.reverse();
+            
+            // 賦予名次屬性
             window.allScores = scores.map((s, index) => ({...s, rank: index + 1}));
             window.updateLeaderboardUI();
-        });
-
-        const livePlayersRef = ref(db, 'live_players');
-        onValue(livePlayersRef, (snapshot) => {
-            window.livePlayersData = snapshot.val() || {};
         });
     </script>
     <script>
@@ -709,6 +565,7 @@
             if (window.allScores.length === 0) {
                 miniList.innerHTML = '<div style="text-align:center;">尚無紀錄</div>';
             } else {
+                // 渲染前 10 名
                 window.allScores.slice(0, 10).forEach(s => {
                     const div = document.createElement('div');
                     div.className = 'lb-entry';
@@ -716,7 +573,7 @@
                     miniList.appendChild(div);
                 });
             }
-            window.filterLeaderboard(); 
+            window.filterLeaderboard(); // 更新完整列表
         };
 
         window.renderFullList = function(scoresToRender) {
@@ -749,19 +606,6 @@
             document.getElementById('fullLeaderboardModal').style.display = 'none';
         };
 
-        window.zoomLiveImage = function(imgSrc, name) {
-            const modal = document.getElementById('imageZoomModal');
-            const img = document.getElementById('zoomedImage');
-            const title = document.getElementById('zoomTitle');
-            img.src = imgSrc;
-            title.innerText = `📺 正在觀看: ${name} 的即時實況`;
-            modal.style.display = 'flex';
-        };
-
-        window.closeZoomModal = function() {
-            document.getElementById('imageZoomModal').style.display = 'none';
-        };
-
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const playerDom = document.getElementById('playerSprite');
@@ -770,9 +614,10 @@
         const hpBarDom = document.getElementById('playerHpBar');     
         const damageOverlayDom = document.getElementById('damageOverlay'); 
         
+        // 建立背景音樂
         const gameBgm = new Audio('BGM.mp3');
         gameBgm.loop = true;
-        gameBgm.volume = 0.4; 
+        gameBgm.volume = 0.4; // 音量大小 (0.0 到 1.0)
 
         function resize() {
             canvas.width = window.innerWidth;
@@ -824,14 +669,12 @@
         let gameTime = 0;
         let lastTime = performance.now();
         
-        // 【修正點1】將原本的 setInterval 改成 timeout 變數，用於遞迴呼叫
-        let currentLiveKey = null;
-        let liveUploadTimeout = null; 
-
+        // 鍵盤控制監聽
         const keys = {};
         window.addEventListener('keydown', e => keys[e.code] = true);
         window.addEventListener('keyup', e => keys[e.code] = false);
 
+        // 手機觸控虛擬搖桿變數
         let mobileMoveX = 0;
         let mobileMoveY = 0;
         let joystickActive = false;
@@ -839,10 +682,12 @@
         const joystickZone = document.getElementById('joystickZone');
         const joystickStick = document.getElementById('joystickStick');
 
+        // 偵測是否為觸控裝置，是的話開啟虛擬搖桿 UI
         if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
             joystickZone.style.display = 'block';
         }
 
+        // 虛擬搖桿觸控事件
         joystickZone.addEventListener('touchstart', e => {
             joystickActive = true;
             joystickRect = joystickZone.getBoundingClientRect();
@@ -851,7 +696,7 @@
 
         window.addEventListener('touchmove', e => {
             if (!joystickActive) return;
-            e.preventDefault(); 
+            e.preventDefault(); // 防止手機網頁在拖曳時畫面跟著捲動
             handleJoystickMove(e.touches[0]);
         }, { passive: false });
 
@@ -906,6 +751,7 @@
             skills: { speed: 0, damage: 0, xp: 0, count: 0, atkSpeed: 0, bounce: 0, area: 0 } 
         };
 
+        // 技能池
         const skillPool = [
             { id: 'speed', name: '嘴完人就跑', desc: '移動速度上升', current: () => player.skills.speed },
             { id: 'damage', name: '增加言語傷害', desc: '增加彈幕傷害', current: () => player.skills.damage },
@@ -955,44 +801,10 @@
             document.getElementById('skill6Text').innerText = `▶ 一言不和開地圖炮 : LV ${player.skills.area}`;
         }
 
-        // 【修正點2】建立遞迴式的獨立截圖函式，確保畫面完整並防止塞車當機
-        function captureAndUpload() {
-            if (isGameOver) return;
-
-            const container = document.getElementById('gameContainer');
-            
-            // 強制綁定瀏覽器可視範圍參數，確保能完整抓下全螢幕，不會被裁切
-            html2canvas(container, {
-                logging: false,
-                scale: 0.4, 
-                useCORS: true,
-                backgroundColor: "#111",
-                width: window.innerWidth,
-                height: window.innerHeight,
-                windowWidth: window.innerWidth,
-                windowHeight: window.innerHeight,
-                scrollX: 0,
-                scrollY: 0
-            }).then(canvas => {
-                const base64Img = canvas.toDataURL('image/jpeg', 0.4); 
-                if (currentLiveKey && window.updateLiveSession) {
-                    window.updateLiveSession(currentLiveKey, {
-                        name: player.name,
-                        time: gameTime,
-                        image: base64Img
-                    });
-                }
-                // 等這張圖片確定上傳成功後，再倒數 0.5 秒截下一張，這樣就不會卡住
-                liveUploadTimeout = setTimeout(captureAndUpload, 500);
-            }).catch(err => {
-                console.error("實況截圖失敗:", err);
-                liveUploadTimeout = setTimeout(captureAndUpload, 1000); // 失敗稍微等久一點再試
-            });
-        }
-
         function startGame() {
             if (!isLoaded) return;
 
+            // 播放背景音樂
             gameBgm.play().catch(err => {
                 console.log("音樂播放失敗，使用者尚未與頁面互動:", err);
             });
@@ -1017,11 +829,6 @@
 
             isGameStarted = true;
             lastTime = performance.now(); 
-
-            if (window.createLiveSession) {
-                currentLiveKey = window.createLiveSession();
-                captureAndUpload(); // 啟動新版遞迴截圖
-            }
         }
 
         const enemies = [];
@@ -1151,19 +958,9 @@
         }
 
         function gameOver() {
-            if (isGameOver) return; 
+            if (isGameOver) return; // 避免重複執行
             isGameOver = true;
             
-            // 結束時清除定時器
-            if (liveUploadTimeout) {
-                clearTimeout(liveUploadTimeout);
-                liveUploadTimeout = null;
-            }
-            if (currentLiveKey && window.removeLiveSession) {
-                window.removeLiveSession(currentLiveKey);
-                currentLiveKey = null;
-            }
-
             document.getElementById('gameOver').style.display = 'block';
             playerDom.style.display = 'none'; 
             nameTagDom.style.display = 'none';
@@ -1174,62 +971,24 @@
             const s = Math.floor(gameTime % 60).toString().padStart(2, '0');
             document.getElementById('finalStats').innerHTML = `玩家: <b>${player.name}</b><br>最終等級: <b>${player.level}</b><br>存活時間: <b>${m}:${s}</b>`;
 
+            // 上傳分數至排行榜
             if (window.saveToLeaderboard) {
                 window.saveToLeaderboard(player.name, gameTime);
             }
         }
 
-        window.addEventListener('beforeunload', () => {
-            if (currentLiveKey && window.removeLiveSession) {
-                window.removeLiveSession(currentLiveKey);
-            }
-        });
-
-        // 定時刷新首頁的實況區塊
-        setInterval(() => {
-            if (isGameStarted) return; 
-            const container = document.getElementById('liveContainer');
-            if (!container) return;
-
-            const liveData = window.livePlayersData || {};
-            const keys = Object.keys(liveData);
-
-            if (keys.length === 0) {
-                container.innerHTML = '<div style="color:#95a5a6; width:100%; text-align:center;">目前沒有鵝鵝在線上發起嘴砲戰場...</div>';
-                return;
-            }
-
-            container.innerHTML = '';
-            keys.forEach(key => {
-                const p = liveData[key];
-                const card = document.createElement('div');
-                card.className = 'live-card';
-                card.onclick = () => window.zoomLiveImage(p.image, p.name);
-
-                const m = Math.floor(p.time / 60).toString().padStart(2, '0');
-                const s = Math.floor(p.time % 60).toString().padStart(2, '0');
-
-                card.innerHTML = `
-                    <img src="${p.image}" alt="${p.name}">
-                    <div class="live-info">
-                        <span class="live-name">🔴 ${p.name}</span>
-                        <span class="live-time">存活: ${m}:${s}</span>
-                    </div>
-                `;
-                container.appendChild(card);
-            });
-        }, 500);
-
         function update(dt) {
             if (!isLoaded || !isGameStarted || isGameOver || isLevelUpMenuOpen || isLevelUpTransition) return;
             gameTime += dt;
 
+            // 整合鍵盤與手機虛擬搖桿移動邏輯
             let moveX = 0, moveY = 0;
             if (keys['KeyW'] || keys['ArrowUp']) moveY -= 1;
             if (keys['KeyS'] || keys['ArrowDown']) moveY += 1;
             if (keys['KeyA'] || keys['ArrowLeft']) moveX -= 1;
             if (keys['KeyD'] || keys['ArrowRight']) moveX += 1;
 
+            // 若沒有使用鍵盤，則讀取虛擬搖桿
             if (moveX === 0 && moveY === 0) {
                 moveX = mobileMoveX;
                 moveY = mobileMoveY;
@@ -1237,12 +996,13 @@
 
             if (moveX !== 0 || moveY !== 0) {
                 const len = Math.sqrt(moveX * moveX + moveY * moveY);
-                if (len > 0.05) { 
+                if (len > 0.05) { // 微死區避免抖動
                     player.x += (moveX / len) * player.speed * dt;
                     player.y += (moveY / len) * player.speed * dt;
                 }
             }
 
+            // 朝向面朝轉變
             if (moveX > 0.05) player.facingRight = true;
             else if (moveX < -0.05) player.facingRight = false;
 
@@ -1259,6 +1019,7 @@
             nameTagDom.style.left = `${screenX}px`;
             nameTagDom.style.top = `${screenY - player.drawH / 2 - 35}px`;
 
+            // 血條精確位置：完美位於名字與鵝鵝頭頂的中間
             hpBarBgDom.style.left = `${screenX}px`;
             hpBarBgDom.style.top = `${screenY - player.drawH / 2 - 5}px`; 
             hpBarDom.style.width = `${Math.max(0, (player.hp / player.maxHp) * 100)}%`;
@@ -1291,6 +1052,7 @@
                 damageOverlayDom.style.backgroundColor = 'transparent';
             }
 
+            // 處理地圖炮技能判定範圍 (地圖炮等級每升1級，判定範圍半徑額外加 8px)
             const hitboxBonus = player.skills.area * 8; 
 
             for (let i = projectiles.length - 1; i >= 0; i--) {
@@ -1379,6 +1141,7 @@
                 }
             });
 
+            // 繪製彈幕 (地圖炮等級每升1級，字體放大 5px)
             const fontSize = 16 + (player.skills.area * 5); 
             ctx.fillStyle = '#fff';
             ctx.font = `bold ${fontSize}px Arial`;
