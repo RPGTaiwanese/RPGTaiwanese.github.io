@@ -146,6 +146,7 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            overflow-y: auto;
         }
         
         #startScreenWrapper {
@@ -153,6 +154,8 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            max-height: 95vh;
+            padding: 20px 0;
         }
 
         #startScreen h1 {
@@ -210,6 +213,63 @@
             color: #fff;
             font-size: 20px;
         }
+
+        /* 實況區塊樣式 */
+        #liveStreamsSection {
+            margin-top: 30px;
+            text-align: center;
+            width: 100%;
+        }
+        #liveStreamsSection h2 {
+            color: #3498db;
+            text-shadow: 0 0 10px rgba(52, 152, 219, 0.5);
+            margin-bottom: 15px;
+        }
+        #liveStreamsContainer {
+            display: flex;
+            gap: 15px;
+            overflow-x: auto;
+            max-width: 90vw;
+            padding: 10px;
+            justify-content: center;
+            min-height: 150px;
+        }
+        .stream-card {
+            background: rgba(44, 62, 80, 0.9);
+            border: 2px solid #3498db;
+            border-radius: 8px;
+            padding: 10px;
+            min-width: 200px;
+            max-width: 250px;
+            text-align: center;
+            box-shadow: 0 0 10px rgba(52, 152, 219, 0.3);
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .stream-card h4 {
+            margin: 0 0 5px 0;
+            color: #f1c40f;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .stream-card p {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            color: #ecf0f1;
+        }
+        .stream-card img {
+            width: 100%;
+            border-radius: 5px;
+            border: 1px solid #111;
+            object-fit: contain;
+        }
+        /* 自訂捲軸 */
+        #liveStreamsContainer::-webkit-scrollbar { height: 8px; }
+        #liveStreamsContainer::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); border-radius: 10px; }
+        #liveStreamsContainer::-webkit-scrollbar-thumb { background: #3498db; border-radius: 10px; }
 
         #levelUpScreen {
             display: none;
@@ -426,7 +486,6 @@
 
         <div id="fullLeaderboardModal">
             <div id="fullLeaderboardContent">
-                <!-- 這裡修改了標題 -->
                 <h2>🏆 鵝鵝高手排行榜</h2>
                 <input type="text" id="lbSearch" placeholder="輸入玩家名稱搜尋..." onkeyup="window.filterLeaderboard()">
                 <div id="lbList"></div>
@@ -435,7 +494,6 @@
         </div>
         
         <div id="startScreen">
-            <!-- 加入一層 wrapper 以便手機端整體等比例縮小 -->
             <div id="startScreenWrapper">
                 <h1>開始嘴砲時間</h1>
                 <div class="input-group">
@@ -448,15 +506,17 @@
                         <h3>角色1<br>天使鵝鵝</h3>
                     </div>
                 </div>
+
+                <div id="liveStreamsSection">
+                    <h2>📺 鵝鵝玩家實況</h2>
+                    <div id="liveStreamsContainer">
+                        <p style="color: #95a5a6;">連線中...</p>
+                    </div>
+                </div>
             </div>
         </div>
 
-        
-<div id="livePlayersPanel" style="position:absolute;right:15px;bottom:15px;z-index:80;background:rgba(0,0,0,.85);padding:10px;max-width:400px;max-height:300px;overflow:auto;color:white;border-radius:10px">
-<h3>鵝鵝玩家實況</h3><div id="livePlayersList">載入中...</div></div>
-<div id="imageModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:999;align-items:center;justify-content:center"><img id="modalImg" style="max-width:95%;max-height:95%"></div>
-
-<canvas id="gameCanvas"></canvas>
+        <canvas id="gameCanvas"></canvas>
         
         <div id="damageOverlay"></div>
 
@@ -499,11 +559,11 @@
     </div>
 
     <script type="module">
+        // 增加 set, remove, onDisconnect 來管理實況資料的增刪
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { getDatabase, ref, push, onValue, query as dbQuery, orderByChild } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+        import { getDatabase, ref, push, onValue, query as dbQuery, orderByChild, set, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
-        // Firebase 設定
         const firebaseConfig = {
             apiKey: "AIzaSyBaq5Y89srrIozUZY7sUJALvAamIZsxyuo",
             authDomain: "mmorpg-a836b.firebaseapp.com",
@@ -518,17 +578,21 @@
         const auth = getAuth(app);
         const db = getDatabase(app);
 
-        // 匿名登入
+        // 將實況用到的 Firebase 方法綁定到 window 讓另一個 Script 可以呼叫
+        window.firebaseDb = db;
+        window.firebaseRef = ref;
+        window.firebasePush = push;
+        window.firebaseSet = set;
+        window.firebaseRemove = remove;
+        window.firebaseOnDisconnect = onDisconnect;
+
         signInAnonymously(auth).then(() => {
             console.log("Firebase 遊客登入成功！");
         }).catch((error) => {
             console.error("Firebase 登入失敗:", error);
         });
 
-        // 全局全域變數，供舊版 script 呼叫
         window.allScores = [];
-
-        // 上傳分數
         window.saveToLeaderboard = function(playerName, surviveTime) {
             const leaderboardRef = ref(db, 'leaderboard');
             push(leaderboardRef, {
@@ -538,7 +602,6 @@
             });
         };
 
-        // 監聽排行榜資料
         const leaderboardRef = ref(db, 'leaderboard');
         const topScoresQuery = dbQuery(leaderboardRef, orderByChild('time'));
         
@@ -547,13 +610,34 @@
             snapshot.forEach((childSnapshot) => {
                 scores.push(childSnapshot.val());
             });
-            
-            // Firebase orderByChild 是升序(從小到大)，所以我們反轉成降序(時間最長在前面)
             scores.reverse();
-            
-            // 賦予名次屬性
             window.allScores = scores.map((s, index) => ({...s, rank: index + 1}));
             window.updateLeaderboardUI();
+        });
+
+        // 監聽並渲染目前實況中的玩家
+        const liveStreamsRef = ref(db, 'livestreams');
+        onValue(liveStreamsRef, (snapshot) => {
+            const container = document.getElementById('liveStreamsContainer');
+            if (!container) return;
+            
+            let html = '';
+            if (!snapshot.exists()) {
+                container.innerHTML = '<p style="color: #95a5a6;">目前沒有玩家在實況中喔！</p>';
+                return;
+            }
+
+            snapshot.forEach((child) => {
+                const data = child.val();
+                html += `
+                    <div class="stream-card">
+                        <h4>${data.name}</h4>
+                        <p>存活時間: ${data.time}</p>
+                        <img src="${data.image}" alt="Live Stream">
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
         });
     </script>
     <script>
@@ -566,11 +650,9 @@
         window.updateLeaderboardUI = function() {
             const miniList = document.getElementById('miniLbList');
             miniList.innerHTML = '';
-            
             if (window.allScores.length === 0) {
                 miniList.innerHTML = '<div style="text-align:center;">尚無紀錄</div>';
             } else {
-                // 渲染前 10 名
                 window.allScores.slice(0, 10).forEach(s => {
                     const div = document.createElement('div');
                     div.className = 'lb-entry';
@@ -578,7 +660,7 @@
                     miniList.appendChild(div);
                 });
             }
-            window.filterLeaderboard(); // 更新完整列表
+            window.filterLeaderboard(); 
         };
 
         window.renderFullList = function(scoresToRender) {
@@ -619,10 +701,9 @@
         const hpBarDom = document.getElementById('playerHpBar');     
         const damageOverlayDom = document.getElementById('damageOverlay'); 
         
-        // 建立背景音樂
         const gameBgm = new Audio('BGM.mp3');
         gameBgm.loop = true;
-        gameBgm.volume = 0.4; // 音量大小 (0.0 到 1.0)
+        gameBgm.volume = 0.4; 
 
         function resize() {
             canvas.width = window.innerWidth;
@@ -687,12 +768,10 @@
         const joystickZone = document.getElementById('joystickZone');
         const joystickStick = document.getElementById('joystickStick');
 
-        // 偵測是否為觸控裝置，是的話開啟虛擬搖桿 UI
         if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
             joystickZone.style.display = 'block';
         }
 
-        // 虛擬搖桿觸控事件
         joystickZone.addEventListener('touchstart', e => {
             joystickActive = true;
             joystickRect = joystickZone.getBoundingClientRect();
@@ -701,7 +780,7 @@
 
         window.addEventListener('touchmove', e => {
             if (!joystickActive) return;
-            e.preventDefault(); // 防止手機網頁在拖曳時畫面跟著捲動
+            e.preventDefault(); 
             handleJoystickMove(e.touches[0]);
         }, { passive: false });
 
@@ -756,7 +835,6 @@
             skills: { speed: 0, damage: 0, xp: 0, count: 0, atkSpeed: 0, bounce: 0, area: 0 } 
         };
 
-        // 技能池
         const skillPool = [
             { id: 'speed', name: '嘴完人就跑', desc: '移動速度上升', current: () => player.skills.speed },
             { id: 'damage', name: '增加言語傷害', desc: '增加彈幕傷害', current: () => player.skills.damage },
@@ -806,10 +884,83 @@
             document.getElementById('skill6Text').innerText = `▶ 一言不和開地圖炮 : LV ${player.skills.area}`;
         }
 
+        /* * 自製高幀率截圖功能
+         * 將主畫布與 UI 使用原生 Canvas 在背景合成，取代 html2canvas 避免造成每 0.5 秒大卡頓
+         */
+        function captureScreen() {
+            const offCanvas = document.createElement('canvas');
+            // 縮小解析度以降低 Base64 檔案大小及傳輸負擔
+            const scale = 0.25; 
+            offCanvas.width = canvas.width * scale;
+            offCanvas.height = canvas.height * scale;
+            const octx = offCanvas.getContext('2d');
+            
+            // 1. 將主要的遊戲畫布縮小繪製過來
+            octx.drawImage(canvas, 0, 0, offCanvas.width, offCanvas.height);
+            
+            // 將畫筆縮放，使後續繪製的 UI 能直接使用原始大小的座標系
+            octx.scale(scale, scale);
+
+            // 2. 繪製受傷紅色閃爍特效
+            if (damageOverlayDom.style.backgroundColor !== 'transparent' && damageOverlayDom.style.backgroundColor !== '') {
+                octx.fillStyle = damageOverlayDom.style.backgroundColor;
+                octx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+
+            // 3. 繪製頂部經驗值條
+            const xpBarW = canvas.width;
+            const xpBarH = 20;
+            octx.fillStyle = "rgba(0,0,0,0.6)";
+            octx.fillRect(0, 0, xpBarW, xpBarH);
+            octx.fillStyle = "#f1c40f";
+            octx.fillRect(0, 0, xpBarW * Math.min(1, player.xp / player.xpNeeded), xpBarH);
+
+            // 4. 繪製玩家名稱與血條
+            const screenX = player.x - camera.x;
+            const screenY = player.y - camera.y;
+
+            octx.textAlign = "center";
+            octx.font = "bold 24px 'Segoe UI'";
+            octx.fillStyle = "white";
+            octx.shadowColor = "black";
+            octx.shadowBlur = 4;
+            octx.fillText(player.name, screenX, screenY - player.drawH / 2 - 35);
+            octx.shadowBlur = 0;
+
+            const hpW = 80, hpH = 10;
+            const hpX = screenX - hpW / 2;
+            const hpY = screenY - player.drawH / 2 - 5;
+            octx.fillStyle = "rgba(0,0,0,0.8)";
+            octx.fillRect(hpX, hpY, hpW, hpH);
+            octx.fillStyle = "#e74c3c";
+            octx.fillRect(hpX, hpY, hpW * (Math.max(0, player.hp) / player.maxHp), hpH);
+            octx.strokeStyle = "#222";
+            octx.lineWidth = 2;
+            octx.strokeRect(hpX, hpY, hpW, hpH);
+
+            // 5. 繪製左上角遊戲資訊 UI
+            octx.textAlign = "left";
+            octx.fillStyle = "rgba(0,0,0,0.6)";
+            octx.fillRect(15, 30, 220, 110);
+            octx.fillStyle = "#f1c40f";
+            octx.font = "bold 28px 'Segoe UI'";
+            octx.fillText(`LV: ${player.level}`, 30, 65);
+            octx.fillStyle = "#e74c3c";
+            octx.font = "bold 24px 'Segoe UI'";
+            octx.fillText(`HP: ${Math.max(0, Math.floor(player.hp))} / ${player.maxHp}`, 30, 95);
+            octx.fillStyle = "#ecf0f1";
+            octx.font = "bold 20px 'Segoe UI'";
+            const m = Math.floor(gameTime / 60).toString().padStart(2, '0');
+            const s = Math.floor(gameTime % 60).toString().padStart(2, '0');
+            octx.fillText(`時間: ${m}:${s}`, 30, 125);
+
+            // 輸出輕量級的 JPEG Base64
+            return offCanvas.toDataURL('image/jpeg', 0.4);
+        }
+
         function startGame() {
             if (!isLoaded) return;
 
-            // 播放背景音樂
             gameBgm.play().catch(err => {
                 console.log("音樂播放失敗，使用者尚未與頁面互動:", err);
             });
@@ -834,6 +985,34 @@
 
             isGameStarted = true;
             lastTime = performance.now(); 
+
+            // ===== 實況直播推送邏輯 開始 =====
+            if (window.firebaseDb) {
+                // 產生一個新的獨特實況 Key
+                const newStreamRef = window.firebasePush(window.firebaseRef(window.firebaseDb, 'livestreams'));
+                window.currentStreamKey = newStreamRef.key;
+                const streamPath = window.firebaseRef(window.firebaseDb, `livestreams/${window.currentStreamKey}`);
+                
+                // 防呆機制：若玩家直接關閉網頁/瀏覽器當機，自動從 Firebase 移除該資料
+                window.firebaseOnDisconnect(streamPath).remove();
+
+                // 每 0.5 秒抓圖上傳
+                window.streamInterval = setInterval(() => {
+                    if (isGameOver || !isGameStarted) return;
+                    
+                    const base64Img = captureScreen();
+                    const m = Math.floor(gameTime / 60).toString().padStart(2, '0');
+                    const s = Math.floor(gameTime % 60).toString().padStart(2, '0');
+
+                    window.firebaseSet(streamPath, {
+                        name: player.name,
+                        time: `${m}:${s}`,
+                        image: base64Img,
+                        timestamp: Date.now()
+                    });
+                }, 500);
+            }
+            // ===== 實況直播推送邏輯 結束 =====
         }
 
         const enemies = [];
@@ -963,7 +1142,7 @@
         }
 
         function gameOver() {
-            if (isGameOver) return; // 避免重複執行
+            if (isGameOver) return; 
             isGameOver = true;
             
             document.getElementById('gameOver').style.display = 'block';
@@ -976,9 +1155,20 @@
             const s = Math.floor(gameTime % 60).toString().padStart(2, '0');
             document.getElementById('finalStats').innerHTML = `玩家: <b>${player.name}</b><br>最終等級: <b>${player.level}</b><br>存活時間: <b>${m}:${s}</b>`;
 
-            // 上傳分數至排行榜
             if (window.saveToLeaderboard) {
                 window.saveToLeaderboard(player.name, gameTime);
+            }
+
+            // ===== 遊戲結束清理實況推送 =====
+            if (window.streamInterval) {
+                clearInterval(window.streamInterval);
+                window.streamInterval = null;
+            }
+            if (window.currentStreamKey && window.firebaseDb) {
+                const streamPath = window.firebaseRef(window.firebaseDb, `livestreams/${window.currentStreamKey}`);
+                window.firebaseRemove(streamPath);
+                // 取消斷線設定，因為我們已經手動移除了
+                window.firebaseOnDisconnect(streamPath).cancel(); 
             }
         }
 
@@ -986,14 +1176,12 @@
             if (!isLoaded || !isGameStarted || isGameOver || isLevelUpMenuOpen || isLevelUpTransition) return;
             gameTime += dt;
 
-            // 整合鍵盤與手機虛擬搖桿移動邏輯
             let moveX = 0, moveY = 0;
             if (keys['KeyW'] || keys['ArrowUp']) moveY -= 1;
             if (keys['KeyS'] || keys['ArrowDown']) moveY += 1;
             if (keys['KeyA'] || keys['ArrowLeft']) moveX -= 1;
             if (keys['KeyD'] || keys['ArrowRight']) moveX += 1;
 
-            // 若沒有使用鍵盤，則讀取虛擬搖桿
             if (moveX === 0 && moveY === 0) {
                 moveX = mobileMoveX;
                 moveY = mobileMoveY;
@@ -1001,13 +1189,12 @@
 
             if (moveX !== 0 || moveY !== 0) {
                 const len = Math.sqrt(moveX * moveX + moveY * moveY);
-                if (len > 0.05) { // 微死區避免抖動
+                if (len > 0.05) { 
                     player.x += (moveX / len) * player.speed * dt;
                     player.y += (moveY / len) * player.speed * dt;
                 }
             }
 
-            // 朝向面朝轉變
             if (moveX > 0.05) player.facingRight = true;
             else if (moveX < -0.05) player.facingRight = false;
 
@@ -1024,7 +1211,6 @@
             nameTagDom.style.left = `${screenX}px`;
             nameTagDom.style.top = `${screenY - player.drawH / 2 - 35}px`;
 
-            // 血條精確位置：完美位於名字與鵝鵝頭頂的中間
             hpBarBgDom.style.left = `${screenX}px`;
             hpBarBgDom.style.top = `${screenY - player.drawH / 2 - 5}px`; 
             hpBarDom.style.width = `${Math.max(0, (player.hp / player.maxHp) * 100)}%`;
@@ -1057,7 +1243,6 @@
                 damageOverlayDom.style.backgroundColor = 'transparent';
             }
 
-            // 處理地圖炮技能判定範圍 (地圖炮等級每升1級，判定範圍半徑額外加 8px)
             const hitboxBonus = player.skills.area * 8; 
 
             for (let i = projectiles.length - 1; i >= 0; i--) {
@@ -1146,7 +1331,6 @@
                 }
             });
 
-            // 繪製彈幕 (地圖炮等級每升1級，字體放大 5px)
             const fontSize = 16 + (player.skills.area * 5); 
             ctx.fillStyle = '#fff';
             ctx.font = `bold ${fontSize}px Arial`;
@@ -1164,8 +1348,5 @@
             requestAnimationFrame(gameLoop);
         }
     </script>
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script>
-// LIVE STREAM FEATURE PLACEHOLDER ADDED
-</script></body>
+</body>
 </html>
