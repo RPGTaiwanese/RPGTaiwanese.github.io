@@ -157,30 +157,10 @@
 
         #startScreen h1 {
             font-size: 54px;
-            margin-bottom: 10px;
+            margin-bottom: 20px;
             color: #f1c40f;
             text-shadow: 0 0 10px rgba(241, 196, 15, 0.5);
         }
-        
-        .game-intro {
-            color: #ecf0f1; 
-            font-size: 18px; 
-            max-width: 90%; 
-            text-align: center; 
-            margin-bottom: 30px; 
-            line-height: 1.6; 
-            background: rgba(0,0,0,0.5); 
-            padding: 15px 25px; 
-            border-radius: 10px; 
-            border: 1px solid rgba(255,255,255,0.2);
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-        }
-
-        .game-intro span {
-            color: #f1c40f;
-            font-weight: bold;
-        }
-
         .input-group {
             margin-bottom: 30px;
             text-align: center;
@@ -415,46 +395,6 @@
         .close-btn { margin-top: 20px; padding: 12px; background: #e74c3c; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 18px; font-weight: bold; text-align: center; transition: 0.2s; }
         .close-btn:hover { background: #c0392b; transform: scale(1.02); }
 
-        /* ================== 新增對戰模式 UI ================== */
-        #roomListModal, #waitingRoomModal {
-            display: none;
-            position: absolute;
-            top: 0; left: 0;
-            width: 100vw; height: 100vh;
-            background: rgba(0, 0, 0, 0.9);
-            z-index: 100;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-        .modal-content {
-            background: #2c3e50;
-            border: 3px solid #3498db;
-            border-radius: 15px;
-            width: 90%; max-width: 500px;
-            padding: 30px;
-            text-align: center;
-            box-shadow: 0 0 30px rgba(52, 152, 219, 0.4);
-        }
-        .modal-content h2 { color: #3498db; margin-top: 0; text-shadow: 2px 2px #000;}
-        .room-btn {
-            display: block; width: 100%; margin: 10px 0; padding: 15px;
-            background: #1abc9c; color: white; border: 2px solid #16a085; border-radius: 8px;
-            font-size: 18px; cursor: pointer; transition: 0.2s; font-weight: bold;
-        }
-        .room-btn:hover { background: #16a085; transform: scale(1.02); box-shadow: 0 0 10px rgba(26, 188, 156, 0.6); }
-        .action-btn {
-            padding: 12px 25px; font-size: 18px; border: none; border-radius: 8px;
-            cursor: pointer; color: white; transition: 0.2s; font-weight: bold;
-        }
-        .create-btn { background: #e67e22; margin: 10px 5px;}
-        .create-btn:hover { background: #d35400; transform: scale(1.05); }
-        .cancel-btn { background: #e74c3c; margin: 10px 5px;}
-        .cancel-btn:hover { background: #c0392b; transform: scale(1.05); }
-        #roomListContainer {
-            max-height: 300px; overflow-y: auto; margin: 15px 0; border-radius: 8px; background: rgba(0,0,0,0.3); padding: 10px;
-        }
-
         /* ================== 手機等比例縮小選單設定 ================== */
         @media screen and (max-width: 768px) {
             #ui { transform: scale(0.75); transform-origin: top left; }
@@ -463,7 +403,6 @@
             #levelUpScreen { transform: translate(-50%, -50%) scale(0.85); width: 90%; }
             #gameOver { transform: translate(-50%, -50%) scale(0.8); }
             #fullLeaderboardContent { transform: scale(0.85); }
-            .modal-content { transform: scale(0.85); }
         }
 
         @media screen and (max-width: 480px) {
@@ -473,7 +412,6 @@
             #levelUpScreen { transform: translate(-50%, -50%) scale(0.75); }
             #gameOver { transform: translate(-50%, -50%) scale(0.7); }
             #fullLeaderboardContent { transform: scale(0.75); }
-            .modal-content { transform: scale(0.75); }
         }
     </style>
 </head>
@@ -498,53 +436,15 @@
         <div id="startScreen">
             <div id="startScreenWrapper">
                 <h1>開始嘴砲時間</h1>
-                <p class="game-intro">
-                    這是一款真正的場外聊天室線上遊戲<br>
-                    電腦使用<span>方向鍵</span>移動，手機使用<span>虛擬搖桿</span>移動<br>
-                    生存到最後就是真正的鵝鵝高手！
-                </p>
                 <div class="input-group">
                     <input type="text" id="playerNameInput" placeholder="請輸入玩家名稱 (可留空)" autocomplete="off">
                 </div>
-                <h2>請選擇模式</h2>
+                <h2>請選擇角色</h2>
                 <div class="char-selection">
-                    <!-- 單人模式按鈕 -->
-                    <div class="char-card" onclick="startGame(false)">
+                    <div class="char-card" onclick="startGame()">
                         <img src="https://truth.bahamut.com.tw/s01/202606/43564bf4cf60b9503351e352c70275c1.GIF" alt="天使鵝鵝">
-                        <h3>單人模式<br>無盡生存</h3>
+                        <h3>角色1<br>天使鵝鵝</h3>
                     </div>
-                    <!-- 對戰模式按鈕 -->
-                    <div class="char-card" onclick="openRoomList()" style="border-color: #e74c3c;">
-                        <img src="https://truth.bahamut.com.tw/s01/202606/43564bf4cf60b9503351e352c70275c1.GIF" alt="對戰模式">
-                        <h3 style="color: #e74c3c;">對戰模式<br>雙人死鬥</h3>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 房間列表 UI -->
-        <div id="roomListModal">
-            <div class="modal-content">
-                <h2>⚔️ 尋找對戰房間</h2>
-                <button class="action-btn create-btn" onclick="createRoom()">新建房間</button>
-                <div id="roomListContainer">讀取中...</div>
-                <button class="action-btn cancel-btn" onclick="closeRoomList()">返回</button>
-            </div>
-        </div>
-
-        <!-- 等待對手加入與準備 UI -->
-        <div id="waitingRoomModal">
-            <div class="modal-content">
-                <h2>⏳ 準備對戰</h2>
-                <p style="font-size: 18px; color: #f1c40f;">房間: <span id="displayRoomId"></span></p>
-                
-                <div id="roomPlayersContainer" style="margin: 20px 0; padding: 15px; background: rgba(0,0,0,0.4); border-radius: 10px; text-align: left; font-size: 18px;">
-                    <!-- 玩家狀態會由 JS 渲染至此 -->
-                </div>
-
-                <div style="display: flex; justify-content: center; gap: 15px;">
-                    <button class="action-btn" id="readyBtn" style="background: #2ecc71; width: 120px;" onclick="toggleReady()">準備</button>
-                    <button class="action-btn cancel-btn" style="width: 120px; margin: 0;" onclick="cancelRoom()">離開</button>
                 </div>
             </div>
         </div>
@@ -587,7 +487,7 @@
         </div>
 
         <div id="gameOver">
-            <h1 id="gameOverTitle">遊戲結束</h1>
+            <h1>遊戲結束</h1>
             <p id="finalStats"></p>
             <button class="restart-btn" onclick="location.reload()">重新開始</button>
         </div>
@@ -595,8 +495,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { getDatabase, ref, push, onValue, query as dbQuery, orderByChild, update, set, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getDatabase, ref, push, onValue, query as dbQuery, orderByChild } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
         // Firebase 設定
         const firebaseConfig = {
@@ -613,27 +513,11 @@
         const auth = getAuth(app);
         const db = getDatabase(app);
 
-        // 將 Firebase 函式掛載至 window 給其他 script 使用
-        window.db = db;
-        window.firebaseRef = ref;
-        window.firebasePush = push;
-        window.firebaseOnValue = onValue;
-        window.firebaseUpdate = update;
-        window.firebaseSet = set;
-        window.firebaseRemove = remove;
-        window.firebaseOnDisconnect = onDisconnect;
-
-        // 匿名登入並記錄 UID
+        // 匿名登入
         signInAnonymously(auth).then(() => {
             console.log("Firebase 遊客登入成功！");
         }).catch((error) => {
             console.error("Firebase 登入失敗:", error);
-        });
-
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                window.myUid = user.uid;
-            }
         });
 
         window.allScores = [];
@@ -752,6 +636,7 @@
         const gemImg = new Image();
         gemImg.src = 'https://truth.bahamut.com.tw/s01/202606/2a1e9ed6c7071377696d76d8902c0f04.PNG';
 
+        // 新增技能圖片
         const hikariImg = new Image();
         hikariImg.src = 'https://truth.bahamut.com.tw/s01/202606/9616421ff6d96bbc50f704292d04ba67.JPG';
 
@@ -780,10 +665,6 @@
         const playerNormalImg = "https://truth.bahamut.com.tw/s01/202606/43564bf4cf60b9503351e352c70275c1.GIF";
         const playerLevelUpImg = "https://truth.bahamut.com.tw/s01/202606/0ba3166828aa01fb90c7c7a9d998bf8e.PNG";
 
-        // 對戰對手圖像載入
-        window.opponentImg = new Image();
-        window.opponentImg.src = playerNormalImg;
-
         let isLoaded = false;
         let isGameStarted = false;
         let isGameOver = false;
@@ -793,16 +674,6 @@
         let lastTime = performance.now();
         let lastBossPhase = 0; 
         
-        // 對戰相關變數
-        window.isPvPMode = false;
-        window.currentRoomId = null;
-        window.myRole = null;
-        window.opponentRole = null;
-        window.opponentData = null;
-        window.pvpSyncTimer = 0;
-        window.isReady = false; 
-        window.roomUnsubscribe = null; 
-
         // 鍵盤控制監聽
         const keys = {};
         window.addEventListener('keydown', e => keys[e.code] = true);
@@ -902,6 +773,7 @@
         let loadedCount = 0;
         function checkInit() {
             loadedCount++;
+            // 需要等待 bgImg, playerDom, gemImg, hikariImg 載入完成
             if (loadedCount === 4) { 
                 isLoaded = true;
                 player.x = mapBounds.w / 2;
@@ -941,8 +813,13 @@
             document.getElementById('skill8Text').innerText = `▶ 收割戰場 : LV ${player.skills.harvest}`;
         }
 
-        // 準備玩家名稱
-        function preparePlayerInfo() {
+        function startGame() {
+            if (!isLoaded) return;
+
+            gameBgm.play().catch(err => {
+                console.log("音樂播放失敗:", err);
+            });
+
             const inputName = document.getElementById('playerNameInput').value.trim();
             if (inputName !== "") {
                 player.name = inputName;
@@ -950,261 +827,6 @@
                 const randomNum = Math.floor(Math.random() * 999999) + 1;
                 player.name = String(randomNum).padStart(6, '0') + "勇者";
             }
-        }
-
-        // ================== 對戰模式房型邏輯 ==================
-        window.openRoomList = function() {
-            preparePlayerInfo();
-            if(!window.myUid) { alert("尚未連線到伺服器，請稍後"); return; }
-            
-            document.getElementById('roomListModal').style.display = 'flex';
-            
-            const roomsRef = window.firebaseRef(window.db, 'rooms');
-            window.firebaseOnValue(roomsRef, (snapshot) => {
-                const container = document.getElementById('roomListContainer');
-                container.innerHTML = '';
-                const rooms = snapshot.val();
-                let hasRooms = false;
-                
-                if (rooms) {
-                    for (const [roomId, room] of Object.entries(rooms)) {
-                        if (room.status === 'waiting' && !room.player2) { // 只顯示還有空位的房間
-                            hasRooms = true;
-                            const btn = document.createElement('button');
-                            btn.className = 'room-btn';
-                            btn.innerText = `🏠 ${room.name} (點擊加入)`;
-                            btn.onclick = () => window.joinRoom(roomId);
-                            container.appendChild(btn);
-                        }
-                    }
-                }
-                
-                if (!hasRooms) {
-                    container.innerHTML = '<p style="color: #bdc3c7;">目前沒有等待中的房間，請點擊「新建房間」</p>';
-                }
-            });
-        };
-
-        window.closeRoomList = function() {
-            document.getElementById('roomListModal').style.display = 'none';
-        }
-
-        window.createRoom = function() {
-            window.isReady = false;
-            const roomsRef = window.firebaseRef(window.db, 'rooms');
-            const newRoomRef = window.firebasePush(roomsRef);
-            window.currentRoomId = newRoomRef.key;
-            window.myRole = 'player1';
-            window.opponentRole = 'player2';
-            window.isPvPMode = true;
-
-            const roomData = {
-                name: player.name + " 的房間",
-                status: 'waiting',
-                player1: { uid: window.myUid, name: player.name, isDead: false, hp: 100, maxHp: 100, x: player.x, y: player.y, isReady: false }
-            };
-            window.firebaseSet(newRoomRef, roomData);
-
-            // 當斷線時死亡，或刪除房間
-            const myNodeRef = window.firebaseRef(window.db, `rooms/${window.currentRoomId}/${window.myRole}`);
-            window.firebaseOnDisconnect(myNodeRef).update({ isDead: true });
-            window.firebaseOnDisconnect(newRoomRef).remove(); 
-
-            document.getElementById('roomListModal').style.display = 'none';
-            document.getElementById('waitingRoomModal').style.display = 'flex';
-            document.getElementById('displayRoomId').innerText = player.name + " 的房間";
-
-            window.listenToRoom(window.currentRoomId);
-        }
-
-        window.joinRoom = function(roomId) {
-            window.isReady = false;
-            window.currentRoomId = roomId;
-            window.myRole = 'player2';
-            window.opponentRole = 'player1';
-            window.isPvPMode = true;
-
-            const roomRef = window.firebaseRef(window.db, `rooms/${roomId}`);
-            window.firebaseUpdate(roomRef, {
-                status: 'waiting',
-                player2: { uid: window.myUid, name: player.name, isDead: false, hp: 100, maxHp: 100, x: player.x, y: player.y, isReady: false }
-            });
-
-            // 當斷線時宣告死亡
-            const myNodeRef = window.firebaseRef(window.db, `rooms/${window.currentRoomId}/${window.myRole}`);
-            window.firebaseOnDisconnect(myNodeRef).update({ isDead: true });
-
-            document.getElementById('roomListModal').style.display = 'none';
-            document.getElementById('waitingRoomModal').style.display = 'flex';
-            
-            window.listenToRoom(window.currentRoomId);
-        }
-
-        window.toggleReady = function() {
-            window.isReady = !window.isReady;
-            const myRef = window.firebaseRef(window.db, `rooms/${window.currentRoomId}/${window.myRole}`);
-            window.firebaseUpdate(myRef, { isReady: window.isReady });
-        }
-
-        window.kickPlayer = function() {
-            if (window.myRole === 'player1') {
-                const roomRef = window.firebaseRef(window.db, `rooms/${window.currentRoomId}`);
-                window.firebaseUpdate(roomRef, {
-                    player2: null // 刪除 player2
-                });
-            }
-        }
-
-        window.cancelRoom = function() {
-            if (window.currentRoomId) {
-                if (window.myRole === 'player1') {
-                    const roomRef = window.firebaseRef(window.db, `rooms/${window.currentRoomId}`);
-                    window.firebaseRemove(roomRef);
-                } else {
-                    const roomRef = window.firebaseRef(window.db, `rooms/${window.currentRoomId}`);
-                    window.firebaseUpdate(roomRef, { player2: null });
-                }
-            }
-            if (window.roomUnsubscribe) {
-                window.roomUnsubscribe();
-                window.roomUnsubscribe = null;
-            }
-            
-            document.getElementById('waitingRoomModal').style.display = 'none';
-            window.isPvPMode = false;
-            window.currentRoomId = null;
-            window.isReady = false;
-        }
-
-        window.listenToRoom = function(roomId) {
-            const roomRef = window.firebaseRef(window.db, `rooms/${roomId}`);
-            
-            if (window.roomUnsubscribe) {
-                window.roomUnsubscribe();
-            }
-
-            window.roomUnsubscribe = window.firebaseOnValue(roomRef, (snapshot) => {
-                const data = snapshot.val();
-                
-                // 房間被刪除了 (房主離開或斷線)
-                if (!data) {
-                    if (window.isPvPMode && isGameStarted && !isGameOver) {
-                        pvpWin("對手已離開房間 / 斷線，不戰而勝！");
-                    } else if (!isGameStarted && document.getElementById('waitingRoomModal').style.display === 'flex') {
-                        document.getElementById('waitingRoomModal').style.display = 'none';
-                        alert("房間已被關閉或房主已離開");
-                        window.isPvPMode = false;
-                        window.currentRoomId = null;
-                        if(window.roomUnsubscribe) window.roomUnsubscribe();
-                    }
-                    return;
-                }
-
-                document.getElementById('displayRoomId').innerText = data.name;
-
-                // 被踢出判斷
-                if (window.myRole === 'player2' && !data.player2 && !isGameStarted) {
-                    document.getElementById('waitingRoomModal').style.display = 'none';
-                    alert("您已被房主踢出");
-                    window.isPvPMode = false;
-                    window.currentRoomId = null;
-                    if(window.roomUnsubscribe) window.roomUnsubscribe();
-                    return;
-                }
-
-                // ================= 等待大廳邏輯 =================
-                if (!isGameStarted) {
-                    const p1 = data.player1;
-                    const p2 = data.player2;
-
-                    // 若在等待期間對手斷線 (isDead由onDisconnect觸發)
-                    if (window.myRole === 'player1' && p2 && p2.isDead) {
-                        window.kickPlayer(); // 把斷線的 p2 踢掉
-                        return;
-                    }
-
-                    // 更新 UI 顯示玩家與準備狀態
-                    const container = document.getElementById('roomPlayersContainer');
-                    let html = '';
-                    
-                    html += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.2); padding-bottom:10px;">
-                                <span style="color: #f1c40f;">👑 ${p1.name}</span>
-                                <span style="color:${p1.isReady ? '#2ecc71' : '#e74c3c'}; font-weight: bold;">${p1.isReady ? '✅ 已準備' : '❌ 未準備'}</span>
-                             </div>`;
-
-                    if (p2) {
-                        html += `<div style="display:flex; justify-content:space-between; align-items:center;">
-                                    <span style="color: #3498db;">👤 ${p2.name}</span>
-                                    <div style="display:flex; gap:10px; align-items:center;">
-                                        <span style="color:${p2.isReady ? '#2ecc71' : '#e74c3c'}; font-weight: bold;">${p2.isReady ? '✅ 已準備' : '❌ 未準備'}</span>
-                                        ${window.myRole === 'player1' ? `<button onclick="kickPlayer()" style="background:#e74c3c; border:none; border-radius:5px; color:white; cursor:pointer; padding:5px 10px; font-weight:bold;">踢出</button>` : ''}
-                                    </div>
-                                 </div>`;
-                    } else {
-                        html += `<div style="text-align:center; color:#bdc3c7; padding-top: 5px;">⏳ 等待對手加入...</div>`;
-                    }
-                    
-                    container.innerHTML = html;
-
-                    // 更新自己的準備按鈕樣式
-                    const readyBtn = document.getElementById('readyBtn');
-                    if (window.isReady) {
-                        readyBtn.innerText = "取消準備";
-                        readyBtn.style.background = "#e67e22";
-                    } else {
-                        readyBtn.innerText = "準備";
-                        readyBtn.style.background = "#2ecc71";
-                    }
-
-                    // 檢查是否雙方都準備好，且目前是房主
-                    if (p1 && p2 && p1.isReady && p2.isReady) {
-                        if (window.myRole === 'player1' && data.status !== 'playing') {
-                            const roomRefUpdate = window.firebaseRef(window.db, `rooms/${roomId}`);
-                            window.firebaseUpdate(roomRefUpdate, { status: 'playing' });
-                        }
-                    }
-                }
-
-                // ================= 進入遊戲邏輯 =================
-                // 兩人到齊且準備完成，狀態變為 playing，開始遊戲
-                if (data.status === 'playing' && !isGameStarted) {
-                    document.getElementById('waitingRoomModal').style.display = 'none';
-                    actualStartGame();
-                }
-
-                // ================= 遊戲進行中邏輯 =================
-                if (isGameStarted) {
-                    window.opponentData = data[window.opponentRole];
-                    
-                    // 完全找不到對手節點 (對手斷線且被移除了)
-                    if (!window.opponentData) {
-                        if (!isGameOver) pvpWin("對手已離開房間 / 斷線，不戰而勝！");
-                    } 
-                    // 找到了對手，但對手狀態顯示已死 (血量歸零 或 觸發 onDisconnect)
-                    else if (window.opponentData.isDead && !isGameOver) {
-                        pvpWin("對方已陣亡 / 斷線，恭喜勝利！");
-                    }
-                }
-            });
-        }
-        // ==================================================
-
-        // 選擇遊戲模式的入口
-        function startGame(isPvP = false) {
-            if (!isLoaded) return;
-            preparePlayerInfo();
-            
-            if (isPvP) {
-                window.isPvPMode = true;
-            } else {
-                window.isPvPMode = false;
-                actualStartGame();
-            }
-        }
-
-        // 實際開始遊戲
-        function actualStartGame() {
-            gameBgm.play().catch(err => console.log("音樂播放失敗:", err));
             
             nameTagDom.innerText = player.name;
             updateSkillDisplay();
@@ -1328,6 +950,7 @@
             }
         }
 
+        // 發射偶愛小光彈幕
         function shootHikari() {
             if (enemies.length === 0) return;
             let nearestEnemy = null;
@@ -1350,9 +973,10 @@
                     y: player.y,
                     vx: Math.cos(angle) * (player.attackSpeed * 0.9), 
                     vy: Math.sin(angle) * (player.attackSpeed * 0.9),
+                    // 攻擊力是目前彈幕的10倍，每升1級增加1倍 (也就是加法概念)
                     damage: player.attackDamage * (10 + player.skills.hikari - 1),
-                    life: 5.0, 
-                    hitEnemies: new Set()
+                    life: 5.0, // 存活時間更長
+                    hitEnemies: new Set() // 確保穿透彈幕不會在同一幀重複對同個敵人造成傷害
                 });
             }
         }
@@ -1412,7 +1036,9 @@
                 player.skills.hikari++;
             } else if (skillId === 'harvest') {
                 player.skills.harvest++;
+                // 升級時立刻獎勵觸發5秒收割戰場！
                 player.harvestActiveTimer = 5.0; 
+                // 冷卻時間隨著等級縮短，基礎約35秒，每級減5秒，最短5秒
                 player.harvestTimer = Math.max(5.0, 35.0 - player.skills.harvest * 5.0);
             }
 
@@ -1434,27 +1060,15 @@
             document.getElementById('timeText').innerText = `時間: ${m}:${s}`;
         }
 
-        // ================== 單人/對戰 死亡結算 ==================
         function gameOver() {
             if (isGameOver) return;
             isGameOver = true;
-
+            
             document.getElementById('gameOver').style.display = 'block';
             playerDom.style.display = 'none'; 
             nameTagDom.style.display = 'none';
             hpBarBgDom.style.display = 'none'; 
             damageOverlayDom.style.backgroundColor = 'transparent'; 
-
-            if (window.isPvPMode && window.currentRoomId) {
-                // 對戰模式中自己死亡 -> 通知 Firebase 對手獲勝
-                const myRef = window.firebaseRef(window.db, `rooms/${window.currentRoomId}/${window.myRole}`);
-                window.firebaseUpdate(myRef, { isDead: true });
-
-                document.getElementById('gameOverTitle').innerText = "遊戲結束 - 對方勝利";
-                document.getElementById('gameOverTitle').style.color = "#e74c3c";
-            } else {
-                document.getElementById('gameOverTitle').innerText = "遊戲結束";
-            }
             
             const m = Math.floor(gameTime / 60).toString().padStart(2, '0');
             const s = Math.floor(gameTime % 60).toString().padStart(2, '0');
@@ -1465,54 +1079,9 @@
             }
         }
 
-        // 對戰獲勝處理
-        window.pvpWin = function(reason) {
-            if (isGameOver) return;
-            isGameOver = true;
-
-            document.getElementById('gameOver').style.display = 'block';
-            playerDom.style.display = 'none'; 
-            nameTagDom.style.display = 'none';
-            hpBarBgDom.style.display = 'none'; 
-            damageOverlayDom.style.backgroundColor = 'transparent'; 
-
-            document.getElementById('gameOverTitle').innerText = "遊戲勝利！";
-            document.getElementById('gameOverTitle').style.color = "#2ecc71"; // 顯示綠色勝利
-            
-            const m = Math.floor(gameTime / 60).toString().padStart(2, '0');
-            const s = Math.floor(gameTime % 60).toString().padStart(2, '0');
-            document.getElementById('finalStats').innerHTML = `${reason}<br><br>玩家: <b>${player.name}</b><br>最終等級: <b>${player.level}</b><br>存活時間: <b>${m}:${s}</b>`;
-
-            if (window.saveToLeaderboard) {
-                window.saveToLeaderboard(player.name, gameTime);
-            }
-        }
-        // =========================================================
-
         function update(dt) {
             if (!isLoaded || !isGameStarted || isGameOver || isLevelUpMenuOpen || isLevelUpTransition) return;
             gameTime += dt;
-
-            // ===== 對戰模式資料同步 (每秒約同步 20 次) =====
-            if (window.isPvPMode) {
-                window.pvpSyncTimer += dt;
-                if (window.pvpSyncTimer > 0.05) { 
-                    window.pvpSyncTimer = 0;
-                    if (window.currentRoomId && window.myRole) {
-                        const myRef = window.firebaseRef(window.db, `rooms/${window.currentRoomId}/${window.myRole}`);
-                        window.firebaseUpdate(myRef, {
-                            x: Math.round(player.x),
-                            y: Math.round(player.y),
-                            hp: player.hp,
-                            maxHp: player.maxHp,
-                            time: gameTime,
-                            facingRight: player.facingRight,
-                            isDead: false
-                        });
-                    }
-                }
-            }
-            // ===============================================
 
             let currentBossPhase = Math.floor(gameTime / 30);
             if (currentBossPhase > lastBossPhase && currentBossPhase >= 1) {
@@ -1562,6 +1131,7 @@
             player.attackTimer -= dt;
             if (player.attackTimer <= 0) { shootNearestEnemy(); player.attackTimer = player.attackCooldown; }
 
+            // 偶愛小光技能計時與發射
             if (player.skills.hikari > 0) {
                 player.hikariTimer -= dt;
                 if (player.hikariTimer <= 0) {
@@ -1570,13 +1140,14 @@
                 }
             }
 
+            // 收割戰場技能計時
             if (player.skills.harvest > 0) {
                 if (player.harvestActiveTimer > 0) {
                     player.harvestActiveTimer -= dt;
                 } else {
                     player.harvestTimer -= dt;
                     if (player.harvestTimer <= 0) {
-                        player.harvestActiveTimer = 5.0; 
+                        player.harvestActiveTimer = 5.0; // 持續5秒
                         player.harvestTimer = Math.max(5.0, 35.0 - player.skills.harvest * 5.0);
                     }
                 }
@@ -1656,10 +1227,11 @@
                 p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt;
                 
                 if (p.type === 'hikari') {
+                    // 偶愛小光彈幕的穿透與碰撞邏輯
                     const hikariRadius = (hikariImg.naturalWidth * 0.5) / 2;
                     for (let j = enemies.length - 1; j >= 0; j--) {
                         const e = enemies[j];
-                        if (p.hitEnemies && p.hitEnemies.has(e)) continue;
+                        if (p.hitEnemies && p.hitEnemies.has(e)) continue; // 避免同一幀重複判定同個敵人
 
                         const dx = p.x - e.x, dy = p.y - e.y;
                         if (Math.sqrt(dx*dx + dy*dy) < e.radius + hikariRadius) {
@@ -1676,6 +1248,7 @@
                         projectiles.splice(i, 1);
                     }
                 } else {
+                    // 一般文字彈幕的邏輯
                     let hit = false;
                     for (let j = enemies.length - 1; j >= 0; j--) {
                         const e = enemies[j];
@@ -1708,6 +1281,7 @@
                 }
             }
 
+            // 經驗值寶石吸收邏輯 (整合收割戰場)
             for (let i = gems.length - 1; i >= 0; i--) {
                 const g = gems[i];
                 const dx = player.x - g.x, dy = player.y - g.y, dist = Math.sqrt(dx*dx + dy*dy);
@@ -1715,6 +1289,7 @@
                 let pullDistance = 180;
                 let pullSpeed = 350;
 
+                // 若發動收割戰場，距離變無限大，吸取速度加快
                 if (player.harvestActiveTimer > 0) {
                     pullDistance = 99999; 
                     pullSpeed = 800; 
@@ -1748,61 +1323,6 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(bgImg, -camera.x, -camera.y, mapBounds.w, mapBounds.h);
             if (!isGameStarted) return;
-
-            // ===== 渲染對手角色 (如果是對戰模式) =====
-            if (window.isPvPMode && window.opponentData && !window.opponentData.isDead) {
-                const opp = window.opponentData;
-                const screenX = opp.x - camera.x;
-                const screenY = opp.y - camera.y;
-
-                ctx.save();
-                ctx.globalAlpha = 0.5; // 半透明顯示
-                
-                // 畫對手圖形
-                if (window.opponentImg && window.opponentImg.complete) {
-                    ctx.translate(screenX, screenY);
-                    ctx.scale(opp.facingRight ? -1 : 1, 1); // 同步面向方向
-                    ctx.drawImage(window.opponentImg, -player.drawW / 2, -player.drawH / 2, player.drawW, player.drawH);
-                    ctx.scale(opp.facingRight ? -1 : 1, 1); 
-                    ctx.translate(-screenX, -screenY); 
-                }
-                ctx.restore(); // 關閉透明度與矩陣影響
-
-                // 畫對手名稱
-                ctx.fillStyle = "white";
-                ctx.font = "bold 20px 'Segoe UI'";
-                ctx.textAlign = "center";
-                ctx.shadowColor = "black";
-                ctx.shadowBlur = 4;
-                ctx.shadowOffsetX = 2;
-                ctx.shadowOffsetY = 2;
-                ctx.fillText(opp.name, screenX, screenY - player.drawH / 2 - 35);
-                
-                // 畫對手生存時間
-                ctx.font = "16px Arial";
-                ctx.fillStyle = "#f1c40f";
-                ctx.fillText(`生存: ${formatTimeHelper(opp.time || 0)}`, screenX, screenY - player.drawH / 2 - 60);
-                ctx.shadowBlur = 0; 
-                ctx.shadowOffsetX = 0;
-                ctx.shadowOffsetY = 0;
-
-                // 畫對手血條
-                const barW = 80;
-                const barH = 10;
-                const barX = screenX - barW / 2;
-                const barY = screenY - player.drawH / 2 - 15;
-
-                ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
-                ctx.fillRect(barX, barY, barW, barH);
-                ctx.strokeStyle = "#222";
-                ctx.lineWidth = 2;
-                ctx.strokeRect(barX, barY, barW, barH);
-
-                const hpPct = Math.max(0, opp.hp / opp.maxHp);
-                ctx.fillStyle = "#e74c3c";
-                ctx.fillRect(barX, barY, barW * hpPct, barH);
-            }
-            // ==========================================
 
             gems.forEach(g => {
                 if (gemImg.complete) {
