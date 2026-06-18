@@ -221,6 +221,17 @@
             overflow-y: auto; 
             box-shadow: 0 0 30px rgba(241, 196, 15, 0.6);
         }
+        #levelUpScreen::-webkit-scrollbar {
+            width: 8px;
+        }
+        #levelUpScreen::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2); 
+            border-radius: 10px;
+        }
+        #levelUpScreen::-webkit-scrollbar-thumb {
+            background: #f1c40f; 
+            border-radius: 10px;
+        }
         #levelUpScreen h1 {
             color: #f1c40f;
             margin-top: 0;
@@ -289,78 +300,190 @@
             border-radius: 8px;
             transition: background 0.2s, transform 0.2s;
         }
-        button.restart-btn:hover { background: #27ae60; transform: scale(1.05); }
+        button.restart-btn:hover {
+            background: #27ae60;
+            transform: scale(1.05);
+        }
 
+        /* 手機虛擬搖桿樣式 */
         #joystickZone {
-            position: absolute; bottom: 50px; left: 50px; width: 120px; height: 120px;
-            background: rgba(255, 255, 255, 0.15); border: 3px solid rgba(255, 255, 255, 0.3); border-radius: 50%;
-            z-index: 30; display: none; touch-action: none;
+            position: absolute;
+            bottom: 50px;
+            left: 50px;
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            z-index: 30;
+            display: none; 
+            touch-action: none;
         }
         #joystickStick {
-            position: absolute; top: 35px; left: 35px; width: 50px; height: 50px; background: rgba(255, 255, 255, 0.5); border-radius: 50%; pointer-events: none;
+            position: absolute;
+            top: 35px;
+            left: 35px;
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            pointer-events: none;
         }
 
-        /* ------------------ 新增：排行榜相關 CSS ------------------ */
+        /* 新增：右上角迷你排行榜 */
         #miniLeaderboard {
-            position: absolute; top: 30px; right: 15px; background: rgba(0, 0, 0, 0.6); border: 2px solid #f1c40f;
-            border-radius: 10px; padding: 10px 15px; z-index: 45; cursor: pointer; transition: transform 0.2s;
-            width: 200px;
+            position: absolute;
+            top: 30px;
+            right: 15px;
+            background: rgba(0, 0, 0, 0.65);
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            z-index: 55;
+            cursor: pointer;
+            width: 220px;
+            text-shadow: 1px 1px 2px #000;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            box-sizing: border-box;
         }
-        #miniLeaderboard:hover { transform: scale(1.05); box-shadow: 0 0 15px rgba(241, 196, 15, 0.4); }
-        #miniLeaderboard h3 { margin: 0 0 10px 0; color: #f1c40f; text-align: center; border-bottom: 1px solid #f1c40f; padding-bottom: 5px;}
-        #miniLeaderboard ul { list-style: none; padding: 0; margin: 0; font-size: 14px; max-height: 250px; overflow-y: auto; }
-        #miniLeaderboard li { margin-bottom: 5px; display: flex; justify-content: space-between; border-bottom: 1px dashed #555; padding-bottom: 3px;}
-        #miniLeaderboard li span.name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100px; }
+        #miniLeaderboard h3 {
+            margin: 0 0 8px 0;
+            font-size: 16px;
+            color: #f1c40f;
+            text-align: center;
+        }
+        #miniLeaderboard ol {
+            margin: 0;
+            padding-left: 22px;
+            font-size: 13px;
+            color: #ecf0f1;
+        }
+        #miniLeaderboard li {
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        #miniLeaderboard .click-tip {
+            display: block;
+            text-align: center;
+            color: #aaa;
+            font-size: 11px;
+            margin-top: 6px;
+        }
 
+        /* 新增：完整排行榜半透明選單彈窗 */
         #fullLeaderboardModal {
-            display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(0, 0, 0, 0.85); z-index: 100; align-items: center; justify-content: center;
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(15, 15, 15, 0.92);
+            padding: 25px;
+            border-radius: 15px;
+            border: 2px solid #3498db;
+            z-index: 70;
+            width: 85%;
+            max-width: 480px;
+            box-shadow: 0 0 25px rgba(52, 152, 219, 0.6);
+            text-align: center;
+            box-sizing: border-box;
         }
-        .leaderboard-content {
-            background: rgba(44, 62, 80, 0.95); border: 3px solid #f1c40f; border-radius: 15px;
-            padding: 20px; width: 80%; max-width: 600px; max-height: 80vh; display: flex; flex-direction: column; position: relative; box-shadow: 0 0 30px rgba(0,0,0,0.8);
+        #fullLeaderboardModal h2 {
+            margin-top: 0;
+            color: #3498db;
+            font-size: 26px;
+            text-shadow: 1px 1px 3px #000;
         }
-        .close-btn { position: absolute; top: 15px; right: 20px; background: transparent; border: none; color: white; font-size: 28px; cursor: pointer; font-weight: bold;}
-        .close-btn:hover { color: #e74c3c; }
-        .leaderboard-content h2 { text-align: center; color: #f1c40f; margin-top: 0; font-size: 32px;}
-        #leaderboardSearch { padding: 12px; margin-bottom: 15px; border-radius: 8px; border: 2px solid #34495e; width: 100%; box-sizing: border-box; font-size: 16px; background: #1a252f; color: white; }
-        .list-container { overflow-y: auto; flex-grow: 1; border-radius: 8px; border: 1px solid #34495e;}
-        .list-container table { width: 100%; border-collapse: collapse; text-align: center; background: #2c3e50; }
-        .list-container th, .list-container td { padding: 12px; border-bottom: 1px solid #34495e; }
-        .list-container th { color: #f1c40f; position: sticky; top: 0; background: #1a252f; }
-        .list-container tr:nth-child(even) { background-color: rgba(0,0,0,0.1); }
-        .list-container tr:hover { background-color: rgba(52, 152, 219, 0.2); }
+        #leaderboardSearch {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 6px;
+            border: 1px solid #34495e;
+            background: #2c3e50;
+            color: white;
+            font-size: 15px;
+            outline: none;
+            box-sizing: border-box;
+        }
+        #fullLeaderboardListContainer {
+            max-height: 45vh;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(0,0,0,0.3);
+            border-radius: 6px;
+        }
+        #fullLeaderboardListContainer::-webkit-scrollbar {
+            width: 6px;
+        }
+        #fullLeaderboardListContainer::-webkit-scrollbar-thumb {
+            background: #3498db;
+            border-radius: 3px;
+        }
+        #fullLeaderboardTable {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 15px;
+        }
+        #fullLeaderboardTable th, #fullLeaderboardTable td {
+            padding: 10px 6px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            text-align: center;
+            word-break: break-all;
+        }
+        #fullLeaderboardTable th {
+            color: #f1c40f;
+            position: sticky;
+            top: 0;
+            background: #1a1a1a;
+            z-index: 2;
+        }
+        .modal-close-btn {
+            padding: 10px 30px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+            transition: background 0.2s;
+        }
+        .modal-close-btn:hover {
+            background: #c0392b;
+        }
     </style>
 </head>
 <body>
 
     <div id="gameContainer">
         <div id="miniLeaderboard" onclick="openFullLeaderboard()">
-            <h3>排行榜 Top 10</h3>
-            <ul id="miniLeaderboardList">
-                <li>載入中...</li>
-            </ul>
+            <h3>🏆 排行榜 (Top 10)</h3>
+            <ol id="miniLeaderboardList">
+                <li style="list-style:none; text-align:center; color:#aaa;">載入中...</li>
+            </ol>
+            <span class="click-tip">點擊查看完整排行/搜尋</span>
         </div>
 
         <div id="fullLeaderboardModal">
-            <div class="leaderboard-content">
-                <button class="close-btn" onclick="closeFullLeaderboard()">×</button>
-                <h2>🌍 存活排行榜</h2>
-                <input type="text" id="leaderboardSearch" placeholder="搜尋玩家名稱..." oninput="filterLeaderboard()">
-                <div class="list-container">
-                    <table id="fullLeaderboardTable">
-                        <thead>
-                            <tr>
-                                <th>名次</th>
-                                <th>玩家名稱</th>
-                                <th>生存時間</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            </tbody>
-                    </table>
-                </div>
+            <h2>🏆 完整生存排行</h2>
+            <input type="text" id="leaderboardSearch" placeholder="輸入玩家名稱進行查詢..." oninput="filterLeaderboard()">
+            <div id="fullLeaderboardListContainer">
+                <table id="fullLeaderboardTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 20%;">名次</th>
+                            <th style="width: 55%;">玩家 ID/名稱</th>
+                            <th style="width: 25%;">生存時間</th>
+                        </tr>
+                    </thead>
+                    <tbody id="fullLeaderboardBody"></tbody>
+                </table>
             </div>
+            <button class="modal-close-btn" onclick="closeFullLeaderboard()">關閉</button>
         </div>
 
         <div id="startScreen">
@@ -378,10 +501,14 @@
         </div>
 
         <canvas id="gameCanvas"></canvas>
+        
         <div id="damageOverlay"></div>
+
         <div id="playerNameTag">玩家名稱</div>
         <div id="playerHpBarBg"><div id="playerHpBar"></div></div>
+
         <img id="playerSprite" src="https://truth.bahamut.com.tw/s01/202606/43564bf4cf60b9503351e352c70275c1.GIF" alt="Player">
+        
         <div id="xpBarContainer"><div id="xpBar"></div></div>
         
         <div id="ui">
@@ -399,7 +526,9 @@
             </div>
         </div>
 
-        <div id="joystickZone"><div id="joystickStick"></div></div>
+        <div id="joystickZone">
+            <div id="joystickStick"></div>
+        </div>
 
         <div id="levelUpScreen">
             <h1>升級！選擇一項技能</h1>
@@ -414,11 +543,11 @@
     </div>
 
     <script type="module">
-        // ------------------ Firebase 初始化與設定 ------------------
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { getDatabase, ref, push, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
+        // Firebase 配置
         const firebaseConfig = {
             apiKey: "AIzaSyBaq5Y89srrIozUZY7sUJALvAamIZsxyuo",
             authDomain: "mmorpg-a836b.firebaseapp.com",
@@ -429,102 +558,117 @@
             appId: "1:995630256799:web:913fbb7303b58efaff08aa"
         };
 
+        // 初始化 Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getDatabase(app);
 
-        let uid = null;
-        let allScores = []; // 儲存所有排行榜資料
+        // 自動匿名訪客登入
+        signInAnonymously(auth)
+            .then(() => console.log("Firebase 匿名登入成功"))
+            .catch(err => console.error("Firebase 匿名登入失敗:", err));
 
-        // 匿名登入
-        signInAnonymously(auth).catch((error) => {
-            console.error("Firebase登入失敗:", error);
-        });
+        // 全域排行榜資料緩存
+        let allLeaderboardData = [];
+        let scoreSubmitted = false;
 
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                uid = user.uid;
-            }
-        });
-
-        // 監聽排行榜資料
+        // 監聽 Firebase 排行榜即時更新
         const leaderboardRef = ref(db, 'leaderboard');
         onValue(leaderboardRef, (snapshot) => {
             const data = snapshot.val();
-            allScores = [];
+            allLeaderboardData = [];
             if (data) {
-                for (let key in data) {
-                    allScores.push(data[key]);
-                }
-                // 依照生存時間降冪排序 (活最久的在最前面)
-                allScores.sort((a, b) => b.time - a.time);
+                Object.keys(data).forEach(key => {
+                    allLeaderboardData.push(data[key]);
+                });
             }
-            updateLeaderboardUI();
+            // 排序：生存時間由長到短 (降序)
+            allLeaderboardData.sort((a, b) => b.survivalTime - a.survivalTime);
+            
+            // 更新 UI 顯示
+            renderMiniLeaderboard();
         });
 
-        function formatTimeText(seconds) {
+        // 格式化時間秒數為 MM:SS
+        function formatTime(seconds) {
             const m = Math.floor(seconds / 60).toString().padStart(2, '0');
             const s = Math.floor(seconds % 60).toString().padStart(2, '0');
             return `${m}:${s}`;
         }
 
-        function updateLeaderboardUI() {
-            // 更新右上角 Mini 榜單 (Top 10)
-            const miniList = document.getElementById('miniLeaderboardList');
-            miniList.innerHTML = '';
-            const top10 = allScores.slice(0, 10);
-            if (top10.length === 0) {
-                miniList.innerHTML = '<li>尚無資料</li>';
-            } else {
-                top10.forEach((score, index) => {
-                    const li = document.createElement('li');
-                    let medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
-                    li.innerHTML = `<span class="name">${medal} ${score.name}</span> <span>${formatTimeText(score.time)}</span>`;
-                    miniList.appendChild(li);
-                });
+        // 渲染右上角前 10 名
+        function renderMiniLeaderboard() {
+            const listDom = document.getElementById('miniLeaderboardList');
+            listDom.innerHTML = '';
+            const top10 = allLeaderboardData.slice(0, 10);
+            
+            if(top10.length === 0) {
+                listDom.innerHTML = '<li style="list-style:none; text-align:center; color:#aaa;">暫無排行資料</li>';
+                return;
             }
 
-            // 更新完整榜單表格
-            renderFullLeaderboardTable(allScores);
+            top10.forEach((item, index) => {
+                const li = document.createElement('li');
+                li.innerHTML = `<b>${index + 1}.</b> ${item.playerName} (${formatTime(item.survivalTime)})`;
+                listDom.appendChild(li);
+            });
         }
 
-        function renderFullLeaderboardTable(scores) {
-            const tbody = document.querySelector('#fullLeaderboardTable tbody');
-            tbody.innerHTML = '';
-            scores.forEach((score, index) => {
+        // 渲染完整排行榜選單彈窗
+        function renderFullLeaderboard(dataList) {
+            const bodyDom = document.getElementById('fullLeaderboardBody');
+            bodyDom.innerHTML = '';
+            
+            if(dataList.length === 0) {
+                bodyDom.innerHTML = `<tr><td colspan="3" style="color:#aaa;">找不到相符的玩家名稱</td></tr>`;
+                return;
+            }
+
+            dataList.forEach((item) => {
+                // 找出該筆在原始大排行中的正名次
+                const originalRank = allLeaderboardData.indexOf(item) + 1;
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td>${index + 1}</td>
-                    <td>${score.name}</td>
-                    <td>${formatTimeText(score.time)}</td>
+                    <td><b>${originalRank}</b></td>
+                    <td>${item.playerName}</td>
+                    <td>${formatTime(item.survivalTime)}</td>
                 `;
-                tbody.appendChild(tr);
+                bodyDom.appendChild(tr);
             });
         }
 
-        // 上傳成績至 Firebase
-        function saveScoreToFirebase(playerName, survivalTime) {
-            if (!uid) return;
-            const newRecordRef = push(ref(db, 'leaderboard'));
-            set(newRecordRef, {
-                uid: uid,
-                name: playerName,
-                time: survivalTime,
-                timestamp: Date.now()
-            });
+        // 開啟完整排行榜選單
+        function openFullLeaderboard() {
+            document.getElementById('fullLeaderboardModal').style.display = 'block';
+            document.getElementById('leaderboardSearch').value = '';
+            renderFullLeaderboard(allLeaderboardData);
         }
 
-        // 綁定 UI 事件至全域，供 HTML onclick 呼叫
-        window.openFullLeaderboard = () => { document.getElementById('fullLeaderboardModal').style.display = 'flex'; };
-        window.closeFullLeaderboard = () => { document.getElementById('fullLeaderboardModal').style.display = 'none'; };
-        window.filterLeaderboard = () => {
-            const query = document.getElementById('leaderboardSearch').value.toLowerCase();
-            const filtered = allScores.filter(score => score.name.toLowerCase().includes(query));
-            renderFullLeaderboardTable(filtered);
-        };
+        // 關閉完整排行榜選單
+        function closeFullLeaderboard() {
+            document.getElementById('fullLeaderboardModal').style.display = 'none';
+        }
 
+        // 搜尋篩選過濾功能
+        function filterLeaderboard() {
+            const keyword = document.getElementById('leaderboardSearch').value.toLowerCase().trim();
+            if (keyword === '') {
+                renderFullLeaderboard(allLeaderboardData);
+            } else {
+                const filtered = allLeaderboardData.filter(item => 
+                    item.playerName.toLowerCase().includes(keyword)
+                );
+                renderFullLeaderboard(filtered);
+            }
+        }
 
-        // ------------------ 遊戲主邏輯 ------------------
+        // 將函式掛載至 window 確保 HTML 的 inline 事件監聽（例如 onclick）可正常訪問
+        window.openFullLeaderboard = openFullLeaderboard;
+        window.closeFullLeaderboard = closeFullLeaderboard;
+        window.filterLeaderboard = filterLeaderboard;
+
+        /* --- 以下為原遊戲邏輯核心，整合部分功能 --- */
+
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const playerDom = document.getElementById('playerSprite');
@@ -554,6 +698,7 @@
         const BG_SCALE = 1.5; 
         const bgImg = new Image();
         bgImg.src = 'https://truth.bahamut.com.tw/s01/202606/59ee76a4fa72093f25e147c1a26da16f.JPG';
+
         const gemImg = new Image();
         gemImg.src = 'https://truth.bahamut.com.tw/s01/202606/2a1e9ed6c7071377696d76d8902c0f04.PNG';
 
@@ -578,17 +723,28 @@
         const playerNormalImg = "https://truth.bahamut.com.tw/s01/202606/43564bf4cf60b9503351e352c70275c1.GIF";
         const playerLevelUpImg = "https://truth.bahamut.com.tw/s01/202606/0ba3166828aa01fb90c7c7a9d998bf8e.PNG";
 
-        let isLoaded = false, isGameStarted = false, isGameOver = false, isLevelUpMenuOpen = false, isLevelUpTransition = false;
-        let gameTime = 0, lastTime = performance.now();
+        let isLoaded = false;
+        let isGameStarted = false;
+        let isGameOver = false;
+        let isLevelUpMenuOpen = false; 
+        let isLevelUpTransition = false; 
+        let gameTime = 0;
+        let lastTime = performance.now();
+        
         const keys = {};
         window.addEventListener('keydown', e => keys[e.code] = true);
         window.addEventListener('keyup', e => keys[e.code] = false);
 
-        let mobileMoveX = 0, mobileMoveY = 0, joystickActive = false, joystickRect = null;
+        let mobileMoveX = 0;
+        let mobileMoveY = 0;
+        let joystickActive = false;
+        let joystickRect = null;
         const joystickZone = document.getElementById('joystickZone');
         const joystickStick = document.getElementById('joystickStick');
 
-        if ('ontouchstart' in window || navigator.maxTouchPoints > 0) joystickZone.style.display = 'block';
+        if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+            joystickZone.style.display = 'block';
+        }
 
         joystickZone.addEventListener('touchstart', e => {
             joystickActive = true;
@@ -605,7 +761,8 @@
         window.addEventListener('touchend', () => {
             if (!joystickActive) return;
             joystickActive = false;
-            mobileMoveX = 0; mobileMoveY = 0;
+            mobileMoveX = 0;
+            mobileMoveY = 0;
             joystickStick.style.transform = 'translate(0px, 0px)';
         });
 
@@ -617,17 +774,38 @@
             const dist = Math.sqrt(dx * dx + dy * dy);
             const maxDist = joystickRect.width / 2;
 
-            if (dist > maxDist) { dx = (dx / dist) * maxDist; dy = (dy / dist) * maxDist; }
+            if (dist > maxDist) {
+                dx = (dx / dist) * maxDist;
+                dy = (dy / dist) * maxDist;
+            }
+
             joystickStick.style.transform = `translate(${dx}px, ${dy}px)`;
-            mobileMoveX = dx / maxDist; mobileMoveY = dy / maxDist;
+            mobileMoveX = dx / maxDist;
+            mobileMoveY = dy / maxDist;
         }
 
         let mapBounds = { w: 0, h: 0 };
         const camera = { x: 0, y: 0 };
+
         const player = {
-            name: "", x: 0, y: 0, drawW: 0, drawH: 180, hitboxRadius: 25, speed: 220, hp: 100, maxHp: 100,
-            level: 1, xp: 0, xpNeeded: 100, xpMultiplier: 1.0, attackCooldown: 1.2, attackTimer: 0, attackDamage: 20,
-            attackSpeed: 300, facingRight: true,
+            name: "",
+            x: 0, 
+            y: 0,
+            drawW: 0, 
+            drawH: 180,
+            hitboxRadius: 25, 
+            speed: 220,
+            hp: 100,
+            maxHp: 100,
+            level: 1,
+            xp: 0,
+            xpNeeded: 100,
+            xpMultiplier: 1.0, 
+            attackCooldown: 1.2,
+            attackTimer: 0,
+            attackDamage: 20,
+            attackSpeed: 300,
+            facingRight: true,
             skills: { speed: 0, damage: 0, xp: 0, count: 0, atkSpeed: 0, bounce: 0, area: 0 } 
         };
 
@@ -645,17 +823,28 @@
         function checkInit() {
             loadedCount++;
             if (loadedCount === 3) { 
-                isLoaded = true; player.x = mapBounds.w / 2; player.y = mapBounds.h / 2; requestAnimationFrame(gameLoop);
+                isLoaded = true;
+                player.x = mapBounds.w / 2;
+                player.y = mapBounds.h / 2;
+                requestAnimationFrame(gameLoop);
             }
         }
 
-        bgImg.onload = () => { mapBounds.w = bgImg.naturalWidth * BG_SCALE; mapBounds.h = bgImg.naturalHeight * BG_SCALE; checkInit(); };
+        bgImg.onload = () => {
+            mapBounds.w = bgImg.naturalWidth * BG_SCALE;
+            mapBounds.h = bgImg.naturalHeight * BG_SCALE;
+            checkInit();
+        };
+
         playerDom.onload = () => {
             const ratio = playerDom.naturalWidth / playerDom.naturalHeight;
             player.drawW = player.drawH * ratio;
             playerDom.style.width = player.drawW + 'px';
-            if (!isLoaded) checkInit();
+            if (!isLoaded) {
+                checkInit();
+            }
         };
+
         gemImg.onload = () => { if(!isLoaded) checkInit(); };
 
         function updateSkillDisplay() {
@@ -669,9 +858,12 @@
             document.getElementById('skill6Text').innerText = `▶ 一言不和開地圖炮 : LV ${player.skills.area}`;
         }
 
-        window.startGame = function() {
+        function startGame() {
             if (!isLoaded) return;
-            gameBgm.play().catch(err => { console.log("音樂播放失敗", err); });
+
+            gameBgm.play().catch(err => {
+                console.log("音樂播放失敗，使用者尚未與頁面互動:", err);
+            });
 
             const inputName = document.getElementById('playerNameInput').value.trim();
             if (inputName !== "") {
@@ -693,9 +885,11 @@
 
             isGameStarted = true;
             lastTime = performance.now(); 
-        };
+        }
 
-        const enemies = [], projectiles = [], gems = [];
+        const enemies = [];
+        const projectiles = [];
+        const gems = [];
         let enemySpawnTimer = 0;
 
         function spawnEnemy() {
@@ -714,15 +908,20 @@
 
         function shootNearestEnemy() {
             if (enemies.length === 0) return;
-            let nearestEnemy = null, minDist = Infinity;
+            let nearestEnemy = null;
+            let minDist = Infinity;
             enemies.forEach(enemy => {
-                const dx = enemy.x - player.x, dy = enemy.y - player.y, dist = Math.sqrt(dx * dx + dy * dy);
+                const dx = enemy.x - player.x;
+                const dy = enemy.y - player.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
                 if (dist < minDist) { minDist = dist; nearestEnemy = enemy; }
             });
 
             if (nearestEnemy) {
-                const dx = nearestEnemy.x - player.x, dy = nearestEnemy.y - player.y;
+                const dx = nearestEnemy.x - player.x;
+                const dy = nearestEnemy.y - player.y;
                 const baseAngle = Math.atan2(dy, dx);
+                
                 const totalProjectiles = 1 + player.skills.count;
                 const spreadAngle = 0.25; 
                 const startAngle = baseAngle - ((totalProjectiles - 1) * spreadAngle) / 2;
@@ -730,10 +929,14 @@
                 for (let i = 0; i < totalProjectiles; i++) {
                     const angle = startAngle + i * spreadAngle;
                     projectiles.push({
-                        x: player.x, y: player.y,
-                        vx: Math.cos(angle) * player.attackSpeed, vy: Math.sin(angle) * player.attackSpeed,
+                        x: player.x,
+                        y: player.y,
+                        vx: Math.cos(angle) * player.attackSpeed,
+                        vy: Math.sin(angle) * player.attackSpeed,
                         text: quotes[Math.floor(Math.random() * quotes.length)],
-                        damage: player.attackDamage, life: 3.0, bounceCount: 0 
+                        damage: player.attackDamage,
+                        life: 3.0,
+                        bounceCount: 0 
                     });
                 }
             }
@@ -742,8 +945,15 @@
         function levelUp() {
             player.level++;
             player.xp -= player.xpNeeded;
-            player.xpNeeded = Math.floor(player.xpNeeded * (player.level <= 15 ? 1.15 : 1.4)); 
-            player.maxHp += 15; player.hp = player.maxHp; 
+            
+            if (player.level <= 15) {
+                player.xpNeeded = Math.floor(player.xpNeeded * 1.15); 
+            } else {
+                player.xpNeeded = Math.floor(player.xpNeeded * 1.4); 
+            }
+            
+            player.maxHp += 15; 
+            player.hp = player.maxHp; 
             
             updateSkillDisplay();
             damageOverlayDom.style.backgroundColor = 'transparent';
@@ -755,7 +965,7 @@
                 const btn = document.createElement('button');
                 btn.className = 'skill-btn';
                 btn.innerHTML = `${skill.name} (當前 LV.${skill.current()})<br><span style="font-size: 14px; color: #bdc3c7;">(${skill.desc})</span>`;
-                btn.onclick = () => window.chooseSkill(skill.id);
+                btn.onclick = () => chooseSkill(skill.id);
                 container.appendChild(btn);
             });
 
@@ -764,40 +974,64 @@
             document.getElementById('levelUpScreen').scrollTop = 0; 
         }
 
-        window.chooseSkill = function(skillId) {
-            if (skillId === 'speed') { player.speed += 20; player.skills.speed++; }
-            else if (skillId === 'damage') { player.attackDamage += 12; player.skills.damage++; }
-            else if (skillId === 'xp') { player.xpMultiplier += 0.25; player.skills.xp++; }
-            else if (skillId === 'count') { player.skills.count++; }
-            else if (skillId === 'atkSpeed') { player.skills.atkSpeed++; player.attackCooldown = Math.max(0.15, 1.2 * Math.pow(0.75, player.skills.atkSpeed)); }
-            else if (skillId === 'bounce') { player.skills.bounce++; }
-            else if (skillId === 'area') { player.skills.area++; }
+        function chooseSkill(skillId) {
+            if (skillId === 'speed') {
+                player.speed += 20; 
+                player.skills.speed++;
+            } else if (skillId === 'damage') {
+                player.attackDamage += 12; 
+                player.skills.damage++;
+            } else if (skillId === 'xp') {
+                player.xpMultiplier += 0.25; 
+                player.skills.xp++;
+            } else if (skillId === 'count') {
+                player.skills.count++; 
+            } else if (skillId === 'atkSpeed') {
+                player.skills.atkSpeed++; 
+                player.attackCooldown = Math.max(0.15, 1.2 * Math.pow(0.75, player.skills.atkSpeed));
+            } else if (skillId === 'bounce') {
+                player.skills.bounce++; 
+            } else if (skillId === 'area') {
+                player.skills.area++; 
+            }
 
             updateSkillDisplay();
+
             playerDom.src = playerNormalImg;
             isLevelUpTransition = false; 
 
             document.getElementById('levelUpScreen').style.display = 'none';
             isLevelUpMenuOpen = false;
             lastTime = performance.now(); 
-        };
+        }
 
         function updateUI() {
             document.getElementById('hpText').innerText = `HP: ${Math.max(0, Math.floor(player.hp))} / ${player.maxHp}`;
             document.getElementById('xpBar').style.width = `${Math.min(100, (player.xp / player.xpNeeded) * 100)}%`;
-            document.getElementById('timeText').innerText = `時間: ${formatTimeText(gameTime)}`;
+            document.getElementById('timeText').innerText = `時間: ${formatTime(gameTime)}`;
         }
 
         function gameOver() {
             isGameOver = true;
             document.getElementById('gameOver').style.display = 'block';
-            playerDom.style.display = 'none'; nameTagDom.style.display = 'none'; hpBarBgDom.style.display = 'none'; 
+            playerDom.style.display = 'none'; 
+            nameTagDom.style.display = 'none';
+            hpBarBgDom.style.display = 'none'; 
             damageOverlayDom.style.backgroundColor = 'transparent'; 
             
-            document.getElementById('finalStats').innerHTML = `玩家: <b>${player.name}</b><br>最終等級: <b>${player.level}</b><br>存活時間: <b>${formatTimeText(gameTime)}</b>`;
-
-            // ----------- 將成績存入 Firebase -----------
-            saveScoreToFirebase(player.name, gameTime);
+            document.getElementById('finalStats').innerHTML = `玩家: <b>${player.name}</b><br>最終等級: <b>${player.level}</b><br>存活時間: <b>${formatTime(gameTime)}</b>`;
+            
+            // 新增：向 Firebase 提交排行數據
+            if (!scoreSubmitted) {
+                scoreSubmitted = true;
+                push(ref(db, 'leaderboard'), {
+                    playerName: player.name,
+                    survivalTime: gameTime,
+                    timestamp: Date.now()
+                })
+                .then(() => console.log("分數已成功同步至排行榜！"))
+                .catch(err => console.error("同步分數失敗:", err));
+            }
         }
 
         function update(dt) {
@@ -810,7 +1044,10 @@
             if (keys['KeyA'] || keys['ArrowLeft']) moveX -= 1;
             if (keys['KeyD'] || keys['ArrowRight']) moveX += 1;
 
-            if (moveX === 0 && moveY === 0) { moveX = mobileMoveX; moveY = mobileMoveY; }
+            if (moveX === 0 && moveY === 0) {
+                moveX = mobileMoveX;
+                moveY = mobileMoveY;
+            }
 
             if (moveX !== 0 || moveY !== 0) {
                 const len = Math.sqrt(moveX * moveX + moveY * moveY);
@@ -820,18 +1057,24 @@
                 }
             }
 
-            if (moveX > 0.05) player.facingRight = true; else if (moveX < -0.05) player.facingRight = false;
+            if (moveX > 0.05) player.facingRight = true;
+            else if (moveX < -0.05) player.facingRight = false;
 
             player.x = Math.max(player.drawH/2, Math.min(mapBounds.w - player.drawH/2, player.x));
             player.y = Math.max(player.drawH/2, Math.min(mapBounds.h - player.drawH/2, player.y));
+
             camera.x = Math.max(0, Math.min(mapBounds.w - canvas.width, player.x - canvas.width / 2));
             camera.y = Math.max(0, Math.min(mapBounds.h - canvas.height, player.y - canvas.height / 2));
             
-            const screenX = player.x - camera.x, screenY = player.y - camera.y;
+            const screenX = player.x - camera.x;
+            const screenY = player.y - camera.y;
             playerDom.style.transform = `translate(${screenX - player.drawW / 2}px, ${screenY - player.drawH / 2}px) scaleX(${player.facingRight ? -1 : 1})`;
             
-            nameTagDom.style.left = `${screenX}px`; nameTagDom.style.top = `${screenY - player.drawH / 2 - 35}px`;
-            hpBarBgDom.style.left = `${screenX}px`; hpBarBgDom.style.top = `${screenY - player.drawH / 2 - 5}px`; 
+            nameTagDom.style.left = `${screenX}px`;
+            nameTagDom.style.top = `${screenY - player.drawH / 2 - 35}px`;
+
+            hpBarBgDom.style.left = `${screenX}px`;
+            hpBarBgDom.style.top = `${screenY - player.drawH / 2 - 5}px`; 
             hpBarDom.style.width = `${Math.max(0, (player.hp / player.maxHp) * 100)}%`;
 
             player.attackTimer -= dt;
@@ -841,17 +1084,27 @@
             if (enemySpawnTimer <= 0) { spawnEnemy(); enemySpawnTimer = Math.max(0.15, 1.2 - (gameTime / 120)); }
 
             let isHitThisFrame = false; 
+
             for (let i = enemies.length - 1; i >= 0; i--) {
                 const e = enemies[i];
                 const dx = player.x - e.x, dy = player.y - e.y, dist = Math.sqrt(dx*dx + dy*dy);
                 if (dist > 5) { e.x += (dx/dist)*e.speed*dt; e.y += (dy/dist)*e.speed*dt; }
                 if (dist < e.radius + player.hitboxRadius) { 
-                    player.hp -= e.damage * dt; isHitThisFrame = true; 
-                    if (player.hp <= 0) { gameOver(); return; }
+                    player.hp -= e.damage * dt; 
+                    isHitThisFrame = true; 
+                    if (player.hp <= 0) {
+                        gameOver();
+                        return;
+                    }
                 }
             }
 
-            damageOverlayDom.style.backgroundColor = isHitThisFrame && !isGameOver ? 'rgba(255, 0, 0, 0.3)' : 'transparent';
+            if (isHitThisFrame && !isGameOver) {
+                damageOverlayDom.style.backgroundColor = 'rgba(255, 0, 0, 0.3)';
+            } else {
+                damageOverlayDom.style.backgroundColor = 'transparent';
+            }
+
             const hitboxBonus = player.skills.area * 8; 
 
             for (let i = projectiles.length - 1; i >= 0; i--) {
@@ -864,8 +1117,12 @@
                     const dx = p.x - e.x, dy = p.y - e.y;
                     
                     if (Math.sqrt(dx*dx + dy*dy) < e.radius + 10 + hitboxBonus) {
-                        e.hp -= p.damage; hit = true;
-                        if (e.hp <= 0) { gems.push({ x: e.x, y: e.y, xp: 60 }); enemies.splice(j, 1); }
+                        e.hp -= p.damage; 
+                        hit = true;
+                        if (e.hp <= 0) { 
+                            gems.push({ x: e.x, y: e.y, xp: 60 }); 
+                            enemies.splice(j, 1); 
+                        }
                         break; 
                     }
                 }
@@ -875,16 +1132,24 @@
                         p.bounceCount++;
                         const currentAngle = Math.atan2(p.vy, p.vx);
                         const bounceAngle = currentAngle + Math.PI + (Math.random() - 0.5) * 0.6;
-                        p.vx = Math.cos(bounceAngle) * player.attackSpeed; p.vy = Math.sin(bounceAngle) * player.attackSpeed;
-                    } else { projectiles.splice(i, 1); }
-                } else if (p.life <= 0) { projectiles.splice(i, 1); }
+                        p.vx = Math.cos(bounceAngle) * player.attackSpeed;
+                        p.vy = Math.sin(bounceAngle) * player.attackSpeed;
+                    } else {
+                        projectiles.splice(i, 1);
+                    }
+                } else if (p.life <= 0) {
+                    projectiles.splice(i, 1);
+                }
             }
 
             for (let i = gems.length - 1; i >= 0; i--) {
                 const g = gems[i];
                 const dx = player.x - g.x, dy = player.y - g.y, dist = Math.sqrt(dx*dx + dy*dy);
                 if (dist < 180) { g.x += (dx/dist)*350*dt; g.y += (dy/dist)*350*dt; }
-                if (dist < 35) { player.xp += g.xp * player.xpMultiplier; gems.splice(i, 1); }
+                if (dist < 35) { 
+                    player.xp += g.xp * player.xpMultiplier; 
+                    gems.splice(i, 1); 
+                }
             }
 
             updateUI();
@@ -892,7 +1157,10 @@
             if (player.xp >= player.xpNeeded) {
                 isLevelUpTransition = true;
                 playerDom.src = playerLevelUpImg; 
-                setTimeout(() => { levelUp(); }, 500); 
+                
+                setTimeout(() => {
+                    levelUp();
+                }, 500); 
             }
         }
 
@@ -904,7 +1172,8 @@
 
             gems.forEach(g => {
                 if (gemImg.complete) {
-                    const drawWidth = gemImg.naturalWidth * 0.1, drawHeight = gemImg.naturalHeight * 0.1;
+                    const drawWidth = gemImg.naturalWidth * 0.1;
+                    const drawHeight = gemImg.naturalHeight * 0.1;
                     ctx.drawImage(gemImg, g.x - camera.x - drawWidth / 2, g.y - camera.y - drawHeight / 2, drawWidth, drawHeight);
                 }
             });
@@ -912,16 +1181,25 @@
             enemies.forEach(e => {
                 const drawSize = e.radius * 2.5;
                 if (e.img.complete) {
-                    ctx.save(); ctx.beginPath(); ctx.arc(e.x - camera.x, e.y - camera.y, drawSize / 2, 0, Math.PI * 2);
-                    ctx.lineWidth = 4; ctx.strokeStyle = '#f1c40f'; ctx.stroke(); ctx.clip();
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(e.x - camera.x, e.y - camera.y, drawSize / 2, 0, Math.PI * 2);
+                    ctx.lineWidth = 4;
+                    ctx.strokeStyle = '#f1c40f'; 
+                    ctx.stroke();
+                    ctx.clip();
                     ctx.drawImage(e.img, e.x - camera.x - drawSize/2, e.y - camera.y - drawSize/2, drawSize, drawSize);
                     ctx.restore();
                 }
             });
 
             const fontSize = 16 + (player.skills.area * 5); 
-            ctx.fillStyle = '#fff'; ctx.font = `bold ${fontSize}px Arial`;
-            projectiles.forEach(p => { ctx.fillText(p.text, p.x - camera.x, p.y - camera.y); });
+            ctx.fillStyle = '#fff';
+            ctx.font = `bold ${fontSize}px Arial`;
+            
+            projectiles.forEach(p => {
+                ctx.fillText(p.text, p.x - camera.x, p.y - camera.y);
+            });
         }
 
         function gameLoop(timestamp) {
@@ -931,6 +1209,9 @@
             draw();
             requestAnimationFrame(gameLoop);
         }
+
+        window.startGame = startGame;
+        window.chooseSkill = chooseSkill;
     </script>
 </body>
 </html>
