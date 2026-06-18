@@ -147,6 +147,14 @@
             align-items: center;
             justify-content: center;
         }
+        
+        #startScreenWrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
         #startScreen h1 {
             font-size: 54px;
             margin-bottom: 20px;
@@ -316,7 +324,7 @@
             border: 3px solid rgba(255, 255, 255, 0.3);
             border-radius: 50%;
             z-index: 30;
-            display: none; 
+            display: none; /* 預設隱藏，偵測到觸控裝置才會開啟 */
             touch-action: none;
         }
         #joystickStick {
@@ -330,172 +338,115 @@
             pointer-events: none;
         }
 
-        /* 新增：右上角迷你排行榜 */
+        /* ================== 排行榜 UI 樣式 ================== */
         #miniLeaderboard {
             position: absolute;
-            top: 30px;
+            top: 15px;
             right: 15px;
-            background: rgba(0, 0, 0, 0.65);
-            padding: 12px;
-            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.7);
             border: 1px solid rgba(255, 255, 255, 0.2);
-            z-index: 55;
-            cursor: pointer;
+            border-radius: 10px;
+            padding: 15px;
+            z-index: 60; 
+            color: #fff;
             width: 220px;
-            text-shadow: 1px 1px 2px #000;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            box-sizing: border-box;
+            cursor: pointer;
+            transition: background 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.5);
         }
-        #miniLeaderboard h3 {
-            margin: 0 0 8px 0;
-            font-size: 16px;
-            color: #f1c40f;
-            text-align: center;
-        }
-        #miniLeaderboard ol {
-            margin: 0;
-            padding-left: 22px;
-            font-size: 13px;
-            color: #ecf0f1;
-        }
-        #miniLeaderboard li {
-            margin-bottom: 4px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        #miniLeaderboard .click-tip {
-            display: block;
-            text-align: center;
-            color: #aaa;
-            font-size: 11px;
-            margin-top: 6px;
-        }
-
-        /* 新增：完整排行榜半透明選單彈窗 */
+        #miniLeaderboard:hover { background: rgba(0, 0, 0, 0.9); }
+        #miniLeaderboard h3 { margin: 0 0 10px 0; color: #f1c40f; text-align: center; font-size: 18px; }
+        .lb-entry { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 6px; }
+        .lb-entry .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 120px; }
+        
         #fullLeaderboardModal {
             display: none;
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(15, 15, 15, 0.92);
-            padding: 25px;
-            border-radius: 15px;
-            border: 2px solid #3498db;
-            z-index: 70;
-            width: 85%;
-            max-width: 480px;
-            box-shadow: 0 0 25px rgba(52, 152, 219, 0.6);
-            text-align: center;
-            box-sizing: border-box;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 100;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
-        #fullLeaderboardModal h2 {
-            margin-top: 0;
-            color: #3498db;
-            font-size: 26px;
-            text-shadow: 1px 1px 3px #000;
-        }
-        #leaderboardSearch {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 15px;
-            border-radius: 6px;
-            border: 1px solid #34495e;
+        #fullLeaderboardContent {
             background: #2c3e50;
-            color: white;
-            font-size: 15px;
-            outline: none;
-            box-sizing: border-box;
+            border: 3px solid #f1c40f;
+            border-radius: 15px;
+            width: 90%; max-width: 500px;
+            max-height: 80vh;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 30px rgba(241, 196, 15, 0.4);
         }
-        #fullLeaderboardListContainer {
-            max-height: 45vh;
-            overflow-y: auto;
-            margin-bottom: 20px;
-            border: 1px solid rgba(255,255,255,0.1);
-            background: rgba(0,0,0,0.3);
-            border-radius: 6px;
+        #fullLeaderboardContent h2 { color: #f1c40f; text-align: center; margin-top: 0; text-shadow: 2px 2px #000; }
+        #lbSearch { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 8px; border: 2px solid #34495e; box-sizing: border-box; background: #1a252f; color: white; outline: none; font-size: 16px; }
+        #lbSearch::placeholder { color: #95a5a6; }
+        #lbList { flex-grow: 1; overflow-y: auto; padding-right: 10px; }
+        #lbList::-webkit-scrollbar { width: 8px; }
+        #lbList::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); border-radius: 10px; }
+        #lbList::-webkit-scrollbar-thumb { background: #f1c40f; border-radius: 10px; }
+        .lb-full-entry { display: flex; justify-content: space-between; padding: 12px; border-bottom: 1px solid #34495e; font-size: 18px; align-items: center;}
+        .lb-full-entry .rank { font-weight: bold; color: #e74c3c; width: 40px; }
+        .lb-full-entry .name { flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 10px; }
+        .lb-full-entry .time { color: #2ecc71; font-weight: bold; }
+        .close-btn { margin-top: 20px; padding: 12px; background: #e74c3c; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 18px; font-weight: bold; text-align: center; transition: 0.2s; }
+        .close-btn:hover { background: #c0392b; transform: scale(1.02); }
+
+        /* ================== 手機等比例縮小選單設定 ================== */
+        @media screen and (max-width: 768px) {
+            #ui { transform: scale(0.75); transform-origin: top left; }
+            #miniLeaderboard { transform: scale(0.75); transform-origin: top right; }
+            #startScreenWrapper { transform: scale(0.75); }
+            #levelUpScreen { transform: translate(-50%, -50%) scale(0.85); width: 90%; }
+            #gameOver { transform: translate(-50%, -50%) scale(0.8); }
+            #fullLeaderboardContent { transform: scale(0.85); }
         }
-        #fullLeaderboardListContainer::-webkit-scrollbar {
-            width: 6px;
-        }
-        #fullLeaderboardListContainer::-webkit-scrollbar-thumb {
-            background: #3498db;
-            border-radius: 3px;
-        }
-        #fullLeaderboardTable {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 15px;
-        }
-        #fullLeaderboardTable th, #fullLeaderboardTable td {
-            padding: 10px 6px;
-            border-bottom: 1px solid rgba(255,255,255,0.08);
-            text-align: center;
-            word-break: break-all;
-        }
-        #fullLeaderboardTable th {
-            color: #f1c40f;
-            position: sticky;
-            top: 0;
-            background: #1a1a1a;
-            z-index: 2;
-        }
-        .modal-close-btn {
-            padding: 10px 30px;
-            background: #e74c3c;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 16px;
-            transition: background 0.2s;
-        }
-        .modal-close-btn:hover {
-            background: #c0392b;
+
+        @media screen and (max-width: 480px) {
+            #ui { transform: scale(0.6); }
+            #miniLeaderboard { transform: scale(0.65); }
+            #startScreenWrapper { transform: scale(0.65); }
+            #levelUpScreen { transform: translate(-50%, -50%) scale(0.75); }
+            #gameOver { transform: translate(-50%, -50%) scale(0.7); }
+            #fullLeaderboardContent { transform: scale(0.75); }
         }
     </style>
 </head>
 <body>
 
     <div id="gameContainer">
-        <div id="miniLeaderboard" onclick="openFullLeaderboard()">
-            <h3>🏆 排行榜 (Top 10)</h3>
-            <ol id="miniLeaderboardList">
-                <li style="list-style:none; text-align:center; color:#aaa;">載入中...</li>
-            </ol>
-            <span class="click-tip">點擊查看完整排行/搜尋</span>
+        <div id="miniLeaderboard" onclick="window.openFullLeaderboard()">
+            <h3>🏆 存活排行榜 Top 10</h3>
+            <div id="miniLbList">連線中...</div>
+            <div style="font-size: 12px; text-align: center; margin-top: 10px; color: #bdc3c7;">點擊查看完整名單 / 搜尋</div>
         </div>
 
         <div id="fullLeaderboardModal">
-            <h2>🏆 完整生存排行</h2>
-            <input type="text" id="leaderboardSearch" placeholder="輸入玩家名稱進行查詢..." oninput="filterLeaderboard()">
-            <div id="fullLeaderboardListContainer">
-                <table id="fullLeaderboardTable">
-                    <thead>
-                        <tr>
-                            <th style="width: 20%;">名次</th>
-                            <th style="width: 55%;">玩家 ID/名稱</th>
-                            <th style="width: 25%;">生存時間</th>
-                        </tr>
-                    </thead>
-                    <tbody id="fullLeaderboardBody"></tbody>
-                </table>
+            <div id="fullLeaderboardContent">
+                <!-- 這裡修改了標題 -->
+                <h2>🏆 鵝鵝高手排行榜</h2>
+                <input type="text" id="lbSearch" placeholder="輸入玩家名稱搜尋..." onkeyup="window.filterLeaderboard()">
+                <div id="lbList"></div>
+                <button class="close-btn" onclick="window.closeFullLeaderboard()">關閉排行榜</button>
             </div>
-            <button class="modal-close-btn" onclick="closeFullLeaderboard()">關閉</button>
         </div>
-
+        
         <div id="startScreen">
-            <h1>開始嘴砲時間</h1>
-            <div class="input-group">
-                <input type="text" id="playerNameInput" placeholder="請輸入玩家名稱 (可留空)" autocomplete="off">
-            </div>
-            <h2>請選擇角色</h2>
-            <div class="char-selection">
-                <div class="char-card" onclick="startGame()">
-                    <img src="https://truth.bahamut.com.tw/s01/202606/43564bf4cf60b9503351e352c70275c1.GIF" alt="天使鵝鵝">
-                    <h3>角色1<br>天使鵝鵝</h3>
+            <!-- 加入一層 wrapper 以便手機端整體等比例縮小 -->
+            <div id="startScreenWrapper">
+                <h1>開始嘴砲時間</h1>
+                <div class="input-group">
+                    <input type="text" id="playerNameInput" placeholder="請輸入玩家名稱 (可留空)" autocomplete="off">
+                </div>
+                <h2>請選擇角色</h2>
+                <div class="char-selection">
+                    <div class="char-card" onclick="startGame()">
+                        <img src="https://truth.bahamut.com.tw/s01/202606/43564bf4cf60b9503351e352c70275c1.GIF" alt="天使鵝鵝">
+                        <h3>角色1<br>天使鵝鵝</h3>
+                    </div>
                 </div>
             </div>
         </div>
@@ -543,11 +494,11 @@
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getDatabase, ref, push, onValue, query as dbQuery, orderByChild } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
-        // Firebase 配置
+        // Firebase 設定
         const firebaseConfig = {
             apiKey: "AIzaSyBaq5Y89srrIozUZY7sUJALvAamIZsxyuo",
             authDomain: "mmorpg-a836b.firebaseapp.com",
@@ -558,116 +509,102 @@
             appId: "1:995630256799:web:913fbb7303b58efaff08aa"
         };
 
-        // 初始化 Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getDatabase(app);
 
-        // 自動匿名訪客登入
-        signInAnonymously(auth)
-            .then(() => console.log("Firebase 匿名登入成功"))
-            .catch(err => console.error("Firebase 匿名登入失敗:", err));
-
-        // 全域排行榜資料緩存
-        let allLeaderboardData = [];
-        let scoreSubmitted = false;
-
-        // 監聽 Firebase 排行榜即時更新
-        const leaderboardRef = ref(db, 'leaderboard');
-        onValue(leaderboardRef, (snapshot) => {
-            const data = snapshot.val();
-            allLeaderboardData = [];
-            if (data) {
-                Object.keys(data).forEach(key => {
-                    allLeaderboardData.push(data[key]);
-                });
-            }
-            // 排序：生存時間由長到短 (降序)
-            allLeaderboardData.sort((a, b) => b.survivalTime - a.survivalTime);
-            
-            // 更新 UI 顯示
-            renderMiniLeaderboard();
+        // 匿名登入
+        signInAnonymously(auth).then(() => {
+            console.log("Firebase 遊客登入成功！");
+        }).catch((error) => {
+            console.error("Firebase 登入失敗:", error);
         });
 
-        // 格式化時間秒數為 MM:SS
-        function formatTime(seconds) {
-            const m = Math.floor(seconds / 60).toString().padStart(2, '0');
-            const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+        // 全局全域變數，供舊版 script 呼叫
+        window.allScores = [];
+
+        // 上傳分數
+        window.saveToLeaderboard = function(playerName, surviveTime) {
+            const leaderboardRef = ref(db, 'leaderboard');
+            push(leaderboardRef, {
+                name: playerName,
+                time: surviveTime,
+                timestamp: Date.now()
+            });
+        };
+
+        // 監聽排行榜資料
+        const leaderboardRef = ref(db, 'leaderboard');
+        const topScoresQuery = dbQuery(leaderboardRef, orderByChild('time'));
+        
+        onValue(topScoresQuery, (snapshot) => {
+            let scores = [];
+            snapshot.forEach((childSnapshot) => {
+                scores.push(childSnapshot.val());
+            });
+            
+            // Firebase orderByChild 是升序(從小到大)，所以我們反轉成降序(時間最長在前面)
+            scores.reverse();
+            
+            // 賦予名次屬性
+            window.allScores = scores.map((s, index) => ({...s, rank: index + 1}));
+            window.updateLeaderboardUI();
+        });
+    </script>
+    <script>
+        function formatTimeHelper(secs) {
+            const m = Math.floor(secs / 60).toString().padStart(2, '0');
+            const s = Math.floor(secs % 60).toString().padStart(2, '0');
             return `${m}:${s}`;
         }
 
-        // 渲染右上角前 10 名
-        function renderMiniLeaderboard() {
-            const listDom = document.getElementById('miniLeaderboardList');
-            listDom.innerHTML = '';
-            const top10 = allLeaderboardData.slice(0, 10);
+        window.updateLeaderboardUI = function() {
+            const miniList = document.getElementById('miniLbList');
+            miniList.innerHTML = '';
             
-            if(top10.length === 0) {
-                listDom.innerHTML = '<li style="list-style:none; text-align:center; color:#aaa;">暫無排行資料</li>';
-                return;
-            }
-
-            top10.forEach((item, index) => {
-                const li = document.createElement('li');
-                li.innerHTML = `<b>${index + 1}.</b> ${item.playerName} (${formatTime(item.survivalTime)})`;
-                listDom.appendChild(li);
-            });
-        }
-
-        // 渲染完整排行榜選單彈窗
-        function renderFullLeaderboard(dataList) {
-            const bodyDom = document.getElementById('fullLeaderboardBody');
-            bodyDom.innerHTML = '';
-            
-            if(dataList.length === 0) {
-                bodyDom.innerHTML = `<tr><td colspan="3" style="color:#aaa;">找不到相符的玩家名稱</td></tr>`;
-                return;
-            }
-
-            dataList.forEach((item) => {
-                // 找出該筆在原始大排行中的正名次
-                const originalRank = allLeaderboardData.indexOf(item) + 1;
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td><b>${originalRank}</b></td>
-                    <td>${item.playerName}</td>
-                    <td>${formatTime(item.survivalTime)}</td>
-                `;
-                bodyDom.appendChild(tr);
-            });
-        }
-
-        // 開啟完整排行榜選單
-        function openFullLeaderboard() {
-            document.getElementById('fullLeaderboardModal').style.display = 'block';
-            document.getElementById('leaderboardSearch').value = '';
-            renderFullLeaderboard(allLeaderboardData);
-        }
-
-        // 關閉完整排行榜選單
-        function closeFullLeaderboard() {
-            document.getElementById('fullLeaderboardModal').style.display = 'none';
-        }
-
-        // 搜尋篩選過濾功能
-        function filterLeaderboard() {
-            const keyword = document.getElementById('leaderboardSearch').value.toLowerCase().trim();
-            if (keyword === '') {
-                renderFullLeaderboard(allLeaderboardData);
+            if (window.allScores.length === 0) {
+                miniList.innerHTML = '<div style="text-align:center;">尚無紀錄</div>';
             } else {
-                const filtered = allLeaderboardData.filter(item => 
-                    item.playerName.toLowerCase().includes(keyword)
-                );
-                renderFullLeaderboard(filtered);
+                // 渲染前 10 名
+                window.allScores.slice(0, 10).forEach(s => {
+                    const div = document.createElement('div');
+                    div.className = 'lb-entry';
+                    div.innerHTML = `<span class="name">#${s.rank} ${s.name}</span><span>${formatTimeHelper(s.time)}</span>`;
+                    miniList.appendChild(div);
+                });
             }
-        }
+            window.filterLeaderboard(); // 更新完整列表
+        };
 
-        // 將函式掛載至 window 確保 HTML 的 inline 事件監聽（例如 onclick）可正常訪問
-        window.openFullLeaderboard = openFullLeaderboard;
-        window.closeFullLeaderboard = closeFullLeaderboard;
-        window.filterLeaderboard = filterLeaderboard;
+        window.renderFullList = function(scoresToRender) {
+            const list = document.getElementById('lbList');
+            list.innerHTML = '';
+            if(scoresToRender.length === 0) {
+                list.innerHTML = '<div style="color:white; text-align:center;">找不到玩家</div>';
+                return;
+            }
+            scoresToRender.forEach(s => {
+                const div = document.createElement('div');
+                div.className = 'lb-full-entry';
+                div.innerHTML = `<span class="rank">#${s.rank}</span><span class="name">${s.name}</span><span class="time">${formatTimeHelper(s.time)}</span>`;
+                list.appendChild(div);
+            });
+        };
 
-        /* --- 以下為原遊戲邏輯核心，整合部分功能 --- */
+        window.filterLeaderboard = function() {
+            const term = document.getElementById('lbSearch').value.toLowerCase();
+            const filtered = window.allScores.filter(s => s.name.toLowerCase().includes(term));
+            window.renderFullList(filtered);
+        };
+
+        window.openFullLeaderboard = function() {
+            document.getElementById('fullLeaderboardModal').style.display = 'flex';
+            window.filterLeaderboard(); 
+        };
+
+        window.closeFullLeaderboard = function() {
+            document.getElementById('fullLeaderboardModal').style.display = 'none';
+        };
 
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -677,9 +614,10 @@
         const hpBarDom = document.getElementById('playerHpBar');     
         const damageOverlayDom = document.getElementById('damageOverlay'); 
         
+        // 建立背景音樂
         const gameBgm = new Audio('BGM.mp3');
         gameBgm.loop = true;
-        gameBgm.volume = 0.4; 
+        gameBgm.volume = 0.4; // 音量大小 (0.0 到 1.0)
 
         function resize() {
             canvas.width = window.innerWidth;
@@ -731,10 +669,12 @@
         let gameTime = 0;
         let lastTime = performance.now();
         
+        // 鍵盤控制監聽
         const keys = {};
         window.addEventListener('keydown', e => keys[e.code] = true);
         window.addEventListener('keyup', e => keys[e.code] = false);
 
+        // 手機觸控虛擬搖桿變數
         let mobileMoveX = 0;
         let mobileMoveY = 0;
         let joystickActive = false;
@@ -742,10 +682,12 @@
         const joystickZone = document.getElementById('joystickZone');
         const joystickStick = document.getElementById('joystickStick');
 
+        // 偵測是否為觸控裝置，是的話開啟虛擬搖桿 UI
         if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
             joystickZone.style.display = 'block';
         }
 
+        // 虛擬搖桿觸控事件
         joystickZone.addEventListener('touchstart', e => {
             joystickActive = true;
             joystickRect = joystickZone.getBoundingClientRect();
@@ -754,7 +696,7 @@
 
         window.addEventListener('touchmove', e => {
             if (!joystickActive) return;
-            e.preventDefault(); 
+            e.preventDefault(); // 防止手機網頁在拖曳時畫面跟著捲動
             handleJoystickMove(e.touches[0]);
         }, { passive: false });
 
@@ -809,6 +751,7 @@
             skills: { speed: 0, damage: 0, xp: 0, count: 0, atkSpeed: 0, bounce: 0, area: 0 } 
         };
 
+        // 技能池
         const skillPool = [
             { id: 'speed', name: '嘴完人就跑', desc: '移動速度上升', current: () => player.skills.speed },
             { id: 'damage', name: '增加言語傷害', desc: '增加彈幕傷害', current: () => player.skills.damage },
@@ -861,6 +804,7 @@
         function startGame() {
             if (!isLoaded) return;
 
+            // 播放背景音樂
             gameBgm.play().catch(err => {
                 console.log("音樂播放失敗，使用者尚未與頁面互動:", err);
             });
@@ -1008,29 +952,28 @@
         function updateUI() {
             document.getElementById('hpText').innerText = `HP: ${Math.max(0, Math.floor(player.hp))} / ${player.maxHp}`;
             document.getElementById('xpBar').style.width = `${Math.min(100, (player.xp / player.xpNeeded) * 100)}%`;
-            document.getElementById('timeText').innerText = `時間: ${formatTime(gameTime)}`;
+            const m = Math.floor(gameTime / 60).toString().padStart(2, '0');
+            const s = Math.floor(gameTime % 60).toString().padStart(2, '0');
+            document.getElementById('timeText').innerText = `時間: ${m}:${s}`;
         }
 
         function gameOver() {
+            if (isGameOver) return; // 避免重複執行
             isGameOver = true;
+            
             document.getElementById('gameOver').style.display = 'block';
             playerDom.style.display = 'none'; 
             nameTagDom.style.display = 'none';
             hpBarBgDom.style.display = 'none'; 
             damageOverlayDom.style.backgroundColor = 'transparent'; 
             
-            document.getElementById('finalStats').innerHTML = `玩家: <b>${player.name}</b><br>最終等級: <b>${player.level}</b><br>存活時間: <b>${formatTime(gameTime)}</b>`;
-            
-            // 新增：向 Firebase 提交排行數據
-            if (!scoreSubmitted) {
-                scoreSubmitted = true;
-                push(ref(db, 'leaderboard'), {
-                    playerName: player.name,
-                    survivalTime: gameTime,
-                    timestamp: Date.now()
-                })
-                .then(() => console.log("分數已成功同步至排行榜！"))
-                .catch(err => console.error("同步分數失敗:", err));
+            const m = Math.floor(gameTime / 60).toString().padStart(2, '0');
+            const s = Math.floor(gameTime % 60).toString().padStart(2, '0');
+            document.getElementById('finalStats').innerHTML = `玩家: <b>${player.name}</b><br>最終等級: <b>${player.level}</b><br>存活時間: <b>${m}:${s}</b>`;
+
+            // 上傳分數至排行榜
+            if (window.saveToLeaderboard) {
+                window.saveToLeaderboard(player.name, gameTime);
             }
         }
 
@@ -1038,12 +981,14 @@
             if (!isLoaded || !isGameStarted || isGameOver || isLevelUpMenuOpen || isLevelUpTransition) return;
             gameTime += dt;
 
+            // 整合鍵盤與手機虛擬搖桿移動邏輯
             let moveX = 0, moveY = 0;
             if (keys['KeyW'] || keys['ArrowUp']) moveY -= 1;
             if (keys['KeyS'] || keys['ArrowDown']) moveY += 1;
             if (keys['KeyA'] || keys['ArrowLeft']) moveX -= 1;
             if (keys['KeyD'] || keys['ArrowRight']) moveX += 1;
 
+            // 若沒有使用鍵盤，則讀取虛擬搖桿
             if (moveX === 0 && moveY === 0) {
                 moveX = mobileMoveX;
                 moveY = mobileMoveY;
@@ -1051,12 +996,13 @@
 
             if (moveX !== 0 || moveY !== 0) {
                 const len = Math.sqrt(moveX * moveX + moveY * moveY);
-                if (len > 0.05) { 
+                if (len > 0.05) { // 微死區避免抖動
                     player.x += (moveX / len) * player.speed * dt;
                     player.y += (moveY / len) * player.speed * dt;
                 }
             }
 
+            // 朝向面朝轉變
             if (moveX > 0.05) player.facingRight = true;
             else if (moveX < -0.05) player.facingRight = false;
 
@@ -1073,6 +1019,7 @@
             nameTagDom.style.left = `${screenX}px`;
             nameTagDom.style.top = `${screenY - player.drawH / 2 - 35}px`;
 
+            // 血條精確位置：完美位於名字與鵝鵝頭頂的中間
             hpBarBgDom.style.left = `${screenX}px`;
             hpBarBgDom.style.top = `${screenY - player.drawH / 2 - 5}px`; 
             hpBarDom.style.width = `${Math.max(0, (player.hp / player.maxHp) * 100)}%`;
@@ -1105,6 +1052,7 @@
                 damageOverlayDom.style.backgroundColor = 'transparent';
             }
 
+            // 處理地圖炮技能判定範圍 (地圖炮等級每升1級，判定範圍半徑額外加 8px)
             const hitboxBonus = player.skills.area * 8; 
 
             for (let i = projectiles.length - 1; i >= 0; i--) {
@@ -1193,6 +1141,7 @@
                 }
             });
 
+            // 繪製彈幕 (地圖炮等級每升1級，字體放大 5px)
             const fontSize = 16 + (player.skills.area * 5); 
             ctx.fillStyle = '#fff';
             ctx.font = `bold ${fontSize}px Arial`;
@@ -1209,9 +1158,6 @@
             draw();
             requestAnimationFrame(gameLoop);
         }
-
-        window.startGame = startGame;
-        window.chooseSkill = chooseSkill;
     </script>
 </body>
 </html>
