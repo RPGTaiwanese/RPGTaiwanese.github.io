@@ -415,7 +415,7 @@
         .close-btn { margin-top: 20px; padding: 12px; background: #e74c3c; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 18px; font-weight: bold; text-align: center; transition: 0.2s; }
         .close-btn:hover { background: #c0392b; transform: scale(1.02); }
 
-        /* ================== 新增對戰模式 UI ================== */
+        /* ================== 對戰模式 UI ================== */
         #roomListModal, #waitingRoomModal {
             display: none;
             position: absolute;
@@ -455,7 +455,7 @@
             max-height: 300px; overflow-y: auto; margin: 15px 0; border-radius: 8px; background: rgba(0,0,0,0.3); padding: 10px;
         }
 
-        /* ================== 手機等比例縮小選單設定 ================== */
+        /* 手機縮放 */
         @media screen and (max-width: 768px) {
             #ui { transform: scale(0.75); transform-origin: top left; }
             #miniLeaderboard { transform: scale(0.75); transform-origin: top right; }
@@ -465,7 +465,6 @@
             #fullLeaderboardContent { transform: scale(0.85); }
             .modal-content { transform: scale(0.85); }
         }
-
         @media screen and (max-width: 480px) {
             #ui { transform: scale(0.6); }
             #miniLeaderboard { transform: scale(0.65); }
@@ -508,12 +507,10 @@
                 </div>
                 <h2>請選擇模式</h2>
                 <div class="char-selection">
-                    <!-- 單人模式按鈕 -->
                     <div class="char-card" onclick="startGame(false)">
                         <img src="https://truth.bahamut.com.tw/s01/202606/43564bf4cf60b9503351e352c70275c1.GIF" alt="天使鵝鵝">
                         <h3>單人模式<br>無盡生存</h3>
                     </div>
-                    <!-- 對戰模式按鈕 -->
                     <div class="char-card" onclick="openRoomList()" style="border-color: #e74c3c;">
                         <img src="https://truth.bahamut.com.tw/s01/202606/43564bf4cf60b9503351e352c70275c1.GIF" alt="對戰模式">
                         <h3 style="color: #e74c3c;">對戰模式<br>雙人死鬥</h3>
@@ -537,11 +534,9 @@
             <div class="modal-content">
                 <h2>⏳ 準備對戰</h2>
                 <p style="font-size: 18px; color: #f1c40f;">房間: <span id="displayRoomId"></span></p>
-                
                 <div id="roomPlayersContainer" style="margin: 20px 0; padding: 15px; background: rgba(0,0,0,0.4); border-radius: 10px; text-align: left; font-size: 18px;">
                     <!-- 玩家狀態會由 JS 渲染至此 -->
                 </div>
-
                 <div style="display: flex; justify-content: center; gap: 15px;">
                     <button class="action-btn" id="readyBtn" style="background: #2ecc71; width: 120px;" onclick="toggleReady()">準備</button>
                     <button class="action-btn cancel-btn" style="width: 120px; margin: 0;" onclick="cancelRoom()">離開</button>
@@ -550,14 +545,10 @@
         </div>
 
         <canvas id="gameCanvas"></canvas>
-        
         <div id="damageOverlay"></div>
-
         <div id="playerNameTag">玩家名稱</div>
         <div id="playerHpBarBg"><div id="playerHpBar"></div></div>
-
         <img id="playerSprite" src="https://truth.bahamut.com.tw/s01/202606/43564bf4cf60b9503351e352c70275c1.GIF" alt="Player">
-        
         <div id="xpBarContainer"><div id="xpBar"></div></div>
         
         <div id="ui">
@@ -577,9 +568,7 @@
             </div>
         </div>
 
-        <div id="joystickZone">
-            <div id="joystickStick"></div>
-        </div>
+        <div id="joystickZone"><div id="joystickStick"></div></div>
 
         <div id="levelUpScreen">
             <h1>升級！選擇一項技能</h1>
@@ -593,12 +582,13 @@
         </div>
     </div>
 
+    <!-- Firebase SDK 與主邏輯合併 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { getDatabase, ref, push, onValue, query as dbQuery, orderByChild, update, set, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+        import { getDatabase, ref, push, onValue, query as dbQuery, orderByChild, update, set, remove, onDisconnect, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
-        // Firebase 設定
+        // ================== Firebase 設定 ==================
         const firebaseConfig = {
             apiKey: "AIzaSyBaq5Y89srrIozUZY7sUJALvAamIZsxyuo",
             authDomain: "mmorpg-a836b.firebaseapp.com",
@@ -613,7 +603,7 @@
         const auth = getAuth(app);
         const db = getDatabase(app);
 
-        // 將 Firebase 函式掛載至 window 給其他 script 使用
+        // 掛載給其他地方使用
         window.db = db;
         window.firebaseRef = ref;
         window.firebasePush = push;
@@ -622,49 +612,42 @@
         window.firebaseSet = set;
         window.firebaseRemove = remove;
         window.firebaseOnDisconnect = onDisconnect;
+        window.firebaseServerTimestamp = serverTimestamp;
 
-        // 匿名登入並記錄 UID
-        signInAnonymously(auth).then(() => {
-            console.log("Firebase 遊客登入成功！");
-        }).catch((error) => {
-            console.error("Firebase 登入失敗:", error);
-        });
+        signInAnonymously(auth).then(() => { console.log("Firebase 遊客登入成功！"); })
+            .catch((error) => { console.error("Firebase 登入失敗:", error); });
 
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                window.myUid = user.uid;
-            }
-        });
+        onAuthStateChanged(auth, (user) => { if (user) window.myUid = user.uid; });
 
         window.allScores = [];
-
-        // 上傳分數
-        window.saveToLeaderboard = function(playerName, surviveTime) {
-            const leaderboardRef = ref(db, 'leaderboard');
-            push(leaderboardRef, {
-                name: playerName,
-                time: surviveTime,
-                timestamp: Date.now()
-            });
-        };
-
-        // 監聽排行榜資料
+        
+        // ================== 排行榜載入 ==================
         const leaderboardRef = ref(db, 'leaderboard');
         const topScoresQuery = dbQuery(leaderboardRef, orderByChild('time'));
         
         onValue(topScoresQuery, (snapshot) => {
             let scores = [];
-            snapshot.forEach((childSnapshot) => {
-                scores.push(childSnapshot.val());
-            });
-            
+            snapshot.forEach((childSnapshot) => { scores.push(childSnapshot.val()); });
             scores.reverse();
-            
             window.allScores = scores.map((s, index) => ({...s, rank: index + 1}));
             window.updateLeaderboardUI();
         });
     </script>
+
     <script>
+        // ================== 隱藏的存檔邏輯 (防外掛) ==================
+        function saveScore(playerName, surviveTime) {
+            if (!window.myUid) return; 
+            const leaderboardRef = window.firebaseRef(window.db, 'leaderboard');
+            window.firebasePush(leaderboardRef, {
+                name: playerName,
+                time: surviveTime,
+                timestamp: window.firebaseServerTimestamp() // 使用伺服器絕對時間
+            }).catch(err => {
+                console.error("成績寫入失敗 (可能被防作弊規則阻擋):", err);
+            });
+        }
+
         function formatTimeHelper(secs) {
             const m = Math.floor(secs / 60).toString().padStart(2, '0');
             const s = Math.floor(secs % 60).toString().padStart(2, '0');
@@ -674,7 +657,6 @@
         window.updateLeaderboardUI = function() {
             const miniList = document.getElementById('miniLbList');
             miniList.innerHTML = '';
-            
             if (window.allScores.length === 0) {
                 miniList.innerHTML = '<div style="text-align:center;">尚無紀錄</div>';
             } else {
@@ -718,6 +700,7 @@
             document.getElementById('fullLeaderboardModal').style.display = 'none';
         };
 
+        // ================== 遊戲核心引擎 ==================
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const playerDom = document.getElementById('playerSprite');
@@ -726,7 +709,6 @@
         const hpBarDom = document.getElementById('playerHpBar');     
         const damageOverlayDom = document.getElementById('damageOverlay'); 
         
-        // 建立背景音樂
         const gameBgm = new Audio('BGM.mp3');
         gameBgm.loop = true;
         gameBgm.volume = 0.4; 
@@ -771,16 +753,11 @@
             "https://avatar2.bahamut.com.tw/avataruserpic/a/2/a22448883/a22448883_s.png",
             "https://avatar2.bahamut.com.tw/avataruserpic/p/3/p34000eter/p34000eter_s.png"
         ];
-        const enemyImages = enemyImgUrls.map(url => {
-            const img = new Image();
-            img.src = url;
-            return img;
-        });
+        const enemyImages = enemyImgUrls.map(url => { const img = new Image(); img.src = url; return img; });
 
         const playerNormalImg = "https://truth.bahamut.com.tw/s01/202606/43564bf4cf60b9503351e352c70275c1.GIF";
         const playerLevelUpImg = "https://truth.bahamut.com.tw/s01/202606/0ba3166828aa01fb90c7c7a9d998bf8e.PNG";
 
-        // 對戰對手圖像載入
         window.opponentImg = new Image();
         window.opponentImg.src = playerNormalImg;
 
@@ -793,7 +770,6 @@
         let lastTime = performance.now();
         let lastBossPhase = 0; 
         
-        // 對戰相關變數
         window.isPvPMode = false;
         window.currentRoomId = null;
         window.myRole = null;
@@ -803,88 +779,40 @@
         window.isReady = false; 
         window.roomUnsubscribe = null; 
 
-        // 鍵盤控制監聽
+        // 鍵盤與搖桿控制
         const keys = {};
         window.addEventListener('keydown', e => keys[e.code] = true);
         window.addEventListener('keyup', e => keys[e.code] = false);
 
-        // 手機觸控虛擬搖桿變數
-        let mobileMoveX = 0;
-        let mobileMoveY = 0;
-        let joystickActive = false;
-        let joystickRect = null;
+        let mobileMoveX = 0, mobileMoveY = 0;
+        let joystickActive = false, joystickRect = null;
         const joystickZone = document.getElementById('joystickZone');
         const joystickStick = document.getElementById('joystickStick');
 
-        if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
-            joystickZone.style.display = 'block';
-        }
+        if ('ontouchstart' in window || navigator.maxTouchPoints > 0) joystickZone.style.display = 'block';
 
         joystickZone.addEventListener('touchstart', e => {
-            joystickActive = true;
-            joystickRect = joystickZone.getBoundingClientRect();
-            handleJoystickMove(e.touches[0]);
+            joystickActive = true; joystickRect = joystickZone.getBoundingClientRect(); handleJoystickMove(e.touches[0]);
         }, { passive: false });
-
-        window.addEventListener('touchmove', e => {
-            if (!joystickActive) return;
-            e.preventDefault(); 
-            handleJoystickMove(e.touches[0]);
-        }, { passive: false });
-
-        window.addEventListener('touchend', () => {
-            if (!joystickActive) return;
-            joystickActive = false;
-            mobileMoveX = 0;
-            mobileMoveY = 0;
-            joystickStick.style.transform = 'translate(0px, 0px)';
-        });
+        window.addEventListener('touchmove', e => { if (joystickActive) { e.preventDefault(); handleJoystickMove(e.touches[0]); } }, { passive: false });
+        window.addEventListener('touchend', () => { if (joystickActive) { joystickActive = false; mobileMoveX = 0; mobileMoveY = 0; joystickStick.style.transform = 'translate(0px, 0px)'; } });
 
         function handleJoystickMove(touch) {
-            const centerX = joystickRect.left + joystickRect.width / 2;
-            const centerY = joystickRect.top + joystickRect.height / 2;
-            let dx = touch.clientX - centerX;
-            let dy = touch.clientY - centerY;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            const maxDist = joystickRect.width / 2;
-
-            if (dist > maxDist) {
-                dx = (dx / dist) * maxDist;
-                dy = (dy / dist) * maxDist;
-            }
-
+            const centerX = joystickRect.left + joystickRect.width / 2, centerY = joystickRect.top + joystickRect.height / 2;
+            let dx = touch.clientX - centerX, dy = touch.clientY - centerY;
+            const dist = Math.sqrt(dx * dx + dy * dy), maxDist = joystickRect.width / 2;
+            if (dist > maxDist) { dx = (dx / dist) * maxDist; dy = (dy / dist) * maxDist; }
             joystickStick.style.transform = `translate(${dx}px, ${dy}px)`;
-            mobileMoveX = dx / maxDist;
-            mobileMoveY = dy / maxDist;
+            mobileMoveX = dx / maxDist; mobileMoveY = dy / maxDist;
         }
 
-        let mapBounds = { w: 0, h: 0 };
-        const camera = { x: 0, y: 0 };
-
+        let mapBounds = { w: 0, h: 0 }, camera = { x: 0, y: 0 };
         const player = {
-            name: "",
-            x: 0, 
-            y: 0,
-            drawW: 0, 
-            drawH: 180,
-            hitboxRadius: 25, 
-            speed: 220,
-            hp: 100,
-            maxHp: 100,
-            level: 1,
-            xp: 0,
-            xpNeeded: 100,
-            xpMultiplier: 1.0, 
-            attackCooldown: 1.2,
-            attackTimer: 0,
-            attackDamage: 20,
-            attackSpeed: 300,
-            facingRight: true,
+            name: "", x: 0, y: 0, drawW: 0, drawH: 180, hitboxRadius: 25, speed: 220,
+            hp: 100, maxHp: 100, level: 1, xp: 0, xpNeeded: 100, xpMultiplier: 1.0, 
+            attackCooldown: 1.2, attackTimer: 0, attackDamage: 20, attackSpeed: 300, facingRight: true,
             skills: { speed: 0, damage: 0, xp: 0, count: 0, atkSpeed: 0, bounce: 0, area: 0, hikari: 0, harvest: 0 },
-            hikariCooldown: 4.0, 
-            hikariTimer: 0,
-            harvestTimer: 0,
-            harvestActiveTimer: 0
+            hikariCooldown: 4.0, hikariTimer: 0, harvestTimer: 0, harvestActiveTimer: 0
         };
 
         const skillPool = [
@@ -903,28 +831,12 @@
         function checkInit() {
             loadedCount++;
             if (loadedCount === 4) { 
-                isLoaded = true;
-                player.x = mapBounds.w / 2;
-                player.y = mapBounds.h / 2;
-                requestAnimationFrame(gameLoop);
+                isLoaded = true; player.x = mapBounds.w / 2; player.y = mapBounds.h / 2; requestAnimationFrame(gameLoop);
             }
         }
 
-        bgImg.onload = () => {
-            mapBounds.w = bgImg.naturalWidth * BG_SCALE;
-            mapBounds.h = bgImg.naturalHeight * BG_SCALE;
-            checkInit();
-        };
-
-        playerDom.onload = () => {
-            const ratio = playerDom.naturalWidth / playerDom.naturalHeight;
-            player.drawW = player.drawH * ratio;
-            playerDom.style.width = player.drawW + 'px';
-            if (!isLoaded) {
-                checkInit();
-            }
-        };
-
+        bgImg.onload = () => { mapBounds.w = bgImg.naturalWidth * BG_SCALE; mapBounds.h = bgImg.naturalHeight * BG_SCALE; checkInit(); };
+        playerDom.onload = () => { const ratio = playerDom.naturalWidth / playerDom.naturalHeight; player.drawW = player.drawH * ratio; playerDom.style.width = player.drawW + 'px'; if (!isLoaded) checkInit(); };
         gemImg.onload = () => { if(!isLoaded) checkInit(); };
         hikariImg.onload = () => { if(!isLoaded) checkInit(); };
 
@@ -941,71 +853,50 @@
             document.getElementById('skill8Text').innerText = `▶ 收割戰場 : LV ${player.skills.harvest}`;
         }
 
-        // 準備玩家名稱
         function preparePlayerInfo() {
             const inputName = document.getElementById('playerNameInput').value.trim();
-            if (inputName !== "") {
-                player.name = inputName;
-            } else {
-                const randomNum = Math.floor(Math.random() * 999999) + 1;
-                player.name = String(randomNum).padStart(6, '0') + "勇者";
-            }
+            if (inputName !== "") player.name = inputName;
+            else player.name = String(Math.floor(Math.random() * 999999) + 1).padStart(6, '0') + "勇者";
         }
 
-        // ================== 對戰模式房型邏輯 ==================
         window.openRoomList = function() {
             preparePlayerInfo();
             if(!window.myUid) { alert("尚未連線到伺服器，請稍後"); return; }
-            
             document.getElementById('roomListModal').style.display = 'flex';
-            
             const roomsRef = window.firebaseRef(window.db, 'rooms');
             window.firebaseOnValue(roomsRef, (snapshot) => {
                 const container = document.getElementById('roomListContainer');
                 container.innerHTML = '';
                 const rooms = snapshot.val();
                 let hasRooms = false;
-                
                 if (rooms) {
                     for (const [roomId, room] of Object.entries(rooms)) {
-                        if (room.status === 'waiting' && !room.player2) { // 只顯示還有空位的房間
+                        if (room.status === 'waiting' && !room.player2) {
                             hasRooms = true;
                             const btn = document.createElement('button');
-                            btn.className = 'room-btn';
-                            btn.innerText = `🏠 ${room.name} (點擊加入)`;
-                            btn.onclick = () => window.joinRoom(roomId);
+                            btn.className = 'room-btn'; btn.innerText = `🏠 ${room.name} (點擊加入)`; btn.onclick = () => window.joinRoom(roomId);
                             container.appendChild(btn);
                         }
                     }
                 }
-                
-                if (!hasRooms) {
-                    container.innerHTML = '<p style="color: #bdc3c7;">目前沒有等待中的房間，請點擊「新建房間」</p>';
-                }
+                if (!hasRooms) container.innerHTML = '<p style="color: #bdc3c7;">目前沒有等待中的房間，請點擊「新建房間」</p>';
             });
         };
 
-        window.closeRoomList = function() {
-            document.getElementById('roomListModal').style.display = 'none';
-        }
+        window.closeRoomList = function() { document.getElementById('roomListModal').style.display = 'none'; }
 
         window.createRoom = function() {
             window.isReady = false;
             const roomsRef = window.firebaseRef(window.db, 'rooms');
             const newRoomRef = window.firebasePush(roomsRef);
             window.currentRoomId = newRoomRef.key;
-            window.myRole = 'player1';
-            window.opponentRole = 'player2';
-            window.isPvPMode = true;
+            window.myRole = 'player1'; window.opponentRole = 'player2'; window.isPvPMode = true;
 
-            const roomData = {
-                name: player.name + " 的房間",
-                status: 'waiting',
+            window.firebaseSet(newRoomRef, {
+                name: player.name + " 的房間", status: 'waiting',
                 player1: { uid: window.myUid, name: player.name, isDead: false, hp: 100, maxHp: 100, x: player.x, y: player.y, isReady: false }
-            };
-            window.firebaseSet(newRoomRef, roomData);
+            });
 
-            // 當斷線時死亡，或刪除房間
             const myNodeRef = window.firebaseRef(window.db, `rooms/${window.currentRoomId}/${window.myRole}`);
             window.firebaseOnDisconnect(myNodeRef).update({ isDead: true });
             window.firebaseOnDisconnect(newRoomRef).remove(); 
@@ -1013,30 +904,23 @@
             document.getElementById('roomListModal').style.display = 'none';
             document.getElementById('waitingRoomModal').style.display = 'flex';
             document.getElementById('displayRoomId').innerText = player.name + " 的房間";
-
             window.listenToRoom(window.currentRoomId);
         }
 
         window.joinRoom = function(roomId) {
-            window.isReady = false;
-            window.currentRoomId = roomId;
-            window.myRole = 'player2';
-            window.opponentRole = 'player1';
-            window.isPvPMode = true;
+            window.isReady = false; window.currentRoomId = roomId;
+            window.myRole = 'player2'; window.opponentRole = 'player1'; window.isPvPMode = true;
 
             const roomRef = window.firebaseRef(window.db, `rooms/${roomId}`);
             window.firebaseUpdate(roomRef, {
-                status: 'waiting',
-                player2: { uid: window.myUid, name: player.name, isDead: false, hp: 100, maxHp: 100, x: player.x, y: player.y, isReady: false }
+                status: 'waiting', player2: { uid: window.myUid, name: player.name, isDead: false, hp: 100, maxHp: 100, x: player.x, y: player.y, isReady: false }
             });
 
-            // 當斷線時宣告死亡
             const myNodeRef = window.firebaseRef(window.db, `rooms/${window.currentRoomId}/${window.myRole}`);
             window.firebaseOnDisconnect(myNodeRef).update({ isDead: true });
 
             document.getElementById('roomListModal').style.display = 'none';
             document.getElementById('waitingRoomModal').style.display = 'flex';
-            
             window.listenToRoom(window.currentRoomId);
         }
 
@@ -1049,89 +933,54 @@
         window.kickPlayer = function() {
             if (window.myRole === 'player1') {
                 const roomRef = window.firebaseRef(window.db, `rooms/${window.currentRoomId}`);
-                window.firebaseUpdate(roomRef, {
-                    player2: null // 刪除 player2
-                });
+                window.firebaseUpdate(roomRef, { player2: null });
             }
         }
 
         window.cancelRoom = function() {
             if (window.currentRoomId) {
-                if (window.myRole === 'player1') {
-                    const roomRef = window.firebaseRef(window.db, `rooms/${window.currentRoomId}`);
-                    window.firebaseRemove(roomRef);
-                } else {
-                    const roomRef = window.firebaseRef(window.db, `rooms/${window.currentRoomId}`);
-                    window.firebaseUpdate(roomRef, { player2: null });
-                }
+                const roomRef = window.firebaseRef(window.db, `rooms/${window.currentRoomId}`);
+                if (window.myRole === 'player1') window.firebaseRemove(roomRef);
+                else window.firebaseUpdate(roomRef, { player2: null });
             }
-            if (window.roomUnsubscribe) {
-                window.roomUnsubscribe();
-                window.roomUnsubscribe = null;
-            }
-            
+            if (window.roomUnsubscribe) { window.roomUnsubscribe(); window.roomUnsubscribe = null; }
             document.getElementById('waitingRoomModal').style.display = 'none';
-            window.isPvPMode = false;
-            window.currentRoomId = null;
-            window.isReady = false;
+            window.isPvPMode = false; window.currentRoomId = null; window.isReady = false;
         }
 
         window.listenToRoom = function(roomId) {
             const roomRef = window.firebaseRef(window.db, `rooms/${roomId}`);
-            
-            if (window.roomUnsubscribe) {
-                window.roomUnsubscribe();
-            }
+            if (window.roomUnsubscribe) window.roomUnsubscribe();
 
             window.roomUnsubscribe = window.firebaseOnValue(roomRef, (snapshot) => {
                 const data = snapshot.val();
                 
-                // 房間被刪除了 (房主離開或斷線)
                 if (!data) {
-                    if (window.isPvPMode && isGameStarted && !isGameOver) {
-                        pvpWin("對手已離開房間 / 斷線，不戰而勝！");
-                    } else if (!isGameStarted && document.getElementById('waitingRoomModal').style.display === 'flex') {
-                        document.getElementById('waitingRoomModal').style.display = 'none';
-                        alert("房間已被關閉或房主已離開");
-                        window.isPvPMode = false;
-                        window.currentRoomId = null;
-                        if(window.roomUnsubscribe) window.roomUnsubscribe();
+                    if (window.isPvPMode && isGameStarted && !isGameOver) pvpWin("對手已離開房間 / 斷線，不戰而勝！");
+                    else if (!isGameStarted && document.getElementById('waitingRoomModal').style.display === 'flex') {
+                        document.getElementById('waitingRoomModal').style.display = 'none'; alert("房間已被關閉或房主已離開");
+                        window.isPvPMode = false; window.currentRoomId = null; if(window.roomUnsubscribe) window.roomUnsubscribe();
                     }
                     return;
                 }
 
                 document.getElementById('displayRoomId').innerText = data.name;
 
-                // 被踢出判斷
                 if (window.myRole === 'player2' && !data.player2 && !isGameStarted) {
-                    document.getElementById('waitingRoomModal').style.display = 'none';
-                    alert("您已被房主踢出");
-                    window.isPvPMode = false;
-                    window.currentRoomId = null;
-                    if(window.roomUnsubscribe) window.roomUnsubscribe();
+                    document.getElementById('waitingRoomModal').style.display = 'none'; alert("您已被房主踢出");
+                    window.isPvPMode = false; window.currentRoomId = null; if(window.roomUnsubscribe) window.roomUnsubscribe();
                     return;
                 }
 
-                // ================= 等待大廳邏輯 =================
                 if (!isGameStarted) {
-                    const p1 = data.player1;
-                    const p2 = data.player2;
+                    const p1 = data.player1, p2 = data.player2;
+                    if (window.myRole === 'player1' && p2 && p2.isDead) { window.kickPlayer(); return; }
 
-                    // 若在等待期間對手斷線 (isDead由onDisconnect觸發)
-                    if (window.myRole === 'player1' && p2 && p2.isDead) {
-                        window.kickPlayer(); // 把斷線的 p2 踢掉
-                        return;
-                    }
-
-                    // 更新 UI 顯示玩家與準備狀態
                     const container = document.getElementById('roomPlayersContainer');
-                    let html = '';
-                    
-                    html += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.2); padding-bottom:10px;">
+                    let html = `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.2); padding-bottom:10px;">
                                 <span style="color: #f1c40f;">👑 ${p1.name}</span>
                                 <span style="color:${p1.isReady ? '#2ecc71' : '#e74c3c'}; font-weight: bold;">${p1.isReady ? '✅ 已準備' : '❌ 未準備'}</span>
                              </div>`;
-
                     if (p2) {
                         html += `<div style="display:flex; justify-content:space-between; align-items:center;">
                                     <span style="color: #3498db;">👤 ${p2.name}</span>
@@ -1140,72 +989,48 @@
                                         ${window.myRole === 'player1' ? `<button onclick="kickPlayer()" style="background:#e74c3c; border:none; border-radius:5px; color:white; cursor:pointer; padding:5px 10px; font-weight:bold;">踢出</button>` : ''}
                                     </div>
                                  </div>`;
-                    } else {
-                        html += `<div style="text-align:center; color:#bdc3c7; padding-top: 5px;">⏳ 等待對手加入...</div>`;
-                    }
-                    
+                    } else { html += `<div style="text-align:center; color:#bdc3c7; padding-top: 5px;">⏳ 等待對手加入...</div>`; }
                     container.innerHTML = html;
 
-                    // 更新自己的準備按鈕樣式
                     const readyBtn = document.getElementById('readyBtn');
-                    if (window.isReady) {
-                        readyBtn.innerText = "取消準備";
-                        readyBtn.style.background = "#e67e22";
-                    } else {
-                        readyBtn.innerText = "準備";
-                        readyBtn.style.background = "#2ecc71";
-                    }
+                    if (window.isReady) { readyBtn.innerText = "取消準備"; readyBtn.style.background = "#e67e22"; }
+                    else { readyBtn.innerText = "準備"; readyBtn.style.background = "#2ecc71"; }
 
-                    // 檢查是否雙方都準備好，且目前是房主
-                    if (p1 && p2 && p1.isReady && p2.isReady) {
-                        if (window.myRole === 'player1' && data.status !== 'playing') {
-                            const roomRefUpdate = window.firebaseRef(window.db, `rooms/${roomId}`);
-                            window.firebaseUpdate(roomRefUpdate, { status: 'playing' });
-                        }
+                    if (p1 && p2 && p1.isReady && p2.isReady && window.myRole === 'player1' && data.status !== 'playing') {
+                        const roomRefUpdate = window.firebaseRef(window.db, `rooms/${roomId}`);
+                        window.firebaseUpdate(roomRefUpdate, { status: 'playing' });
                     }
                 }
 
-                // ================= 進入遊戲邏輯 =================
-                // 兩人到齊且準備完成，狀態變為 playing，開始遊戲
                 if (data.status === 'playing' && !isGameStarted) {
-                    document.getElementById('waitingRoomModal').style.display = 'none';
-                    actualStartGame();
+                    document.getElementById('waitingRoomModal').style.display = 'none'; actualStartGame();
                 }
 
-                // ================= 遊戲進行中邏輯 =================
                 if (isGameStarted) {
                     window.opponentData = data[window.opponentRole];
-                    
-                    // 完全找不到對手節點 (對手斷線且被移除了)
-                    if (!window.opponentData) {
-                        if (!isGameOver) pvpWin("對手已離開房間 / 斷線，不戰而勝！");
-                    } 
-                    // 找到了對手，但對手狀態顯示已死 (血量歸零 或 觸發 onDisconnect)
-                    else if (window.opponentData.isDead && !isGameOver) {
-                        pvpWin("對方已陣亡 / 斷線，恭喜勝利！");
-                    }
+                    if (!window.opponentData) { if (!isGameOver) pvpWin("對手已離開房間 / 斷線，不戰而勝！"); } 
+                    else if (window.opponentData.isDead && !isGameOver) { pvpWin("對方已陣亡 / 斷線，恭喜勝利！"); }
                 }
             });
         }
-        // ==================================================
 
-        // 選擇遊戲模式的入口
-        function startGame(isPvP = false) {
+        window.startGame = function(isPvP = false) {
             if (!isLoaded) return;
             preparePlayerInfo();
-            
-            if (isPvP) {
-                window.isPvPMode = true;
-            } else {
-                window.isPvPMode = false;
-                actualStartGame();
-            }
+            if (isPvP) window.isPvPMode = true; else { window.isPvPMode = false; actualStartGame(); }
         }
 
-        // 實際開始遊戲
         function actualStartGame() {
+            // ================== Session 遊戲紀錄起點 (防作弊核心) ==================
+            if (window.myUid) {
+                const sessionRef = window.firebaseRef(window.db, `sessions/${window.myUid}`);
+                window.firebaseSet(sessionRef, {
+                    startTime: window.firebaseServerTimestamp() // 寫入伺服器時間戳記
+                });
+            }
+            // =======================================================================
+
             gameBgm.play().catch(err => console.log("音樂播放失敗:", err));
-            
             nameTagDom.innerText = player.name;
             updateSkillDisplay();
 
@@ -1216,221 +1041,106 @@
             nameTagDom.style.display = 'block';
             hpBarBgDom.style.display = 'block'; 
 
-            isGameStarted = true;
-            lastTime = performance.now(); 
+            isGameStarted = true; lastTime = performance.now(); 
         }
 
-        const enemies = [];
-        const projectiles = [];
-        const enemyProjectiles = []; 
-        const gems = [];
+        const enemies = [], projectiles = [], enemyProjectiles = [], gems = [];
         let enemySpawnTimer = 0;
 
         function spawnEnemy() {
             if (!isLoaded || !isGameStarted) return;
-            
-            const phase20 = Math.floor(gameTime / 20);
-            const hpMult = Math.pow(1.3, phase20); 
-            const speedMult = Math.pow(1.1, phase20); 
-            const spawnCount = Math.pow(2, phase20); 
-            
-            const maxSpawn = Math.min(spawnCount, 50);
+            const phase20 = Math.floor(gameTime / 20), hpMult = Math.pow(1.3, phase20), speedMult = Math.pow(1.1, phase20); 
+            const spawnCount = Math.min(Math.pow(2, phase20), 50);
 
-            for (let i = 0; i < maxSpawn; i++) {
-                let angle = Math.random() * Math.PI * 2;
-                let distance = Math.max(canvas.width, canvas.height) / 1.5;
-                let ex = player.x + Math.cos(angle) * distance;
-                let ey = player.y + Math.sin(angle) * distance;
+            for (let i = 0; i < spawnCount; i++) {
+                let angle = Math.random() * Math.PI * 2, distance = Math.max(canvas.width, canvas.height) / 1.5;
+                let ex = player.x + Math.cos(angle) * distance, ey = player.y + Math.sin(angle) * distance;
                 const enemyRadius = 20;
-                ex = Math.max(enemyRadius, Math.min(mapBounds.w - enemyRadius, ex));
-                ey = Math.max(enemyRadius, Math.min(mapBounds.h - enemyRadius, ey));
+                ex = Math.max(enemyRadius, Math.min(mapBounds.w - enemyRadius, ex)); ey = Math.max(enemyRadius, Math.min(mapBounds.h - enemyRadius, ey));
                 
-                const randomImg = enemyImages[Math.floor(Math.random() * enemyImages.length)];
-                enemies.push({ 
-                    x: ex, 
-                    y: ey, 
-                    radius: enemyRadius, 
-                    speed: (60 + Math.random() * 30) * speedMult, 
-                    hp: 35 * hpMult, 
-                    damage: 15, 
-                    img: randomImg,
-                    isBoss: false,
-                    xp: 60
-                });
+                enemies.push({ x: ex, y: ey, radius: enemyRadius, speed: (60 + Math.random() * 30) * speedMult, hp: 35 * hpMult, damage: 15, img: enemyImages[Math.floor(Math.random() * enemyImages.length)], isBoss: false, xp: 60 });
             }
         }
 
         function spawnBoss() {
             if (!isLoaded || !isGameStarted) return;
-
-            const phase20 = Math.floor(gameTime / 20);
-            const hpMult = Math.pow(1.3, phase20);
-            const speedMult = Math.pow(1.1, phase20);
-
-            let angle = Math.random() * Math.PI * 2;
-            let distance = Math.max(canvas.width, canvas.height); 
-            let ex = player.x + Math.cos(angle) * distance;
-            let ey = player.y + Math.sin(angle) * distance;
-            const enemyRadius = 20 * 5; 
-            ex = Math.max(enemyRadius, Math.min(mapBounds.w - enemyRadius, ex));
-            ey = Math.max(enemyRadius, Math.min(mapBounds.h - enemyRadius, ey));
+            const phase20 = Math.floor(gameTime / 20), hpMult = Math.pow(1.3, phase20), speedMult = Math.pow(1.1, phase20);
+            let angle = Math.random() * Math.PI * 2, distance = Math.max(canvas.width, canvas.height); 
+            let ex = player.x + Math.cos(angle) * distance, ey = player.y + Math.sin(angle) * distance;
+            const enemyRadius = 100; 
+            ex = Math.max(enemyRadius, Math.min(mapBounds.w - enemyRadius, ex)); ey = Math.max(enemyRadius, Math.min(mapBounds.h - enemyRadius, ey));
             
-            const randomImg = enemyImages[Math.floor(Math.random() * enemyImages.length)];
-            
-            enemies.push({ 
-                x: ex, 
-                y: ey, 
-                radius: enemyRadius, 
-                speed: (60 + Math.random() * 30) * speedMult, 
-                hp: (35 * hpMult) * 5, 
-                damage: 15 * 5, 
-                img: randomImg,
-                isBoss: true,
-                attackTimer: 2.0, 
-                xp: 60 * 5 
-            });
+            enemies.push({ x: ex, y: ey, radius: enemyRadius, speed: (60 + Math.random() * 30) * speedMult, hp: (35 * hpMult) * 5, damage: 75, img: enemyImages[Math.floor(Math.random() * enemyImages.length)], isBoss: true, attackTimer: 2.0, xp: 300 });
         }
 
         function shootNearestEnemy() {
             if (enemies.length === 0) return;
-            let nearestEnemy = null;
-            let minDist = Infinity;
+            let nearestEnemy = null, minDist = Infinity;
             enemies.forEach(enemy => {
-                const dx = enemy.x - player.x;
-                const dy = enemy.y - player.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
+                const dx = enemy.x - player.x, dy = enemy.y - player.y, dist = Math.sqrt(dx * dx + dy * dy);
                 if (dist < minDist) { minDist = dist; nearestEnemy = enemy; }
             });
 
             if (nearestEnemy) {
-                const dx = nearestEnemy.x - player.x;
-                const dy = nearestEnemy.y - player.y;
-                const baseAngle = Math.atan2(dy, dx);
-                
-                const totalProjectiles = 1 + player.skills.count;
-                const spreadAngle = 0.25; 
+                const baseAngle = Math.atan2(nearestEnemy.y - player.y, nearestEnemy.x - player.x);
+                const totalProjectiles = 1 + player.skills.count, spreadAngle = 0.25; 
                 const startAngle = baseAngle - ((totalProjectiles - 1) * spreadAngle) / 2;
 
                 for (let i = 0; i < totalProjectiles; i++) {
                     const angle = startAngle + i * spreadAngle;
-                    projectiles.push({
-                        type: 'text',
-                        x: player.x,
-                        y: player.y,
-                        vx: Math.cos(angle) * player.attackSpeed,
-                        vy: Math.sin(angle) * player.attackSpeed,
-                        text: quotes[Math.floor(Math.random() * quotes.length)],
-                        damage: player.attackDamage,
-                        life: 3.0,
-                        bounceCount: 0 
-                    });
+                    projectiles.push({ type: 'text', x: player.x, y: player.y, vx: Math.cos(angle) * player.attackSpeed, vy: Math.sin(angle) * player.attackSpeed, text: quotes[Math.floor(Math.random() * quotes.length)], damage: player.attackDamage, life: 3.0, bounceCount: 0 });
                 }
             }
         }
 
         function shootHikari() {
             if (enemies.length === 0) return;
-            let nearestEnemy = null;
-            let minDist = Infinity;
+            let nearestEnemy = null, minDist = Infinity;
             enemies.forEach(enemy => {
-                const dx = enemy.x - player.x;
-                const dy = enemy.y - player.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
+                const dx = enemy.x - player.x, dy = enemy.y - player.y, dist = Math.sqrt(dx * dx + dy * dy);
                 if (dist < minDist) { minDist = dist; nearestEnemy = enemy; }
             });
 
             if (nearestEnemy) {
-                const dx = nearestEnemy.x - player.x;
-                const dy = nearestEnemy.y - player.y;
-                const angle = Math.atan2(dy, dx);
-                
-                projectiles.push({
-                    type: 'hikari',
-                    x: player.x,
-                    y: player.y,
-                    vx: Math.cos(angle) * (player.attackSpeed * 0.9), 
-                    vy: Math.sin(angle) * (player.attackSpeed * 0.9),
-                    damage: player.attackDamage * (10 + player.skills.hikari - 1),
-                    life: 5.0, 
-                    hitEnemies: new Set()
-                });
+                const angle = Math.atan2(nearestEnemy.y - player.y, nearestEnemy.x - player.x);
+                projectiles.push({ type: 'hikari', x: player.x, y: player.y, vx: Math.cos(angle) * (player.attackSpeed * 0.9), vy: Math.sin(angle) * (player.attackSpeed * 0.9), damage: player.attackDamage * (10 + player.skills.hikari - 1), life: 5.0, hitEnemies: new Set() });
             }
         }
 
         function levelUp() {
-            player.level++;
-            player.xp -= player.xpNeeded;
-            
-            if (player.level <= 15) {
-                player.xpNeeded = Math.floor(player.xpNeeded * 1.15); 
-            } else {
-                player.xpNeeded = Math.floor(player.xpNeeded * 1.4); 
-            }
-            
-            player.maxHp += 15; 
-            player.hp = player.maxHp; 
-            
-            updateSkillDisplay();
-            damageOverlayDom.style.backgroundColor = 'transparent';
+            player.level++; player.xp -= player.xpNeeded;
+            player.xpNeeded = player.level <= 15 ? Math.floor(player.xpNeeded * 1.15) : Math.floor(player.xpNeeded * 1.4);
+            player.maxHp += 15; player.hp = player.maxHp; 
+            updateSkillDisplay(); damageOverlayDom.style.backgroundColor = 'transparent';
 
-            const container = document.getElementById('skillOptionsContainer');
-            container.innerHTML = '';
-            
+            const container = document.getElementById('skillOptionsContainer'); container.innerHTML = '';
             skillPool.forEach(skill => {
-                const btn = document.createElement('button');
-                btn.className = 'skill-btn';
+                const btn = document.createElement('button'); btn.className = 'skill-btn';
                 btn.innerHTML = `${skill.name} (當前 LV.${skill.current()})<br><span style="font-size: 14px; color: #bdc3c7;">(${skill.desc})</span>`;
-                btn.onclick = () => chooseSkill(skill.id);
-                container.appendChild(btn);
+                btn.onclick = () => chooseSkill(skill.id); container.appendChild(btn);
             });
-
-            isLevelUpMenuOpen = true;
-            document.getElementById('levelUpScreen').style.display = 'block';
-            document.getElementById('levelUpScreen').scrollTop = 0; 
+            isLevelUpMenuOpen = true; document.getElementById('levelUpScreen').style.display = 'block'; document.getElementById('levelUpScreen').scrollTop = 0; 
         }
 
         function chooseSkill(skillId) {
-            if (skillId === 'speed') {
-                player.speed += 20; 
-                player.skills.speed++;
-            } else if (skillId === 'damage') {
-                player.attackDamage += 12; 
-                player.skills.damage++;
-            } else if (skillId === 'xp') {
-                player.xpMultiplier += 0.25; 
-                player.skills.xp++;
-            } else if (skillId === 'count') {
-                player.skills.count++; 
-            } else if (skillId === 'atkSpeed') {
-                player.skills.atkSpeed++; 
-                player.attackCooldown = Math.max(0.15, 1.2 * Math.pow(0.75, player.skills.atkSpeed));
-            } else if (skillId === 'bounce') {
-                player.skills.bounce++; 
-            } else if (skillId === 'area') {
-                player.skills.area++; 
-            } else if (skillId === 'hikari') {
-                player.skills.hikari++;
-            } else if (skillId === 'harvest') {
-                player.skills.harvest++;
-                player.harvestActiveTimer = 5.0; 
-                player.harvestTimer = Math.max(5.0, 35.0 - player.skills.harvest * 5.0);
-            }
+            if (skillId === 'speed') { player.speed += 20; player.skills.speed++; }
+            else if (skillId === 'damage') { player.attackDamage += 12; player.skills.damage++; }
+            else if (skillId === 'xp') { player.xpMultiplier += 0.25; player.skills.xp++; }
+            else if (skillId === 'count') player.skills.count++;
+            else if (skillId === 'atkSpeed') { player.skills.atkSpeed++; player.attackCooldown = Math.max(0.15, 1.2 * Math.pow(0.75, player.skills.atkSpeed)); }
+            else if (skillId === 'bounce') player.skills.bounce++;
+            else if (skillId === 'area') player.skills.area++;
+            else if (skillId === 'hikari') player.skills.hikari++;
+            else if (skillId === 'harvest') { player.skills.harvest++; player.harvestActiveTimer = 5.0; player.harvestTimer = Math.max(5.0, 35.0 - player.skills.harvest * 5.0); }
 
-            updateSkillDisplay();
-
-            playerDom.src = playerNormalImg;
-            isLevelUpTransition = false; 
-
-            document.getElementById('levelUpScreen').style.display = 'none';
-            isLevelUpMenuOpen = false;
-            lastTime = performance.now(); 
+            updateSkillDisplay(); playerDom.src = playerNormalImg; isLevelUpTransition = false; 
+            document.getElementById('levelUpScreen').style.display = 'none'; isLevelUpMenuOpen = false; lastTime = performance.now(); 
         }
 
         function updateUI() {
             document.getElementById('hpText').innerText = `HP: ${Math.max(0, Math.floor(player.hp))} / ${player.maxHp}`;
             document.getElementById('xpBar').style.width = `${Math.min(100, (player.xp / player.xpNeeded) * 100)}%`;
-            const m = Math.floor(gameTime / 60).toString().padStart(2, '0');
-            const s = Math.floor(gameTime % 60).toString().padStart(2, '0');
+            const m = Math.floor(gameTime / 60).toString().padStart(2, '0'), s = Math.floor(gameTime % 60).toString().padStart(2, '0');
             document.getElementById('timeText').innerText = `時間: ${m}:${s}`;
         }
 
@@ -1440,306 +1150,164 @@
             isGameOver = true;
 
             document.getElementById('gameOver').style.display = 'block';
-            playerDom.style.display = 'none'; 
-            nameTagDom.style.display = 'none';
-            hpBarBgDom.style.display = 'none'; 
-            damageOverlayDom.style.backgroundColor = 'transparent'; 
+            playerDom.style.display = 'none'; nameTagDom.style.display = 'none';
+            hpBarBgDom.style.display = 'none'; damageOverlayDom.style.backgroundColor = 'transparent'; 
 
             if (window.isPvPMode && window.currentRoomId) {
-                // 對戰模式中自己死亡 -> 通知 Firebase 對手獲勝
                 const myRef = window.firebaseRef(window.db, `rooms/${window.currentRoomId}/${window.myRole}`);
                 window.firebaseUpdate(myRef, { isDead: true });
-
-                document.getElementById('gameOverTitle').innerText = "遊戲結束 - 對方勝利";
-                document.getElementById('gameOverTitle').style.color = "#e74c3c";
+                document.getElementById('gameOverTitle').innerText = "遊戲結束 - 對方勝利"; document.getElementById('gameOverTitle').style.color = "#e74c3c";
             } else {
                 document.getElementById('gameOverTitle').innerText = "遊戲結束";
             }
             
-            const m = Math.floor(gameTime / 60).toString().padStart(2, '0');
-            const s = Math.floor(gameTime % 60).toString().padStart(2, '0');
+            const m = Math.floor(gameTime / 60).toString().padStart(2, '0'), s = Math.floor(gameTime % 60).toString().padStart(2, '0');
             document.getElementById('finalStats').innerHTML = `玩家: <b>${player.name}</b><br>最終等級: <b>${player.level}</b><br>存活時間: <b>${m}:${s}</b>`;
 
-            if (window.saveToLeaderboard) {
-                window.saveToLeaderboard(player.name, gameTime);
-            }
+            // 觸發安全存檔機制
+            saveScore(player.name, gameTime);
         }
 
-        // 對戰獲勝處理
         window.pvpWin = function(reason) {
             if (isGameOver) return;
             isGameOver = true;
 
             document.getElementById('gameOver').style.display = 'block';
-            playerDom.style.display = 'none'; 
-            nameTagDom.style.display = 'none';
-            hpBarBgDom.style.display = 'none'; 
-            damageOverlayDom.style.backgroundColor = 'transparent'; 
+            playerDom.style.display = 'none'; nameTagDom.style.display = 'none';
+            hpBarBgDom.style.display = 'none'; damageOverlayDom.style.backgroundColor = 'transparent'; 
 
-            document.getElementById('gameOverTitle').innerText = "遊戲勝利！";
-            document.getElementById('gameOverTitle').style.color = "#2ecc71"; // 顯示綠色勝利
-            
-            const m = Math.floor(gameTime / 60).toString().padStart(2, '0');
-            const s = Math.floor(gameTime % 60).toString().padStart(2, '0');
+            document.getElementById('gameOverTitle').innerText = "遊戲勝利！"; document.getElementById('gameOverTitle').style.color = "#2ecc71";
+            const m = Math.floor(gameTime / 60).toString().padStart(2, '0'), s = Math.floor(gameTime % 60).toString().padStart(2, '0');
             document.getElementById('finalStats').innerHTML = `${reason}<br><br>玩家: <b>${player.name}</b><br>最終等級: <b>${player.level}</b><br>存活時間: <b>${m}:${s}</b>`;
 
-            if (window.saveToLeaderboard) {
-                window.saveToLeaderboard(player.name, gameTime);
-            }
+            // 觸發安全存檔機制
+            saveScore(player.name, gameTime);
         }
-        // =========================================================
 
         function update(dt) {
             if (!isLoaded || !isGameStarted || isGameOver || isLevelUpMenuOpen || isLevelUpTransition) return;
             gameTime += dt;
 
-            // ===== 對戰模式資料同步 (每秒約同步 20 次) =====
             if (window.isPvPMode) {
                 window.pvpSyncTimer += dt;
                 if (window.pvpSyncTimer > 0.05) { 
                     window.pvpSyncTimer = 0;
                     if (window.currentRoomId && window.myRole) {
                         const myRef = window.firebaseRef(window.db, `rooms/${window.currentRoomId}/${window.myRole}`);
-                        window.firebaseUpdate(myRef, {
-                            x: Math.round(player.x),
-                            y: Math.round(player.y),
-                            hp: player.hp,
-                            maxHp: player.maxHp,
-                            time: gameTime,
-                            facingRight: player.facingRight,
-                            isDead: false
-                        });
+                        window.firebaseUpdate(myRef, { x: Math.round(player.x), y: Math.round(player.y), hp: player.hp, maxHp: player.maxHp, time: gameTime, facingRight: player.facingRight, isDead: false });
                     }
                 }
             }
-            // ===============================================
 
             let currentBossPhase = Math.floor(gameTime / 30);
-            if (currentBossPhase > lastBossPhase && currentBossPhase >= 1) {
-                spawnBoss();
-                lastBossPhase = currentBossPhase;
-            }
+            if (currentBossPhase > lastBossPhase && currentBossPhase >= 1) { spawnBoss(); lastBossPhase = currentBossPhase; }
 
             let moveX = 0, moveY = 0;
-            if (keys['KeyW'] || keys['ArrowUp']) moveY -= 1;
-            if (keys['KeyS'] || keys['ArrowDown']) moveY += 1;
-            if (keys['KeyA'] || keys['ArrowLeft']) moveX -= 1;
-            if (keys['KeyD'] || keys['ArrowRight']) moveX += 1;
-
-            if (moveX === 0 && moveY === 0) {
-                moveX = mobileMoveX;
-                moveY = mobileMoveY;
-            }
+            if (keys['KeyW'] || keys['ArrowUp']) moveY -= 1; if (keys['KeyS'] || keys['ArrowDown']) moveY += 1;
+            if (keys['KeyA'] || keys['ArrowLeft']) moveX -= 1; if (keys['KeyD'] || keys['ArrowRight']) moveX += 1;
+            if (moveX === 0 && moveY === 0) { moveX = mobileMoveX; moveY = mobileMoveY; }
 
             if (moveX !== 0 || moveY !== 0) {
                 const len = Math.sqrt(moveX * moveX + moveY * moveY);
-                if (len > 0.05) { 
-                    player.x += (moveX / len) * player.speed * dt;
-                    player.y += (moveY / len) * player.speed * dt;
-                }
+                if (len > 0.05) { player.x += (moveX / len) * player.speed * dt; player.y += (moveY / len) * player.speed * dt; }
             }
 
-            if (moveX > 0.05) player.facingRight = true;
-            else if (moveX < -0.05) player.facingRight = false;
-
+            if (moveX > 0.05) player.facingRight = true; else if (moveX < -0.05) player.facingRight = false;
             player.x = Math.max(player.drawH/2, Math.min(mapBounds.w - player.drawH/2, player.x));
             player.y = Math.max(player.drawH/2, Math.min(mapBounds.h - player.drawH/2, player.y));
-
             camera.x = Math.max(0, Math.min(mapBounds.w - canvas.width, player.x - canvas.width / 2));
             camera.y = Math.max(0, Math.min(mapBounds.h - canvas.height, player.y - canvas.height / 2));
             
-            const screenX = player.x - camera.x;
-            const screenY = player.y - camera.y;
+            const screenX = player.x - camera.x, screenY = player.y - camera.y;
             playerDom.style.transform = `translate(${screenX - player.drawW / 2}px, ${screenY - player.drawH / 2}px) scaleX(${player.facingRight ? -1 : 1})`;
-            
-            nameTagDom.style.left = `${screenX}px`;
-            nameTagDom.style.top = `${screenY - player.drawH / 2 - 35}px`;
-
-            hpBarBgDom.style.left = `${screenX}px`;
-            hpBarBgDom.style.top = `${screenY - player.drawH / 2 - 5}px`; 
+            nameTagDom.style.left = `${screenX}px`; nameTagDom.style.top = `${screenY - player.drawH / 2 - 35}px`;
+            hpBarBgDom.style.left = `${screenX}px`; hpBarBgDom.style.top = `${screenY - player.drawH / 2 - 5}px`; 
             hpBarDom.style.width = `${Math.max(0, (player.hp / player.maxHp) * 100)}%`;
 
-            player.attackTimer -= dt;
-            if (player.attackTimer <= 0) { shootNearestEnemy(); player.attackTimer = player.attackCooldown; }
-
-            if (player.skills.hikari > 0) {
-                player.hikariTimer -= dt;
-                if (player.hikariTimer <= 0) {
-                    player.hikariTimer = player.hikariCooldown;
-                    shootHikari();
-                }
-            }
-
+            player.attackTimer -= dt; if (player.attackTimer <= 0) { shootNearestEnemy(); player.attackTimer = player.attackCooldown; }
+            if (player.skills.hikari > 0) { player.hikariTimer -= dt; if (player.hikariTimer <= 0) { player.hikariTimer = player.hikariCooldown; shootHikari(); } }
             if (player.skills.harvest > 0) {
-                if (player.harvestActiveTimer > 0) {
-                    player.harvestActiveTimer -= dt;
-                } else {
-                    player.harvestTimer -= dt;
-                    if (player.harvestTimer <= 0) {
-                        player.harvestActiveTimer = 5.0; 
-                        player.harvestTimer = Math.max(5.0, 35.0 - player.skills.harvest * 5.0);
-                    }
-                }
+                if (player.harvestActiveTimer > 0) player.harvestActiveTimer -= dt;
+                else { player.harvestTimer -= dt; if (player.harvestTimer <= 0) { player.harvestActiveTimer = 5.0; player.harvestTimer = Math.max(5.0, 35.0 - player.skills.harvest * 5.0); } }
             }
 
-            enemySpawnTimer -= dt;
-            if (enemySpawnTimer <= 0) { spawnEnemy(); enemySpawnTimer = 1.2; } 
-
+            enemySpawnTimer -= dt; if (enemySpawnTimer <= 0) { spawnEnemy(); enemySpawnTimer = 1.2; } 
             let isHitThisFrame = false; 
 
             for (let i = enemies.length - 1; i >= 0; i--) {
-                const e = enemies[i];
-                const dx = player.x - e.x, dy = player.y - e.y, dist = Math.sqrt(dx*dx + dy*dy);
-                
+                const e = enemies[i], dx = player.x - e.x, dy = player.y - e.y, dist = Math.sqrt(dx*dx + dy*dy);
                 if (dist > 5) { e.x += (dx/dist)*e.speed*dt; e.y += (dy/dist)*e.speed*dt; }
-                
                 if (dist < e.radius + player.hitboxRadius) { 
-                    player.hp -= e.damage * dt; 
-                    isHitThisFrame = true; 
-                    if (player.hp <= 0) {
-                        gameOver();
-                        return;
-                    }
+                    player.hp -= e.damage * dt; isHitThisFrame = true; 
+                    if (player.hp <= 0) { gameOver(); return; }
                 }
-
                 if (e.isBoss) {
                     e.attackTimer -= dt;
                     if (e.attackTimer <= 0) {
-                        e.attackTimer = 2.0; 
-                        const angle = Math.atan2(dy, dx);
-                        enemyProjectiles.push({
-                            x: e.x, y: e.y,
-                            vx: Math.cos(angle) * 350,
-                            vy: Math.sin(angle) * 350,
-                            radius: e.radius * 0.3, 
-                            img: e.img,
-                            damage: e.damage, 
-                            life: 5.0
-                        });
+                        e.attackTimer = 2.0; const angle = Math.atan2(dy, dx);
+                        enemyProjectiles.push({ x: e.x, y: e.y, vx: Math.cos(angle) * 350, vy: Math.sin(angle) * 350, radius: e.radius * 0.3, img: e.img, damage: e.damage, life: 5.0 });
                     }
                 }
             }
 
             for (let i = enemyProjectiles.length - 1; i >= 0; i--) {
-                const ep = enemyProjectiles[i];
-                ep.x += ep.vx * dt;
-                ep.y += ep.vy * dt;
-                ep.life -= dt;
-
+                const ep = enemyProjectiles[i]; ep.x += ep.vx * dt; ep.y += ep.vy * dt; ep.life -= dt;
                 const dx = player.x - ep.x, dy = player.y - ep.y;
                 if (Math.sqrt(dx*dx + dy*dy) < player.hitboxRadius + ep.radius) {
-                    player.hp -= ep.damage;
-                    isHitThisFrame = true;
-                    enemyProjectiles.splice(i, 1); 
-                    if (player.hp <= 0) {
-                        gameOver();
-                        return;
-                    }
-                    continue;
+                    player.hp -= ep.damage; isHitThisFrame = true; enemyProjectiles.splice(i, 1); 
+                    if (player.hp <= 0) { gameOver(); return; } continue;
                 }
-                
-                if (ep.life <= 0) {
-                    enemyProjectiles.splice(i, 1);
-                }
+                if (ep.life <= 0) enemyProjectiles.splice(i, 1);
             }
 
-            if (isHitThisFrame && !isGameOver) {
-                damageOverlayDom.style.backgroundColor = 'rgba(255, 0, 0, 0.3)';
-            } else {
-                damageOverlayDom.style.backgroundColor = 'transparent';
-            }
-
+            damageOverlayDom.style.backgroundColor = (isHitThisFrame && !isGameOver) ? 'rgba(255, 0, 0, 0.3)' : 'transparent';
             const hitboxBonus = player.skills.area * 8; 
 
             for (let i = projectiles.length - 1; i >= 0; i--) {
-                const p = projectiles[i];
-                p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt;
-                
+                const p = projectiles[i]; p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt;
                 if (p.type === 'hikari') {
                     const hikariRadius = (hikariImg.naturalWidth * 0.5) / 2;
                     for (let j = enemies.length - 1; j >= 0; j--) {
-                        const e = enemies[j];
-                        if (p.hitEnemies && p.hitEnemies.has(e)) continue;
-
+                        const e = enemies[j]; if (p.hitEnemies && p.hitEnemies.has(e)) continue;
                         const dx = p.x - e.x, dy = p.y - e.y;
                         if (Math.sqrt(dx*dx + dy*dy) < e.radius + hikariRadius) {
-                            e.hp -= p.damage;
-                            if (p.hitEnemies) p.hitEnemies.add(e);
-                            
-                            if (e.hp <= 0) { 
-                                gems.push({ x: e.x, y: e.y, xp: e.xp || 60 }); 
-                                enemies.splice(j, 1); 
-                            }
+                            e.hp -= p.damage; if (p.hitEnemies) p.hitEnemies.add(e);
+                            if (e.hp <= 0) { gems.push({ x: e.x, y: e.y, xp: e.xp || 60 }); enemies.splice(j, 1); }
                         }
                     }
-                    if (p.life <= 0) {
-                        projectiles.splice(i, 1);
-                    }
+                    if (p.life <= 0) projectiles.splice(i, 1);
                 } else {
                     let hit = false;
                     for (let j = enemies.length - 1; j >= 0; j--) {
-                        const e = enemies[j];
-                        const dx = p.x - e.x, dy = p.y - e.y;
-                        
+                        const e = enemies[j], dx = p.x - e.x, dy = p.y - e.y;
                         if (Math.sqrt(dx*dx + dy*dy) < e.radius + 10 + hitboxBonus) {
-                            e.hp -= p.damage; 
-                            hit = true;
-                            if (e.hp <= 0) { 
-                                gems.push({ x: e.x, y: e.y, xp: e.xp || 60 }); 
-                                enemies.splice(j, 1); 
-                            }
+                            e.hp -= p.damage; hit = true;
+                            if (e.hp <= 0) { gems.push({ x: e.x, y: e.y, xp: e.xp || 60 }); enemies.splice(j, 1); }
                             break; 
                         }
                     }
-                    
                     if (hit) {
                         if (p.bounceCount < player.skills.bounce) {
-                            p.bounceCount++;
-                            const currentAngle = Math.atan2(p.vy, p.vx);
-                            const bounceAngle = currentAngle + Math.PI + (Math.random() - 0.5) * 0.6;
-                            p.vx = Math.cos(bounceAngle) * player.attackSpeed;
-                            p.vy = Math.sin(bounceAngle) * player.attackSpeed;
-                        } else {
-                            projectiles.splice(i, 1);
-                        }
-                    } else if (p.life <= 0) {
-                        projectiles.splice(i, 1);
-                    }
+                            p.bounceCount++; const bounceAngle = Math.atan2(p.vy, p.vx) + Math.PI + (Math.random() - 0.5) * 0.6;
+                            p.vx = Math.cos(bounceAngle) * player.attackSpeed; p.vy = Math.sin(bounceAngle) * player.attackSpeed;
+                        } else projectiles.splice(i, 1);
+                    } else if (p.life <= 0) projectiles.splice(i, 1);
                 }
             }
 
             for (let i = gems.length - 1; i >= 0; i--) {
-                const g = gems[i];
-                const dx = player.x - g.x, dy = player.y - g.y, dist = Math.sqrt(dx*dx + dy*dy);
-                
-                let pullDistance = 180;
-                let pullSpeed = 350;
+                const g = gems[i], dx = player.x - g.x, dy = player.y - g.y, dist = Math.sqrt(dx*dx + dy*dy);
+                let pullDistance = player.harvestActiveTimer > 0 ? 99999 : 180;
+                let pullSpeed = player.harvestActiveTimer > 0 ? 800 : 350;
 
-                if (player.harvestActiveTimer > 0) {
-                    pullDistance = 99999; 
-                    pullSpeed = 800; 
-                }
-
-                if (dist < pullDistance) { 
-                    g.x += (dx/dist)*pullSpeed*dt; 
-                    g.y += (dy/dist)*pullSpeed*dt; 
-                }
-                
-                if (dist < 35) { 
-                    player.xp += g.xp * player.xpMultiplier; 
-                    gems.splice(i, 1); 
-                }
+                if (dist < pullDistance) { g.x += (dx/dist)*pullSpeed*dt; g.y += (dy/dist)*pullSpeed*dt; }
+                if (dist < 35) { player.xp += g.xp * player.xpMultiplier; gems.splice(i, 1); }
             }
 
             updateUI();
-
             if (player.xp >= player.xpNeeded) {
-                isLevelUpTransition = true;
-                playerDom.src = playerLevelUpImg; 
-                
-                setTimeout(() => {
-                    levelUp();
-                }, 500); 
+                isLevelUpTransition = true; playerDom.src = playerLevelUpImg; 
+                setTimeout(() => { levelUp(); }, 500); 
             }
         }
 
@@ -1749,65 +1317,33 @@
             ctx.drawImage(bgImg, -camera.x, -camera.y, mapBounds.w, mapBounds.h);
             if (!isGameStarted) return;
 
-            // ===== 渲染對手角色 (如果是對戰模式) =====
             if (window.isPvPMode && window.opponentData && !window.opponentData.isDead) {
-                const opp = window.opponentData;
-                const screenX = opp.x - camera.x;
-                const screenY = opp.y - camera.y;
-
-                ctx.save();
-                ctx.globalAlpha = 0.5; // 半透明顯示
-                
-                // 畫對手圖形
+                const opp = window.opponentData, screenX = opp.x - camera.x, screenY = opp.y - camera.y;
+                ctx.save(); ctx.globalAlpha = 0.5; 
                 if (window.opponentImg && window.opponentImg.complete) {
-                    ctx.translate(screenX, screenY);
-                    ctx.scale(opp.facingRight ? -1 : 1, 1); // 同步面向方向
+                    ctx.translate(screenX, screenY); ctx.scale(opp.facingRight ? -1 : 1, 1); 
                     ctx.drawImage(window.opponentImg, -player.drawW / 2, -player.drawH / 2, player.drawW, player.drawH);
-                    ctx.scale(opp.facingRight ? -1 : 1, 1); 
-                    ctx.translate(-screenX, -screenY); 
+                    ctx.scale(opp.facingRight ? -1 : 1, 1); ctx.translate(-screenX, -screenY); 
                 }
-                ctx.restore(); // 關閉透明度與矩陣影響
+                ctx.restore(); 
 
-                // 畫對手名稱
-                ctx.fillStyle = "white";
-                ctx.font = "bold 20px 'Segoe UI'";
-                ctx.textAlign = "center";
-                ctx.shadowColor = "black";
-                ctx.shadowBlur = 4;
-                ctx.shadowOffsetX = 2;
-                ctx.shadowOffsetY = 2;
+                ctx.fillStyle = "white"; ctx.font = "bold 20px 'Segoe UI'"; ctx.textAlign = "center";
+                ctx.shadowColor = "black"; ctx.shadowBlur = 4; ctx.shadowOffsetX = 2; ctx.shadowOffsetY = 2;
                 ctx.fillText(opp.name, screenX, screenY - player.drawH / 2 - 35);
-                
-                // 畫對手生存時間
-                ctx.font = "16px Arial";
-                ctx.fillStyle = "#f1c40f";
+                ctx.font = "16px Arial"; ctx.fillStyle = "#f1c40f";
                 ctx.fillText(`生存: ${formatTimeHelper(opp.time || 0)}`, screenX, screenY - player.drawH / 2 - 60);
-                ctx.shadowBlur = 0; 
-                ctx.shadowOffsetX = 0;
-                ctx.shadowOffsetY = 0;
+                ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
 
-                // 畫對手血條
-                const barW = 80;
-                const barH = 10;
-                const barX = screenX - barW / 2;
-                const barY = screenY - player.drawH / 2 - 15;
-
-                ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
-                ctx.fillRect(barX, barY, barW, barH);
-                ctx.strokeStyle = "#222";
-                ctx.lineWidth = 2;
-                ctx.strokeRect(barX, barY, barW, barH);
-
+                const barW = 80, barH = 10, barX = screenX - barW / 2, barY = screenY - player.drawH / 2 - 15;
+                ctx.fillStyle = "rgba(0, 0, 0, 0.8)"; ctx.fillRect(barX, barY, barW, barH);
+                ctx.strokeStyle = "#222"; ctx.lineWidth = 2; ctx.strokeRect(barX, barY, barW, barH);
                 const hpPct = Math.max(0, opp.hp / opp.maxHp);
-                ctx.fillStyle = "#e74c3c";
-                ctx.fillRect(barX, barY, barW * hpPct, barH);
+                ctx.fillStyle = "#e74c3c"; ctx.fillRect(barX, barY, barW * hpPct, barH);
             }
-            // ==========================================
 
             gems.forEach(g => {
                 if (gemImg.complete) {
-                    const drawWidth = gemImg.naturalWidth * 0.1;
-                    const drawHeight = gemImg.naturalHeight * 0.1;
+                    const drawWidth = gemImg.naturalWidth * 0.1, drawHeight = gemImg.naturalHeight * 0.1;
                     ctx.drawImage(gemImg, g.x - camera.x - drawWidth / 2, g.y - camera.y - drawHeight / 2, drawWidth, drawHeight);
                 }
             });
@@ -1815,13 +1351,9 @@
             enemies.forEach(e => {
                 const drawSize = e.radius * 2.5;
                 if (e.img.complete) {
-                    ctx.save();
-                    ctx.beginPath();
-                    ctx.arc(e.x - camera.x, e.y - camera.y, drawSize / 2, 0, Math.PI * 2);
-                    ctx.lineWidth = e.isBoss ? 8 : 4;
-                    ctx.strokeStyle = e.isBoss ? '#e74c3c' : '#f1c40f'; 
-                    ctx.stroke();
-                    ctx.clip();
+                    ctx.save(); ctx.beginPath(); ctx.arc(e.x - camera.x, e.y - camera.y, drawSize / 2, 0, Math.PI * 2);
+                    ctx.lineWidth = e.isBoss ? 8 : 4; ctx.strokeStyle = e.isBoss ? '#e74c3c' : '#f1c40f'; 
+                    ctx.stroke(); ctx.clip();
                     ctx.drawImage(e.img, e.x - camera.x - drawSize/2, e.y - camera.y - drawSize/2, drawSize, drawSize);
                     ctx.restore();
                 }
@@ -1830,41 +1362,29 @@
             enemyProjectiles.forEach(ep => {
                 const drawSize = ep.radius * 2.5;
                 if (ep.img.complete) {
-                    ctx.save();
-                    ctx.beginPath();
-                    ctx.arc(ep.x - camera.x, ep.y - camera.y, drawSize / 2, 0, Math.PI * 2);
-                    ctx.lineWidth = 3;
-                    ctx.strokeStyle = '#e74c3c'; 
-                    ctx.stroke();
-                    ctx.clip();
+                    ctx.save(); ctx.beginPath(); ctx.arc(ep.x - camera.x, ep.y - camera.y, drawSize / 2, 0, Math.PI * 2);
+                    ctx.lineWidth = 3; ctx.strokeStyle = '#e74c3c'; ctx.stroke(); ctx.clip();
                     ctx.drawImage(ep.img, ep.x - camera.x - drawSize/2, ep.y - camera.y - drawSize/2, drawSize, drawSize);
                     ctx.restore();
                 }
             });
 
             const fontSize = 16 + (player.skills.area * 5); 
-            ctx.fillStyle = '#fff';
-            ctx.font = `bold ${fontSize}px Arial`;
+            ctx.fillStyle = '#fff'; ctx.font = `bold ${fontSize}px Arial`;
             
             projectiles.forEach(p => {
                 if (p.type === 'hikari') {
                     if (hikariImg.complete) {
-                        const drawW = hikariImg.naturalWidth * 0.5;
-                        const drawH = hikariImg.naturalHeight * 0.5;
+                        const drawW = hikariImg.naturalWidth * 0.5, drawH = hikariImg.naturalHeight * 0.5;
                         ctx.drawImage(hikariImg, p.x - camera.x - drawW/2, p.y - camera.y - drawH/2, drawW, drawH);
                     }
-                } else {
-                    ctx.fillText(p.text, p.x - camera.x, p.y - camera.y);
-                }
+                } else { ctx.fillText(p.text, p.x - camera.x, p.y - camera.y); }
             });
         }
 
         function gameLoop(timestamp) {
-            const dt = (timestamp - lastTime) / 1000;
-            lastTime = timestamp;
-            update(Math.min(dt, 0.05));
-            draw();
-            requestAnimationFrame(gameLoop);
+            const dt = (timestamp - lastTime) / 1000; lastTime = timestamp;
+            update(Math.min(dt, 0.05)); draw(); requestAnimationFrame(gameLoop);
         }
     </script>
 </body>
