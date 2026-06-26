@@ -455,23 +455,92 @@
             max-height: 300px; overflow-y: auto; margin: 15px 0; border-radius: 8px; background: rgba(0,0,0,0.3); padding: 10px;
         }
 
+        /* ================== 公告系統 UI 樣式 ================== */
+        #announcementBtn {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #3498db;
+            border-radius: 10px;
+            padding: 10px 20px;
+            color: #3498db;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 60;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+            transition: all 0.2s;
+        }
+        #announcementBtn:hover { 
+            background: rgba(0, 0, 0, 0.9); 
+            transform: translateX(-50%) scale(1.05); 
+            border-color: #2980b9;
+        }
+
+        #announcementModal {
+            display: none;
+            position: absolute;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 100;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        #announcementContent {
+            background: #2c3e50;
+            border: 3px solid #3498db;
+            border-radius: 15px;
+            width: 90%; max-width: 600px;
+            max-height: 80vh;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 30px rgba(52, 152, 219, 0.4);
+        }
+        #announcementContent h2 { color: #3498db; text-align: center; margin-top: 0; text-shadow: 2px 2px #000; }
+        
+        #announcementList { flex-grow: 1; overflow-y: auto; padding-right: 10px; }
+        #announcementList::-webkit-scrollbar { width: 8px; }
+        #announcementList::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); border-radius: 10px; }
+        #announcementList::-webkit-scrollbar-thumb { background: #3498db; border-radius: 10px; }
+        
+        .announce-item { 
+            background: #1a252f; 
+            margin-bottom: 15px; 
+            padding: 15px; 
+            border-radius: 8px; 
+            border-left: 5px solid #f1c40f; 
+        }
+        .announce-date { font-size: 13px; color: #95a5a6; margin-bottom: 5px; }
+        .announce-title { font-size: 20px; color: #fff; font-weight: bold; margin-bottom: 10px; }
+        .announce-body { font-size: 16px; color: #ecf0f1; line-height: 1.6; word-wrap: break-word; }
+        .announce-body img { max-width: 100%; border-radius: 8px; margin-top: 10px; display: block; }
+
         /* 手機縮放 */
         @media screen and (max-width: 768px) {
             #ui { transform: scale(0.75); transform-origin: top left; }
             #miniLeaderboard { transform: scale(0.75); transform-origin: top right; }
+            #announcementBtn { transform: translateX(-50%) scale(0.85); top: 10px; }
             #startScreenWrapper { transform: scale(0.75); }
             #levelUpScreen { transform: translate(-50%, -50%) scale(0.85); width: 90%; }
             #gameOver { transform: translate(-50%, -50%) scale(0.8); }
             #fullLeaderboardContent { transform: scale(0.85); }
+            #announcementContent { transform: scale(0.85); }
             .modal-content { transform: scale(0.85); }
         }
         @media screen and (max-width: 480px) {
             #ui { transform: scale(0.6); }
             #miniLeaderboard { transform: scale(0.65); }
+            #announcementBtn { transform: translateX(-50%) scale(0.75); top: 5px; }
             #startScreenWrapper { transform: scale(0.65); }
             #levelUpScreen { transform: translate(-50%, -50%) scale(0.75); }
             #gameOver { transform: translate(-50%, -50%) scale(0.7); }
             #fullLeaderboardContent { transform: scale(0.75); }
+            #announcementContent { transform: scale(0.75); }
             .modal-content { transform: scale(0.75); }
         }
     </style>
@@ -494,6 +563,15 @@
             </div>
         </div>
         
+        <button id="announcementBtn" onclick="window.openAnnouncement()">📢 遊戲公告</button>
+
+        <div id="announcementModal">
+            <div id="announcementContent">
+                <h2>📢 最新公告</h2>
+                <div id="announcementList">讀取中...</div>
+                <button class="close-btn" onclick="window.closeAnnouncement()">關閉公告</button>
+            </div>
+        </div>
         <div id="startScreen">
             <div id="startScreenWrapper">
                 <h1>開始嘴砲時間</h1>
@@ -519,7 +597,6 @@
             </div>
         </div>
 
-        <!-- 房間列表 UI -->
         <div id="roomListModal">
             <div class="modal-content">
                 <h2>⚔️ 尋找對戰房間</h2>
@@ -529,14 +606,12 @@
             </div>
         </div>
 
-        <!-- 等待對手加入與準備 UI -->
         <div id="waitingRoomModal">
             <div class="modal-content">
                 <h2>⏳ 準備對戰</h2>
                 <p style="font-size: 18px; color: #f1c40f;">房間: <span id="displayRoomId"></span></p>
                 <div id="roomPlayersContainer" style="margin: 20px 0; padding: 15px; background: rgba(0,0,0,0.4); border-radius: 10px; text-align: left; font-size: 18px;">
-                    <!-- 玩家狀態會由 JS 渲染至此 -->
-                </div>
+                    </div>
                 <div style="display: flex; justify-content: center; gap: 15px;">
                     <button class="action-btn" id="readyBtn" style="background: #2ecc71; width: 120px;" onclick="toggleReady()">準備</button>
                     <button class="action-btn cancel-btn" style="width: 120px; margin: 0;" onclick="cancelRoom()">離開</button>
@@ -582,7 +657,6 @@
         </div>
     </div>
 
-    <!-- Firebase SDK 與主邏輯合併 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
@@ -699,6 +773,64 @@
         window.closeFullLeaderboard = function() {
             document.getElementById('fullLeaderboardModal').style.display = 'none';
         };
+
+        // ================== 公告系統解析與邏輯 ==================
+        function parseAnnouncementText(text) {
+            if (!text) return "";
+            let parsed = text;
+            
+            // 1. 換行指令：將 \n 或是 [br] 替換成 HTML 的換行
+            parsed = parsed.replace(/\n|\[br\]/g, '<br>');
+            
+            // 2. 顏色指令：將 [color=顏色代碼]文字[/color] 替換成 CSS
+            parsed = parsed.replace(/\[color=([^\]]+)\](.*?)\[\/color\]/g, '<span style="color: $1;">$2</span>');
+            
+            // 3. 圖片指令：將 [img]圖片網址[/img] 替換成 img 標籤
+            parsed = parsed.replace(/\[img\](.*?)\[\/img\]/g, '<br><img src="$1" alt="公告圖片"><br>');
+            
+            return parsed;
+        }
+
+        window.openAnnouncement = function() {
+            document.getElementById('announcementModal').style.display = 'flex';
+        };
+
+        window.closeAnnouncement = function() {
+            document.getElementById('announcementModal').style.display = 'none';
+        };
+
+        // 監聽 Firebase 公告資料 (當 Firebase 初始化完成後執行)
+        setTimeout(() => {
+            if (!window.firebaseRef || !window.db) return; // 確保 Firebase 已掛載
+            const announcementsRef = window.firebaseRef(window.db, 'announcements');
+            window.firebaseOnValue(announcementsRef, (snapshot) => {
+                const listDiv = document.getElementById('announcementList');
+                listDiv.innerHTML = '';
+                
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    // 將物件轉換為陣列，並依照 id 反向排序，讓最新公告在最上方
+                    const items = Object.values(data).sort((a, b) => (b.id || 0) - (a.id || 0));
+                    
+                    items.forEach(item => {
+                        const div = document.createElement('div');
+                        div.className = 'announce-item';
+                        
+                        const dateStr = item.date || "近期公告";
+                        const bodyHtml = parseAnnouncementText(item.content);
+                        
+                        div.innerHTML = `
+                            <div class="announce-date">📅 ${dateStr}</div>
+                            <div class="announce-title">${item.title || '未命名公告'}</div>
+                            <div class="announce-body">${bodyHtml}</div>
+                        `;
+                        listDiv.appendChild(div);
+                    });
+                } else {
+                    listDiv.innerHTML = '<div style="text-align:center; color:#bdc3c7; padding: 20px;">目前沒有任何公告。</div>';
+                }
+            });
+        }, 1500);
 
         // ================== 遊戲核心引擎 ==================
         const canvas = document.getElementById('gameCanvas');
