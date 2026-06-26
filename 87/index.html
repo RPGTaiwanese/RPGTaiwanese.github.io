@@ -455,6 +455,69 @@
             max-height: 300px; overflow-y: auto; margin: 15px 0; border-radius: 8px; background: rgba(0,0,0,0.3); padding: 10px;
         }
 
+        /* ================== 公告系統樣式 ================== */
+        #topUiContainer {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 70;
+        }
+        #announcementBtn {
+            background-color: #2c3e50;
+            color: white;
+            border: 2px solid #f1c40f;
+            padding: 8px 16px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+            transition: 0.2s;
+        }
+        #announcementBtn:hover {
+            background-color: #34495e;
+            transform: scale(1.05);
+        }
+        #announcementModal {
+            display: flex; /* 預設一開始載入即顯示 */
+            position: absolute;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 150;
+            justify-content: center;
+            align-items: center;
+        }
+        #announcementModal .modal-content {
+            background: #2c3e50;
+            border: 3px solid #f1c40f;
+            border-radius: 12px;
+            padding: 25px;
+            width: 80%; max-width: 500px;
+            max-height: 80vh;
+            display: flex; flex-direction: column;
+            box-shadow: 0 0 30px rgba(241, 196, 15, 0.4);
+            color: white;
+        }
+        #announcementModal .modal-header {
+            font-size: 24px; font-weight: bold;
+            margin-bottom: 15px; text-align: center;
+            color: #f1c40f; border-bottom: 1px solid #34495e;
+            padding-bottom: 10px; text-shadow: 2px 2px #000;
+        }
+        #announcementModal .modal-body {
+            overflow-y: auto; margin-bottom: 20px;
+            font-size: 18px; line-height: 1.6;
+        }
+        #announcementModal .modal-body img {
+            max-width: 100%; border-radius: 8px;
+            margin-top: 15px; display: block;
+        }
+        #announcementModal .modal-body::-webkit-scrollbar { width: 8px; }
+        #announcementModal .modal-body::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); border-radius: 10px; }
+        #announcementModal .modal-body::-webkit-scrollbar-thumb { background: #f1c40f; border-radius: 10px; }
+
         /* 手機縮放 */
         @media screen and (max-width: 768px) {
             #ui { transform: scale(0.75); transform-origin: top left; }
@@ -479,6 +542,21 @@
 <body>
 
     <div id="gameContainer">
+        
+        <div id="topUiContainer">
+            <button id="announcementBtn">📣 遊戲公告</button>
+        </div>
+
+        <div id="announcementModal">
+            <div class="modal-content">
+                <div class="modal-header">📣 最新公告</div>
+                <div class="modal-body" id="announcementContent">
+                    連線讀取中...
+                </div>
+                <button class="close-btn" id="closeAnnouncementBtn">關閉</button>
+            </div>
+        </div>
+
         <div id="miniLeaderboard" onclick="window.openFullLeaderboard()">
             <h3>🏆 存活排行榜 Top 10</h3>
             <div id="miniLbList">連線中...</div>
@@ -519,7 +597,6 @@
             </div>
         </div>
 
-        <!-- 房間列表 UI -->
         <div id="roomListModal">
             <div class="modal-content">
                 <h2>⚔️ 尋找對戰房間</h2>
@@ -529,14 +606,12 @@
             </div>
         </div>
 
-        <!-- 等待對手加入與準備 UI -->
         <div id="waitingRoomModal">
             <div class="modal-content">
                 <h2>⏳ 準備對戰</h2>
                 <p style="font-size: 18px; color: #f1c40f;">房間: <span id="displayRoomId"></span></p>
                 <div id="roomPlayersContainer" style="margin: 20px 0; padding: 15px; background: rgba(0,0,0,0.4); border-radius: 10px; text-align: left; font-size: 18px;">
-                    <!-- 玩家狀態會由 JS 渲染至此 -->
-                </div>
+                    </div>
                 <div style="display: flex; justify-content: center; gap: 15px;">
                     <button class="action-btn" id="readyBtn" style="background: #2ecc71; width: 120px;" onclick="toggleReady()">準備</button>
                     <button class="action-btn cancel-btn" style="width: 120px; margin: 0;" onclick="cancelRoom()">離開</button>
@@ -582,7 +657,6 @@
         </div>
     </div>
 
-    <!-- Firebase SDK 與主邏輯合併 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
@@ -635,6 +709,70 @@
     </script>
 
     <script>
+        // ================== 公告系統邏輯 ==================
+        function initAnnouncementSystem() {
+            const announcementBtn = document.getElementById('announcementBtn');
+            const announcementModal = document.getElementById('announcementModal');
+            const closeAnnouncementBtn = document.getElementById('closeAnnouncementBtn');
+            const announcementContent = document.getElementById('announcementContent');
+
+            // 綁定按鈕開關
+            announcementBtn.addEventListener('click', () => {
+                announcementModal.style.display = 'flex';
+            });
+
+            closeAnnouncementBtn.addEventListener('click', () => {
+                announcementModal.style.display = 'none';
+            });
+
+            announcementModal.addEventListener('click', (e) => {
+                if (e.target === announcementModal) {
+                    announcementModal.style.display = 'none';
+                }
+            });
+
+            // 等待 Firebase 載入後抓取公告資料
+            const checkFirebase = setInterval(() => {
+                if (window.db && window.firebaseRef && window.firebaseOnValue) {
+                    clearInterval(checkFirebase);
+                    const announcementRef = window.firebaseRef(window.db, 'announcement');
+                    
+                    window.firebaseOnValue(announcementRef, (snapshot) => {
+                        const data = snapshot.val();
+                        announcementContent.innerHTML = ''; 
+
+                        if (data) {
+                            // 顯示文字
+                            if (data.text) {
+                                const textElement = document.createElement('div');
+                                textElement.style.whiteSpace = 'pre-wrap'; 
+                                textElement.textContent = data.text;
+                                announcementContent.appendChild(textElement);
+                            }
+
+                            // 顯示圖片
+                            if (data.image && data.image.trim() !== '') {
+                                const imgElement = document.createElement('img');
+                                imgElement.src = data.image;
+                                imgElement.alt = "公告圖片";
+                                imgElement.onerror = () => {
+                                    imgElement.style.display = 'none';
+                                    console.log("公告圖片載入失敗，網址可能無效");
+                                };
+                                announcementContent.appendChild(imgElement);
+                            }
+                        } else {
+                            announcementContent.innerHTML = '<div style="text-align: center; color: #bdc3c7;">目前沒有最新公告。</div>';
+                        }
+                    });
+                }
+            }, 100); // 每 100 毫秒檢查一次 Firebase 是否準備就緒
+        }
+        
+        // 初始化啟動公告系統
+        initAnnouncementSystem();
+
+
         // ================== 隱藏的存檔邏輯 (防外掛) ==================
         function saveScore(playerName, surviveTime) {
             if (!window.myUid) return; 
