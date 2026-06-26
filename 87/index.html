@@ -779,14 +779,23 @@
             if (!text) return "";
             let parsed = text;
             
-            // 1. 換行指令：將 \n 或是 [br] 替換成 HTML 的換行
+            // 1. 圖片指令：先將 [img]圖片網址[/img] 替換成 HTML 的 img 標籤
+            parsed = parsed.replace(/\[img\](.*?)\[\/img\]/g, '<br><img src="$1" alt="公告圖片"><br>');
+            
+            // 2. 自訂超連結指令 (選擇性使用)：[url=網址]顯示文字[/url]
+            parsed = parsed.replace(/\[url=([^\]]+)\](.*?)\[\/url\]/g, '<a href="$1" target="_blank" style="color: #3498db; text-decoration: underline;">$2</a>');
+            
+            // 3. 自動網址超連結：偵測純網址 (http/https 開頭)，自動套上 <a> 標籤
+            // 排除已經在 HTML 屬性 (如 src="" 或 href="") 裡面的網址，避免語法破裂
+            parsed = parsed.replace(/(^|[^="'])(https?:\/\/[^\s<\]]+)/g, function(match, prefix, url) {
+                return prefix + '<a href="' + url + '" target="_blank" style="color: #3498db; text-decoration: underline; word-break: break-all;">' + url + '</a>';
+            });
+            
+            // 4. 換行指令：將 \n 或是 [br] 替換成 HTML 的換行
             parsed = parsed.replace(/\n|\[br\]/g, '<br>');
             
-            // 2. 顏色指令：將 [color=顏色代碼]文字[/color] 替換成 CSS
+            // 5. 顏色指令：將 [color=顏色代碼]文字[/color] 替換成 CSS
             parsed = parsed.replace(/\[color=([^\]]+)\](.*?)\[\/color\]/g, '<span style="color: $1;">$2</span>');
-            
-            // 3. 圖片指令：將 [img]圖片網址[/img] 替換成 img 標籤
-            parsed = parsed.replace(/\[img\](.*?)\[\/img\]/g, '<br><img src="$1" alt="公告圖片"><br>');
             
             return parsed;
         }
@@ -1169,6 +1178,11 @@
             document.getElementById('startScreen').style.display = 'none';
             document.getElementById('ui').style.display = 'block';
             document.getElementById('xpBarContainer').style.display = 'block';
+            
+            // ===== 新增：遊戲開始時隱藏公告按鈕 =====
+            document.getElementById('announcementBtn').style.display = 'none';
+            // =====================================
+
             playerDom.style.display = 'block';
             nameTagDom.style.display = 'block';
             hpBarBgDom.style.display = 'block'; 
