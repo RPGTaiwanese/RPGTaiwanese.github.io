@@ -701,10 +701,24 @@
         
         onValue(topScoresQuery, (snapshot) => {
             let scores = [];
-            snapshot.forEach((childSnapshot) => { scores.push(childSnapshot.val()); });
+            // 確保資料庫中有資料，避免全空時報錯
+            if (snapshot.exists()) {
+                snapshot.forEach((childSnapshot) => { 
+                    const data = childSnapshot.val();
+                    // 防呆驗證：確保資料節點不是空的，且包含 name 與 time 欄位
+                    if (data && typeof data.name !== 'undefined' && typeof data.time !== 'undefined') {
+                        scores.push(data); 
+                    }
+                });
+            }
+            // 依照時間降序排列 (存活越久越前面)
             scores.reverse();
             window.allScores = scores.map((s, index) => ({...s, rank: index + 1}));
-            window.updateLeaderboardUI();
+            
+            // 確保 UI 更新函數有被正確呼叫
+            if (typeof window.updateLeaderboardUI === 'function') {
+                window.updateLeaderboardUI();
+            }
         });
     </script>
 
@@ -723,6 +737,8 @@
         }
 
         function formatTimeHelper(secs) {
+            // 防呆：如果秒數無效，預設顯示 00:00
+            if (isNaN(secs) || secs === null || secs === undefined) secs = 0;
             const m = Math.floor(secs / 60).toString().padStart(2, '0');
             const s = Math.floor(secs % 60).toString().padStart(2, '0');
             return `${m}:${s}`;
@@ -760,8 +776,15 @@
         };
 
         window.filterLeaderboard = function() {
-            const term = document.getElementById('lbSearch').value.toLowerCase();
-            const filtered = window.allScores.filter(s => s.name.toLowerCase().includes(term));
+            const searchInput = document.getElementById('lbSearch');
+            if (!searchInput) return;
+            const term = searchInput.value.toLowerCase();
+            
+            // 加上 s.name 檢查，並轉型為字串以確保安全
+            const filtered = window.allScores.filter(s => {
+                if (!s.name) return false;
+                return String(s.name).toLowerCase().includes(term);
+            });
             window.renderFullList(filtered);
         };
 
