@@ -305,8 +305,6 @@
             border: 3px solid #e74c3c;
             z-index: 60; 
             box-shadow: 0 0 30px rgba(231, 76, 60, 0.6);
-            max-height: 90vh;
-            overflow-y: auto;
         }
         #gameOver h1 {
             color: #e74c3c;
@@ -592,8 +590,8 @@
                         <h3>單人模式<br>無盡生存</h3>
                     </div>
                     <div class="char-card" onclick="openRoomList()" style="border-color: #e74c3c;">
-                        <img src="https://truth.bahamut.com.tw/s01/202606/43564bf4cf60b9503351e352c70275c1.GIF" alt="大亂鬥模式">
-                        <h3 style="color: #e74c3c;">大亂鬥模式<br>無限死鬥</h3>
+                        <img src="https://truth.bahamut.com.tw/s01/202606/43564bf4cf60b9503351e352c70275c1.GIF" alt="對戰模式">
+                        <h3 style="color: #e74c3c;">對戰模式<br>雙人死鬥</h3>
                     </div>
                 </div>
             </div>
@@ -601,7 +599,7 @@
 
         <div id="roomListModal">
             <div class="modal-content">
-                <h2>⚔️ 尋找大亂鬥房間</h2>
+                <h2>⚔️ 尋找對戰房間</h2>
                 <button class="action-btn create-btn" onclick="createRoom()">新建房間</button>
                 <div id="roomListContainer">讀取中...</div>
                 <button class="action-btn cancel-btn" onclick="closeRoomList()">返回</button>
@@ -610,10 +608,10 @@
 
         <div id="waitingRoomModal">
             <div class="modal-content">
-                <h2>⏳ 準備大亂鬥</h2>
+                <h2>⏳ 準備對戰</h2>
                 <p style="font-size: 18px; color: #f1c40f;">房間: <span id="displayRoomId"></span></p>
-                <div id="roomPlayersContainer" style="max-height: 200px; overflow-y: auto; margin: 20px 0; padding: 15px; background: rgba(0,0,0,0.4); border-radius: 10px; text-align: left; font-size: 16px;">
-                </div>
+                <div id="roomPlayersContainer" style="margin: 20px 0; padding: 15px; background: rgba(0,0,0,0.4); border-radius: 10px; text-align: left; font-size: 18px;">
+                    </div>
                 <div style="display: flex; justify-content: center; gap: 15px;">
                     <button class="action-btn" id="readyBtn" style="background: #2ecc71; width: 120px;" onclick="toggleReady()">準備</button>
                     <button class="action-btn cancel-btn" style="width: 120px; margin: 0;" onclick="cancelRoom()">離開</button>
@@ -936,11 +934,11 @@
         let lastTime = performance.now();
         let lastBossPhase = 0; 
         
-        // ================== 大亂鬥模式 全新變數 ==================
         window.isPvPMode = false;
         window.currentRoomId = null;
-        window.isHost = false; 
-        window.roomPlayers = {}; 
+        window.myRole = null;
+        window.opponentRole = null;
+        window.opponentData = null;
         window.pvpSyncTimer = 0;
         window.isReady = false; 
         window.roomUnsubscribe = null; 
@@ -1037,14 +1035,10 @@
                 let hasRooms = false;
                 if (rooms) {
                     for (const [roomId, room] of Object.entries(rooms)) {
-                        // 當房間仍在 waiting，且人數少於 15 人時顯示出來
-                        const playerCount = room.players ? Object.keys(room.players).length : 0;
-                        if (room.status === 'waiting' && playerCount < 15) {
+                        if (room.status === 'waiting' && !room.player2) {
                             hasRooms = true;
                             const btn = document.createElement('button');
-                            btn.className = 'room-btn'; 
-                            btn.innerText = `🏠 ${room.name} (${playerCount}/15) (點擊加入)`; 
-                            btn.onclick = () => window.joinRoom(roomId);
+                            btn.className = 'room-btn'; btn.innerText = `🏠 ${room.name} (點擊加入)`; btn.onclick = () => window.joinRoom(roomId);
                             container.appendChild(btn);
                         }
                     }
@@ -1060,31 +1054,16 @@
             const roomsRef = window.firebaseRef(window.db, 'rooms');
             const newRoomRef = window.firebasePush(roomsRef);
             window.currentRoomId = newRoomRef.key;
-            window.isPvPMode = true;
-            window.isHost = true;
+            window.myRole = 'player1'; window.opponentRole = 'player2'; window.isPvPMode = true;
 
-            // 初始化以 15 人為基準的房間物件結構
             window.firebaseSet(newRoomRef, {
-                name: player.name + " 的房間", 
-                status: 'waiting',
-                players: {
-                    [window.myUid]: { 
-                        uid: window.myUid, 
-                        name: player.name, 
-                        isDead: false, 
-                        hp: 100, 
-                        maxHp: 100, 
-                        x: player.x, 
-                        y: player.y, 
-                        isReady: false, 
-                        isHost: true 
-                    }
-                }
+                name: player.name + " 的房間", status: 'waiting',
+                player1: { uid: window.myUid, name: player.name, isDead: false, hp: 100, maxHp: 100, x: player.x, y: player.y, isReady: false }
             });
 
-            const myNodeRef = window.firebaseRef(window.db, `rooms/${window.currentRoomId}/players/${window.myUid}`);
+            const myNodeRef = window.firebaseRef(window.db, `rooms/${window.currentRoomId}/${window.myRole}`);
             window.firebaseOnDisconnect(myNodeRef).update({ isDead: true });
-            window.firebaseOnDisconnect(newRoomRef).remove(); // 房主離線時直接關閉房間
+            window.firebaseOnDisconnect(newRoomRef).remove(); 
 
             document.getElementById('roomListModal').style.display = 'none';
             document.getElementById('waitingRoomModal').style.display = 'flex';
@@ -1094,22 +1073,14 @@
 
         window.joinRoom = function(roomId) {
             window.isReady = false; window.currentRoomId = roomId;
-            window.isPvPMode = true; window.isHost = false;
+            window.myRole = 'player2'; window.opponentRole = 'player1'; window.isPvPMode = true;
 
-            // 將自己作為 player 加入房內列表
-            const myNodeRef = window.firebaseRef(window.db, `rooms/${roomId}/players/${window.myUid}`);
-            window.firebaseSet(myNodeRef, {
-                uid: window.myUid, 
-                name: player.name, 
-                isDead: false, 
-                hp: 100, 
-                maxHp: 100, 
-                x: player.x, 
-                y: player.y, 
-                isReady: false, 
-                isHost: false
+            const roomRef = window.firebaseRef(window.db, `rooms/${roomId}`);
+            window.firebaseUpdate(roomRef, {
+                status: 'waiting', player2: { uid: window.myUid, name: player.name, isDead: false, hp: 100, maxHp: 100, x: player.x, y: player.y, isReady: false }
             });
 
+            const myNodeRef = window.firebaseRef(window.db, `rooms/${window.currentRoomId}/${window.myRole}`);
             window.firebaseOnDisconnect(myNodeRef).update({ isDead: true });
 
             document.getElementById('roomListModal').style.display = 'none';
@@ -1119,33 +1090,26 @@
 
         window.toggleReady = function() {
             window.isReady = !window.isReady;
-            const myRef = window.firebaseRef(window.db, `rooms/${window.currentRoomId}/players/${window.myUid}`);
+            const myRef = window.firebaseRef(window.db, `rooms/${window.currentRoomId}/${window.myRole}`);
             window.firebaseUpdate(myRef, { isReady: window.isReady });
         }
 
-        window.kickPlayer = function(targetUid) {
-            // 新增動態踢人：只有房主能踢，且根據特定 UID 踢除
-            if (window.isHost) {
-                const playerRef = window.firebaseRef(window.db, `rooms/${window.currentRoomId}/players/${targetUid}`);
-                window.firebaseRemove(playerRef);
+        window.kickPlayer = function() {
+            if (window.myRole === 'player1') {
+                const roomRef = window.firebaseRef(window.db, `rooms/${window.currentRoomId}`);
+                window.firebaseUpdate(roomRef, { player2: null });
             }
         }
 
         window.cancelRoom = function() {
             if (window.currentRoomId) {
-                if (window.isHost) {
-                    // 房主離開則直接關閉/刪除整個房間
-                    const roomRef = window.firebaseRef(window.db, `rooms/${window.currentRoomId}`);
-                    window.firebaseRemove(roomRef);
-                } else {
-                    // 一般玩家離開則刪除自己在陣列裡面的節點
-                    const myRef = window.firebaseRef(window.db, `rooms/${window.currentRoomId}/players/${window.myUid}`);
-                    window.firebaseRemove(myRef);
-                }
+                const roomRef = window.firebaseRef(window.db, `rooms/${window.currentRoomId}`);
+                if (window.myRole === 'player1') window.firebaseRemove(roomRef);
+                else window.firebaseUpdate(roomRef, { player2: null });
             }
             if (window.roomUnsubscribe) { window.roomUnsubscribe(); window.roomUnsubscribe = null; }
             document.getElementById('waitingRoomModal').style.display = 'none';
-            window.isPvPMode = false; window.currentRoomId = null; window.isReady = false; window.isHost = false;
+            window.isPvPMode = false; window.currentRoomId = null; window.isReady = false;
         }
 
         window.listenToRoom = function(roomId) {
@@ -1155,9 +1119,8 @@
             window.roomUnsubscribe = window.firebaseOnValue(roomRef, (snapshot) => {
                 const data = snapshot.val();
                 
-                // 若房間被房主解散
                 if (!data) {
-                    if (window.isPvPMode && isGameStarted && !isGameOver) pvpWin("房間已被關閉！");
+                    if (window.isPvPMode && isGameStarted && !isGameOver) pvpWin("對手已離開房間 / 斷線，不戰而勝！");
                     else if (!isGameStarted && document.getElementById('waitingRoomModal').style.display === 'flex') {
                         document.getElementById('waitingRoomModal').style.display = 'none'; alert("房間已被關閉或房主已離開");
                         window.isPvPMode = false; window.currentRoomId = null; if(window.roomUnsubscribe) window.roomUnsubscribe();
@@ -1166,71 +1129,51 @@
                 }
 
                 document.getElementById('displayRoomId').innerText = data.name;
-                window.roomPlayers = data.players || {};
 
-                // 檢查自己是否已被踢出房間
-                if (!window.roomPlayers[window.myUid]) {
-                    if (!isGameStarted && document.getElementById('waitingRoomModal').style.display === 'flex') {
-                        document.getElementById('waitingRoomModal').style.display = 'none'; alert("您已被房主踢出");
-                        window.isPvPMode = false; window.currentRoomId = null; if(window.roomUnsubscribe) window.roomUnsubscribe();
-                    }
+                if (window.myRole === 'player2' && !data.player2 && !isGameStarted) {
+                    document.getElementById('waitingRoomModal').style.display = 'none'; alert("您已被房主踢出");
+                    window.isPvPMode = false; window.currentRoomId = null; if(window.roomUnsubscribe) window.roomUnsubscribe();
                     return;
                 }
 
-                // 準備大廳 UI 更新
                 if (!isGameStarted) {
+                    const p1 = data.player1, p2 = data.player2;
+                    if (window.myRole === 'player1' && p2 && p2.isDead) { window.kickPlayer(); return; }
+
                     const container = document.getElementById('roomPlayersContainer');
-                    let html = '';
-                    let allReady = true;
-                    let playerCount = 0;
-
-                    for (const [uid, p] of Object.entries(window.roomPlayers)) {
-                        playerCount++;
-                        if (!p.isReady) allReady = false;
-
-                        const isMe = uid === window.myUid;
-                        const hostBadge = p.isHost ? '👑 ' : '👤 ';
-                        const readyStr = p.isReady ? '<span style="color:#2ecc71; font-weight:bold;">✅ 已準備</span>' : '<span style="color:#e74c3c; font-weight:bold;">❌ 未準備</span>';
-                        // 若我是房主，而且遍歷到的不是我自己，就顯示踢出按鈕
-                        const kickBtn = (window.isHost && !isMe) ? `<button onclick="kickPlayer('${uid}')" style="background:#e74c3c; border:none; border-radius:5px; color:white; cursor:pointer; padding:5px 10px; font-weight:bold; margin-left: 10px;">踢出</button>` : '';
-
-                        html += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.2); padding-bottom:10px;">
-                                    <span style="color: ${p.isHost ? '#f1c40f' : '#3498db'};">${hostBadge}${p.name} ${isMe ? '(你)' : ''}</span>
+                    let html = `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.2); padding-bottom:10px;">
+                                <span style="color: #f1c40f;">👑 ${p1.name}</span>
+                                <span style="color:${p1.isReady ? '#2ecc71' : '#e74c3c'}; font-weight: bold;">${p1.isReady ? '✅ 已準備' : '❌ 未準備'}</span>
+                             </div>`;
+                    if (p2) {
+                        html += `<div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <span style="color: #3498db;">👤 ${p2.name}</span>
                                     <div style="display:flex; gap:10px; align-items:center;">
-                                        ${readyStr}
-                                        ${kickBtn}
+                                        <span style="color:${p2.isReady ? '#2ecc71' : '#e74c3c'}; font-weight: bold;">${p2.isReady ? '✅ 已準備' : '❌ 未準備'}</span>
+                                        ${window.myRole === 'player1' ? `<button onclick="kickPlayer()" style="background:#e74c3c; border:none; border-radius:5px; color:white; cursor:pointer; padding:5px 10px; font-weight:bold;">踢出</button>` : ''}
                                     </div>
                                  </div>`;
-                    }
+                    } else { html += `<div style="text-align:center; color:#bdc3c7; padding-top: 5px;">⏳ 等待對手加入...</div>`; }
                     container.innerHTML = html;
 
                     const readyBtn = document.getElementById('readyBtn');
                     if (window.isReady) { readyBtn.innerText = "取消準備"; readyBtn.style.background = "#e67e22"; }
                     else { readyBtn.innerText = "準備"; readyBtn.style.background = "#2ecc71"; }
 
-                    // 若房主判定所有人皆已準備（至少大於1人），則可以自動開始
-                    if (window.isHost && allReady && playerCount > 1 && data.status !== 'playing') {
-                        window.firebaseUpdate(roomRef, { status: 'playing' });
+                    if (p1 && p2 && p1.isReady && p2.isReady && window.myRole === 'player1' && data.status !== 'playing') {
+                        const roomRefUpdate = window.firebaseRef(window.db, `rooms/${roomId}`);
+                        window.firebaseUpdate(roomRefUpdate, { status: 'playing' });
                     }
                 }
 
-                // 房間狀態變為 playing，開始進入遊戲
                 if (data.status === 'playing' && !isGameStarted) {
                     document.getElementById('waitingRoomModal').style.display = 'none'; actualStartGame();
                 }
 
-                // 大亂鬥勝利判定機制 (遊戲進行中不斷檢查存活狀況)
-                if (isGameStarted && !isGameOver) {
-                    let aliveOthers = 0;
-                    let totalPlayers = 0;
-                    for (const uid in window.roomPlayers) {
-                        totalPlayers++;
-                        if (uid !== window.myUid && !window.roomPlayers[uid].isDead) aliveOthers++;
-                    }
-                    // 當房間玩家總數大於1，且其他玩家「全部死光」則宣布勝利
-                    if (aliveOthers === 0 && totalPlayers > 1) {
-                        pvpWin("其他玩家皆已陣亡，恭喜獲得大亂鬥勝利！");
-                    }
+                if (isGameStarted) {
+                    window.opponentData = data[window.opponentRole];
+                    if (!window.opponentData) { if (!isGameOver) pvpWin("對手已離開房間 / 斷線，不戰而勝！"); } 
+                    else if (window.opponentData.isDead && !isGameOver) { pvpWin("對方已陣亡 / 斷線，恭喜勝利！"); }
                 }
             });
         }
@@ -1259,7 +1202,7 @@
             document.getElementById('ui').style.display = 'block';
             document.getElementById('xpBarContainer').style.display = 'block';
             
-            // ===== 遊戲開始時隱藏公告按鈕 =====
+            // ===== 新增：遊戲開始時隱藏公告按鈕 =====
             document.getElementById('announcementBtn').style.display = 'none';
             // =====================================
 
@@ -1370,35 +1313,6 @@
             document.getElementById('timeText').innerText = `時間: ${m}:${s}`;
         }
 
-        // 建立死鬥模式生存榜單產生器
-        function generateBrawlLeaderboardHtml(isWinner = false) {
-            if (!window.isPvPMode || !window.roomPlayers) return "";
-            
-            // 將自己最後的狀態寫入作為運算基準
-            if (window.roomPlayers[window.myUid]) {
-                window.roomPlayers[window.myUid].time = gameTime;
-                window.roomPlayers[window.myUid].isDead = !isWinner; 
-            }
-
-            // 將玩家轉為陣列，依照生存時間排序
-            const arr = Object.values(window.roomPlayers);
-            arr.sort((a, b) => (b.time || 0) - (a.time || 0));
-
-            let html = "<div style='margin-top: 20px; text-align: left; background: rgba(0,0,0,0.5); padding: 15px; border-radius: 10px; border: 1px solid #f1c40f;'>";
-            html += "<h3 style='color: #f1c40f; text-align: center; margin-top: 0; margin-bottom: 10px;'>📊 大亂鬥生存排名</h3>";
-            arr.forEach((p, idx) => {
-                const statusStr = p.isDead ? `<span style='color: #e74c3c;'>陣亡</span>` : `<span style='color: #2ecc71;'>存活</span>`;
-                const isMe = p.uid === window.myUid;
-                const rowBg = isMe ? 'background: rgba(255, 255, 255, 0.1);' : '';
-                html += `<div style='font-size: 16px; margin-bottom: 8px; display: flex; justify-content: space-between; padding: 5px; border-radius: 5px; ${rowBg}'>
-                            <span><span style='color:#f1c40f; font-weight:bold;'>#${idx+1}</span> ${p.name} ${isMe ? '(你)' : ''}</span>
-                            <span>${formatTimeHelper(p.time)} ${statusStr}</span>
-                         </div>`;
-            });
-            html += "</div>";
-            return html;
-        }
-
         // ================== 單人/對戰 死亡結算 ==================
         function gameOver() {
             if (isGameOver) return;
@@ -1408,23 +1322,16 @@
             playerDom.style.display = 'none'; nameTagDom.style.display = 'none';
             hpBarBgDom.style.display = 'none'; damageOverlayDom.style.backgroundColor = 'transparent'; 
 
-            let extraHtml = "";
-
             if (window.isPvPMode && window.currentRoomId) {
-                // 回報自己已死，記錄最後秒數
-                const myRef = window.firebaseRef(window.db, `rooms/${window.currentRoomId}/players/${window.myUid}`);
-                window.firebaseUpdate(myRef, { isDead: true, time: gameTime });
-                document.getElementById('gameOverTitle').innerText = "遊戲結束 - 你已陣亡"; 
-                document.getElementById('gameOverTitle').style.color = "#e74c3c";
-                
-                // 生成大亂鬥排行
-                extraHtml = generateBrawlLeaderboardHtml(false);
+                const myRef = window.firebaseRef(window.db, `rooms/${window.currentRoomId}/${window.myRole}`);
+                window.firebaseUpdate(myRef, { isDead: true });
+                document.getElementById('gameOverTitle').innerText = "遊戲結束 - 對方勝利"; document.getElementById('gameOverTitle').style.color = "#e74c3c";
             } else {
                 document.getElementById('gameOverTitle').innerText = "遊戲結束";
             }
             
             const m = Math.floor(gameTime / 60).toString().padStart(2, '0'), s = Math.floor(gameTime % 60).toString().padStart(2, '0');
-            document.getElementById('finalStats').innerHTML = `玩家: <b>${player.name}</b><br>最終等級: <b>${player.level}</b><br>存活時間: <b>${m}:${s}</b>${extraHtml}`;
+            document.getElementById('finalStats').innerHTML = `玩家: <b>${player.name}</b><br>最終等級: <b>${player.level}</b><br>存活時間: <b>${m}:${s}</b>`;
 
             // 觸發安全存檔機制
             saveScore(player.name, gameTime);
@@ -1438,19 +1345,9 @@
             playerDom.style.display = 'none'; nameTagDom.style.display = 'none';
             hpBarBgDom.style.display = 'none'; damageOverlayDom.style.backgroundColor = 'transparent'; 
 
-            if (window.isPvPMode && window.currentRoomId) {
-                const myRef = window.firebaseRef(window.db, `rooms/${window.currentRoomId}/players/${window.myUid}`);
-                window.firebaseUpdate(myRef, { time: gameTime });
-            }
-
-            document.getElementById('gameOverTitle').innerText = "大吉大利，今晚吃鵝！"; 
-            document.getElementById('gameOverTitle').style.color = "#f1c40f";
-            
-            // 生成大亂鬥排行
-            let extraHtml = generateBrawlLeaderboardHtml(true);
-
+            document.getElementById('gameOverTitle').innerText = "遊戲勝利！"; document.getElementById('gameOverTitle').style.color = "#2ecc71";
             const m = Math.floor(gameTime / 60).toString().padStart(2, '0'), s = Math.floor(gameTime % 60).toString().padStart(2, '0');
-            document.getElementById('finalStats').innerHTML = `${reason}<br><br>玩家: <b>${player.name}</b><br>最終等級: <b>${player.level}</b><br>存活時間: <b>${m}:${s}</b>${extraHtml}`;
+            document.getElementById('finalStats').innerHTML = `${reason}<br><br>玩家: <b>${player.name}</b><br>最終等級: <b>${player.level}</b><br>存活時間: <b>${m}:${s}</b>`;
 
             // 觸發安全存檔機制
             saveScore(player.name, gameTime);
@@ -1460,13 +1357,12 @@
             if (!isLoaded || !isGameStarted || isGameOver || isLevelUpMenuOpen || isLevelUpTransition) return;
             gameTime += dt;
 
-            // 網路同步
             if (window.isPvPMode) {
                 window.pvpSyncTimer += dt;
                 if (window.pvpSyncTimer > 0.05) { 
                     window.pvpSyncTimer = 0;
-                    if (window.currentRoomId) {
-                        const myRef = window.firebaseRef(window.db, `rooms/${window.currentRoomId}/players/${window.myUid}`);
+                    if (window.currentRoomId && window.myRole) {
+                        const myRef = window.firebaseRef(window.db, `rooms/${window.currentRoomId}/${window.myRole}`);
                         window.firebaseUpdate(myRef, { x: Math.round(player.x), y: Math.round(player.y), hp: player.hp, maxHp: player.maxHp, time: gameTime, facingRight: player.facingRight, isDead: false });
                     }
                 }
@@ -1590,36 +1486,28 @@
             ctx.drawImage(bgImg, -camera.x, -camera.y, mapBounds.w, mapBounds.h);
             if (!isGameStarted) return;
 
-            // 繪製多名對手 (遍歷所有的玩家)
-            if (window.isPvPMode && window.roomPlayers) {
-                for (const uid in window.roomPlayers) {
-                    if (uid === window.myUid) continue; // 不畫自己
-                    
-                    const opp = window.roomPlayers[uid];
-                    if (!opp || opp.isDead) continue; // 不畫死掉或斷線的對手
-
-                    const screenX = opp.x - camera.x, screenY = opp.y - camera.y;
-                    ctx.save(); ctx.globalAlpha = 0.5; 
-                    if (window.opponentImg && window.opponentImg.complete) {
-                        ctx.translate(screenX, screenY); ctx.scale(opp.facingRight ? -1 : 1, 1); 
-                        ctx.drawImage(window.opponentImg, -player.drawW / 2, -player.drawH / 2, player.drawW, player.drawH);
-                        ctx.scale(opp.facingRight ? -1 : 1, 1); ctx.translate(-screenX, -screenY); 
-                    }
-                    ctx.restore(); 
-
-                    ctx.fillStyle = "white"; ctx.font = "bold 20px 'Segoe UI'"; ctx.textAlign = "center";
-                    ctx.shadowColor = "black"; ctx.shadowBlur = 4; ctx.shadowOffsetX = 2; ctx.shadowOffsetY = 2;
-                    ctx.fillText(opp.name, screenX, screenY - player.drawH / 2 - 35);
-                    ctx.font = "16px Arial"; ctx.fillStyle = "#f1c40f";
-                    ctx.fillText(`生存: ${formatTimeHelper(opp.time || 0)}`, screenX, screenY - player.drawH / 2 - 60);
-                    ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
-
-                    const barW = 80, barH = 10, barX = screenX - barW / 2, barY = screenY - player.drawH / 2 - 15;
-                    ctx.fillStyle = "rgba(0, 0, 0, 0.8)"; ctx.fillRect(barX, barY, barW, barH);
-                    ctx.strokeStyle = "#222"; ctx.lineWidth = 2; ctx.strokeRect(barX, barY, barW, barH);
-                    const hpPct = Math.max(0, opp.hp / opp.maxHp);
-                    ctx.fillStyle = "#e74c3c"; ctx.fillRect(barX, barY, barW * hpPct, barH);
+            if (window.isPvPMode && window.opponentData && !window.opponentData.isDead) {
+                const opp = window.opponentData, screenX = opp.x - camera.x, screenY = opp.y - camera.y;
+                ctx.save(); ctx.globalAlpha = 0.5; 
+                if (window.opponentImg && window.opponentImg.complete) {
+                    ctx.translate(screenX, screenY); ctx.scale(opp.facingRight ? -1 : 1, 1); 
+                    ctx.drawImage(window.opponentImg, -player.drawW / 2, -player.drawH / 2, player.drawW, player.drawH);
+                    ctx.scale(opp.facingRight ? -1 : 1, 1); ctx.translate(-screenX, -screenY); 
                 }
+                ctx.restore(); 
+
+                ctx.fillStyle = "white"; ctx.font = "bold 20px 'Segoe UI'"; ctx.textAlign = "center";
+                ctx.shadowColor = "black"; ctx.shadowBlur = 4; ctx.shadowOffsetX = 2; ctx.shadowOffsetY = 2;
+                ctx.fillText(opp.name, screenX, screenY - player.drawH / 2 - 35);
+                ctx.font = "16px Arial"; ctx.fillStyle = "#f1c40f";
+                ctx.fillText(`生存: ${formatTimeHelper(opp.time || 0)}`, screenX, screenY - player.drawH / 2 - 60);
+                ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
+
+                const barW = 80, barH = 10, barX = screenX - barW / 2, barY = screenY - player.drawH / 2 - 15;
+                ctx.fillStyle = "rgba(0, 0, 0, 0.8)"; ctx.fillRect(barX, barY, barW, barH);
+                ctx.strokeStyle = "#222"; ctx.lineWidth = 2; ctx.strokeRect(barX, barY, barW, barH);
+                const hpPct = Math.max(0, opp.hp / opp.maxHp);
+                ctx.fillStyle = "#e74c3c"; ctx.fillRect(barX, barY, barW * hpPct, barH);
             }
 
             gems.forEach(g => {
